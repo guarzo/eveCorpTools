@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zoolanders TPS Reports - Config</title>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/tabulator-tables@5.2.3/dist/css/tabulator.min.css">
+    <link rel="stylesheet" type="text/css" href="/static/custom.css">
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+    <script type="text/javascript" src="https://unpkg.com/tabulator-tables@5.2.3/dist/js/tabulator.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Zoolanders TPS Reports - Tracking</h1>
+            <nav class="button-container">
+                <button onclick="updateChart('corporations')" aria-label="Show Corporations Table">Corporations</button>
+                <button onclick="updateChart('alliances')" aria-label="Show Alliances Table">Alliances</button>
+                <button onclick="updateChart('characters')" aria-label="Show Characters Table">Characters</button>
+                <button onclick="updateChart('excludedCharacters')" aria-label="Show Excluded Characters Table">Excluded Characters</button>
+            </nav>
+        </header>
+        <main class="charts">
+            <section class="chart-container" id="corporationsChart">
+                <h2>Corporations</h2>
+                <div id="corporations-table"></div>
+            </section>
+            <section class="chart-container" id="alliancesChart" style="display: none;">
+                <h2>Alliances</h2>
+                <div id="alliances-table"></div>
+            </section>
+            <section class="chart-container" id="charactersChart" style="display: none;">
+                <h2>Characters</h2>
+                <div id="characters-table"></div>
+            </section>
+            <section class="chart-container" id="excludedCharactersChart" style="display: none;">
+                <h2>Excluded Characters</h2>
+                <div id="excluded-characters-table"></div>
+            </section>
+        </main>
+        <footer class="footer">
+            <img src="/static/zoologo.png" alt="Zoolanders Logo">
+        </footer>
+    </div>
+    <script type="text/javascript">
+        function updateChart(chartType) {
+            // Hide all charts
+            document.querySelectorAll('.chart-container').forEach(function(container) {
+                container.style.display = 'none';
+            });
+
+            // Show the selected chart
+            document.getElementById(chartType + 'Chart').style.display = 'block';
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            var corporationsTable = new Tabulator("#corporations-table", {
+                data: {{.Corporations | json}},
+                layout: "fitColumns",
+                columns: [
+                    {title: "ID", field: "ID", sorter: "number"},
+                    {title: "Name", field: "Name", sorter: "string"}
+                ]
+            });
+
+            var alliancesTable = new Tabulator("#alliances-table", {
+                data: {{.Alliances | json}},
+                layout: "fitColumns",
+                columns: [
+                    {title: "ID", field: "ID", sorter: "number"},
+                    {title: "Name", field: "Name", sorter: "string"}
+                ]
+            });
+
+            var charactersTable = new Tabulator("#characters-table", {
+                data: {{.Characters | json}},
+                layout: "fitColumns",
+                columns: [
+                    {title: "ID", field: "ID", sorter: "number"},
+                    {title: "Name", field: "Name", sorter: "string"}
+                ]
+            });
+
+            var excludedCharactersTable = new Tabulator("#excluded-characters-table", {
+                data: {{.ExcludeCharacters | json}},
+                layout: "fitColumns",
+                columns: [
+                    {title: "ID", field: "ID", sorter: "number"},
+                    {title: "Name", field: "Name", sorter: "string"}
+                ]
+            });
+        });
+    </script>
+</body>
+</html>

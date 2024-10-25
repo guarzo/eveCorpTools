@@ -1,0 +1,124 @@
+id: /subscriptions/c591b803-dc4c-4d42-ab28-10448f8b8de8/resourceGroups/flygd/providers/Microsoft.App/containerapps/zkillanalytics
+identity:
+  type: None
+location: East US 2
+name: zkillanalytics
+properties:
+  configuration:
+    activeRevisionsMode: Single
+    dapr: null
+    ingress:
+      additionalPortMappings: null
+      allowInsecure: false
+      clientCertificateMode: Ignore
+      corsPolicy: null
+      customDomains:
+      - bindingType: SniEnabled
+        certificateId: /subscriptions/c591b803-dc4c-4d42-ab28-10448f8b8de8/resourceGroups/flygd/providers/Microsoft.App/managedEnvironments/flygd-analytics/managedCertificates/tps.zoolanders.space-flygd-an-240511214130
+        name: tps.zoolanders.space
+      exposedPort: 0
+      external: true
+      fqdn: zkillanalytics.gentlemeadow-22b7a4cc.eastus2.azurecontainerapps.io
+      ipSecurityRestrictions: null
+      stickySessions:
+        affinity: sticky
+      targetPort: 8080
+      targetPortHttpScheme: null
+      traffic:
+      - latestRevision: true
+        weight: 100
+      transport: Auto
+    maxInactiveRevisions: 100
+    registries:
+    - identity: ''
+      passwordSecretRef: reg-pswd-8c21d7b1-82dd
+      server: flygd.azurecr.io
+      username: flygd
+    secrets:
+    - name: reg-pswd-8c21d7b1-82dd
+    service: null
+  customDomainVerificationId: 4B471A6709328647D7EF7F661F19C75A5ADD539E7F27C1063B08A34962917736
+  delegatedIdentities: []
+  environmentId: /subscriptions/c591b803-dc4c-4d42-ab28-10448f8b8de8/resourceGroups/flygd/providers/Microsoft.App/managedEnvironments/flygd-analytics
+  eventStreamEndpoint: https://eastus2.azurecontainerapps.dev/subscriptions/c591b803-dc4c-4d42-ab28-10448f8b8de8/resourceGroups/flygd/containerApps/zkillanalytics/eventstream
+  latestReadyRevisionName: zkillanalytics--latest
+  latestRevisionFqdn: zkillanalytics--latest.gentlemeadow-22b7a4cc.eastus2.azurecontainerapps.io
+  latestRevisionName: zkillanalytics--latest
+  managedEnvironmentId: /subscriptions/c591b803-dc4c-4d42-ab28-10448f8b8de8/resourceGroups/flygd/providers/Microsoft.App/managedEnvironments/flygd-analytics
+  outboundIpAddresses:
+  - 20.1.250.250
+  - 20.1.251.135
+  - 20.1.251.104
+  - 20.1.251.2
+  - 20.97.130.219
+  - 20.69.200.68
+  - 20.97.132.38
+  - 20.97.133.137
+  - 20.161.138.86
+  - 20.161.137.24
+  - 4.153.72.251
+  - 4.153.73.13
+  - 4.153.73.38
+  - 4.153.72.240
+  - 4.153.73.30
+  - 4.153.72.243
+  - 4.153.73.23
+  - 4.153.72.247
+  - 4.153.73.6
+  - 4.153.73.37
+  - 20.161.137.25
+  - 20.161.138.87
+  - 4.153.106.247
+  - 4.153.107.93
+  - 4.153.108.180
+  - 4.153.107.3
+  - 4.153.110.115
+  - 4.153.108.140
+  provisioningState: Succeeded
+  runningStatus: Running
+  template:
+    containers:
+    - image: flygd.azurecr.io/flygd/zkillanalytics:latest
+      name: zkillanalytics
+      probes: []
+      resources:
+        cpu: 4
+        ephemeralStorage: 2Gi
+        memory: 8Gi
+      env:
+      - name: GOMEMLIMIT
+        value: 7680MiB
+      - name: GOMAXPROCS
+        value: 4
+      volumeMounts:
+      - mountPath: /data
+        volumeName: data
+    initContainers: null
+    revisionSuffix: ''
+    scale:
+      maxReplicas: 10
+      minReplicas: 0
+      rules:
+      - name: http-scaler
+        http:
+          metadata:
+            concurrentRequests: '50'
+        cooldown:
+          scaleIn: 600 # 600 seconds = 10 minutes
+          scaleOut: 0  # scale out immediately
+    serviceBinds: null
+    terminationGracePeriodSeconds: null
+    volumes:
+    - name: data
+      storageName: analyticsdata
+      storageType: AzureFile
+  workloadProfileName: Consumption
+resourceGroup: flygd
+systemData:
+  createdAt: '2024-05-11T21:31:39.5334417'
+  createdBy: thomasgamble2@gmail.com
+  createdByType: User
+  lastModifiedAt: '2024-05-12T17:11:12.0582005'
+  lastModifiedBy: thomasgamble2@gmail.com
+  lastModifiedByType: User
+type: Microsoft.App/containerApps
