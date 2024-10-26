@@ -24,7 +24,7 @@ acaapi.yaml
 zkill
 
 charts/
-data/
+internal/data/
 
 # Go workspace file
 go.work

@@ -7,9 +7,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/gambtho/zkillanalytics/internal/fetch"
+	"github.com/gambtho/zkillanalytics/internal/api/esi"
 	"github.com/gambtho/zkillanalytics/internal/model"
 	"github.com/gambtho/zkillanalytics/internal/persist"
+	"github.com/gambtho/zkillanalytics/internal/service"
 	"github.com/gambtho/zkillanalytics/internal/visuals"
 )
 
@@ -22,8 +23,8 @@ func (fn roundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) 
 func WaitForMutexAndCallFunction(retry int) bool {
 	count := 0
 	for count < retry {
-		if fetch.FetchAllMutex.TryLock() {
-			fetch.FetchAllMutex.Unlock()
+		if service.FetchAllMutex.TryLock() {
+			service.FetchAllMutex.Unlock()
 			return true
 		}
 		count++
@@ -36,7 +37,7 @@ func CreateCorporationMap(client *http.Client, ids []int) (map[int]model.Namer, 
 	corporationMap := make(map[int]model.Namer)
 
 	for _, id := range ids {
-		info, err := fetch.FetchCorporationInfo(client, id)
+		info, err := esi.GetCorporationInfo(client, id)
 		if err != nil {
 			return nil, err
 		}
@@ -50,7 +51,7 @@ func CreateAllianceMap(client *http.Client, ids []int) (map[int]model.Namer, err
 	allianceMap := make(map[int]model.Namer)
 
 	for _, id := range ids {
-		info, err := fetch.FetchAllianceInfo(client, id)
+		info, err := esi.GetAllianceInfo(client, id)
 		if err != nil {
 			return nil, err
 		}
@@ -64,7 +65,7 @@ func CreateCharacterMap(client *http.Client, ids []int) (map[int]model.Namer, er
 	characterMap := make(map[int]model.Namer)
 
 	for _, id := range ids {
-		info, err := fetch.FetchCharacterInfo(client, id)
+		info, err := esi.FetchCharacterInfo(client, id)
 		if err != nil {
 			return nil, err
 		}
@@ -147,5 +148,5 @@ func generateChart(route persist.Route, chartData *model.ChartData, filePath str
 
 func fetchDataForSnippets(client *http.Client, dataMode persist.DataMode) (*model.ChartData, error) {
 	startDate, endDate := persist.GetDateRange(dataMode)
-	return fetch.FetchAllData(client, persist.CorporationIDs, persist.AllianceIDs, persist.CharacterIDs, startDate, endDate)
+	return service.GetAllData(client, persist.CorporationIDs, persist.AllianceIDs, persist.CharacterIDs, startDate, endDate)
 }

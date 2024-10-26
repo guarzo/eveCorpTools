@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gambtho/zkillanalytics/internal/fetch"
+	"github.com/gambtho/zkillanalytics/internal/api/esi"
 	"github.com/gambtho/zkillanalytics/internal/model"
 	"github.com/gambtho/zkillanalytics/internal/persist"
 )
@@ -32,7 +32,7 @@ func FetchCharacterNamesHandler(w http.ResponseWriter, r *http.Request) {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			character, err := fetch.FetchCharacterInfo(client, id)
+			character, err := esi.FetchCharacterInfo(client, id)
 			if err != nil {
 				log.Printf("Error fetching character info for ID %d: %v", id, err)
 				return

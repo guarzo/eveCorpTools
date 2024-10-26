@@ -6,7 +6,7 @@ import (
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
 
-	"github.com/gambtho/zkillanalytics/internal/fetch"
+	"github.com/gambtho/zkillanalytics/internal/data"
 	"github.com/gambtho/zkillanalytics/internal/model"
 	"github.com/gambtho/zkillanalytics/internal/persist"
 )
@@ -32,7 +32,7 @@ func RenderOurShips(chartData *model.ChartData) *charts.Bar {
 			}
 
 			characterName := characterInfo.Name
-			shipName := fetch.QueryInvType(attacker.ShipTypeID)
+			shipName := data.QueryInvType(attacker.ShipTypeID)
 
 			// data-clean -- for ships we don't care about
 			if shipName == "" || shipName == "Capsule" || shipName == "#System" {

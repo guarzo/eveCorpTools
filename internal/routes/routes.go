@@ -8,8 +8,8 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/gambtho/zkillanalytics/internal/fetch"
 	"github.com/gambtho/zkillanalytics/internal/persist"
+	"github.com/gambtho/zkillanalytics/internal/service"
 )
 
 // ServeRoute is an HTTP handler that generates a bar chart based on the mode
@@ -49,10 +49,10 @@ func ServeRoute(route persist.Route) http.HandlerFunc {
 			fmt.Println("Failed to acquire mutex")
 			LoadingHandler(w, r)
 		}
-		fetch.FetchAllMutex.Lock()
-		defer fetch.FetchAllMutex.Unlock()
+		service.FetchAllMutex.Lock()
+		defer service.FetchAllMutex.Unlock()
 
-		chartData, err := fetch.FetchAllData(client, persist.CorporationIDs, persist.AllianceIDs, persist.CharacterIDs, startDate, endDate)
+		chartData, err := service.GetAllData(client, persist.CorporationIDs, persist.AllianceIDs, persist.CharacterIDs, startDate, endDate)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error fetching detailed killmails: %s", err), http.StatusInternalServerError)
 			return

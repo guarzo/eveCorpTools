@@ -6,16 +6,16 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/gambtho/zkillanalytics/internal/fetch"
 	"github.com/gambtho/zkillanalytics/internal/model"
+	"github.com/gambtho/zkillanalytics/internal/service"
 )
 
 var trackedCharacters []int
 
 func RenderSnippets(ytdChartData, lastMonthChartData, mtdChartData *model.ChartData, filePath string) error {
-	ytdTrackedCharacters := fetch.GetTrackedCharacters(ytdChartData.KillMails, &ytdChartData.ESIData)
-	lastMTrackedCharacters := fetch.GetTrackedCharacters(lastMonthChartData.KillMails, &lastMonthChartData.ESIData)
-	mtdTrackedCharacters := fetch.GetTrackedCharacters(mtdChartData.KillMails, &mtdChartData.ESIData)
+	ytdTrackedCharacters := service.GetTrackedCharacters(ytdChartData.KillMails, &ytdChartData.ESIData)
+	lastMTrackedCharacters := service.GetTrackedCharacters(lastMonthChartData.KillMails, &lastMonthChartData.ESIData)
+	mtdTrackedCharacters := service.GetTrackedCharacters(mtdChartData.KillMails, &mtdChartData.ESIData)
 
 	trackedCharacters = append(trackedCharacters, ytdTrackedCharacters...)
 	trackedCharacters = append(trackedCharacters, lastMTrackedCharacters...)

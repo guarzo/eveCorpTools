@@ -2,13 +2,15 @@ package visuals
 
 import (
 	"fmt"
-	"github.com/gambtho/zkillanalytics/internal/persist"
 	"sort"
+
+	"github.com/gambtho/zkillanalytics/internal/data"
+	"github.com/gambtho/zkillanalytics/internal/persist"
+	"github.com/gambtho/zkillanalytics/internal/service"
 
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
 
-	"github.com/gambtho/zkillanalytics/internal/fetch"
 	"github.com/gambtho/zkillanalytics/internal/model"
 )
 
@@ -25,7 +27,7 @@ func RenderTopShipsKilled(chartData *model.ChartData) *charts.Bar {
 
 	if trackedCharacters == nil || len(trackedCharacters) == 0 {
 		fmt.Print(fmt.Sprintf("No tracked characters found, fetching from %d killmails", len(chartData.KillMails)))
-		trackedCharacters = fetch.GetTrackedCharacters(chartData.KillMails, &chartData.ESIData)
+		trackedCharacters = service.GetTrackedCharacters(chartData.KillMails, &chartData.ESIData)
 	}
 
 	// Populate the kill count map using victims' ships from detailed killmails
@@ -36,7 +38,7 @@ func RenderTopShipsKilled(chartData *model.ChartData) *charts.Bar {
 		}
 
 		shipTypeID := km.EsiKillMail.Victim.ShipTypeID
-		shipName := fetch.QueryInvType(shipTypeID) // Fetch the ship name
+		shipName := data.QueryInvType(shipTypeID) // Fetch the ship name
 
 		if shipName == "" || shipName == "Capsule" || shipName == "#System" || shipName == "Mobile Tractor Unit" {
 			continue

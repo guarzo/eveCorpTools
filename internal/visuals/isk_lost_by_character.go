@@ -7,9 +7,9 @@ import (
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
 
-	"github.com/gambtho/zkillanalytics/internal/fetch"
 	"github.com/gambtho/zkillanalytics/internal/model"
 	"github.com/gambtho/zkillanalytics/internal/persist"
+	"github.com/gambtho/zkillanalytics/internal/service"
 )
 
 type CharacterValueData struct {
@@ -23,7 +23,7 @@ func RenderOurLossesValue(chartData *model.ChartData) *charts.Bar {
 
 	if trackedCharacters == nil || len(trackedCharacters) == 0 {
 		fmt.Print(fmt.Sprintf("No tracked characters found, fetching from %d killmails", len(chartData.KillMails)))
-		trackedCharacters = fetch.GetTrackedCharacters(chartData.KillMails, &chartData.ESIData)
+		trackedCharacters = service.GetTrackedCharacters(chartData.KillMails, &chartData.ESIData)
 	}
 
 	// Populate the characterValues map using victims from detailed killmails

@@ -6,7 +6,7 @@ import (
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
 
-	"github.com/gambtho/zkillanalytics/internal/fetch"
+	"github.com/gambtho/zkillanalytics/internal/data"
 	"github.com/gambtho/zkillanalytics/internal/model"
 	"github.com/gambtho/zkillanalytics/internal/persist"
 )
@@ -25,7 +25,7 @@ func RenderWeaponsByCharacter(chartData *model.ChartData) *charts.Bar {
 			}
 
 			characterName := characterInfo.Name
-			weaponName := fetch.QueryInvType(attacker.WeaponTypeID)
+			weaponName := data.QueryInvType(attacker.WeaponTypeID)
 
 			// If the weapon is the same as the ship, skip it
 			if attacker.WeaponTypeID == attacker.ShipTypeID {
