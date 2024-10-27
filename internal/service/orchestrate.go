@@ -19,6 +19,11 @@ import (
 	"github.com/gambtho/zkillanalytics/internal/utils"
 )
 
+const (
+	ESIDataStaleDuration = 48 * time.Hour
+	MinESIDataSize       = 50 * 1024 // 50KB
+)
+
 // OrchestrateService coordinates data fetching, aggregation, and persistence.
 type OrchestrateService struct {
 	KillMailService *KillMailService
@@ -93,7 +98,7 @@ func (os *OrchestrateService) GetAllData(ctx context.Context, corporations, alli
 
 	esiData, err := persist.ReadEsiDataFromFile(esiFileName)
 	if err != nil || os.isESIDataStale(fileInfo) {
-		fmt.Println("Error loading esi data from file:", err)
+		os.Logger.Errorf("error loading esi data from file: %v", err)
 		esiData = &model.ESIData{
 			AllianceInfos:    make(map[int]model.Alliance),
 			CharacterInfos:   make(map[int]model.Character),
@@ -135,12 +140,12 @@ func (os *OrchestrateService) GetAllData(ctx context.Context, corporations, alli
 				os.Logger.Errorf("Error loading data from file %s: %v", fileName, err)
 				continue
 			}
-			// Aggregate KillMailData into ChartData
-			newData = os.KillMailService.AggregateKillMailDumps(newData, monthlyKillMailData)
+			// Aggregate KillMailData into NewData
+			newData.KillMails = os.KillMailService.AggregateKillMailDumps(newData.KillMails, monthlyKillMailData.KillMails)
 		}
 	}
 
-	// Initialize ChartData if it's nil
+	// Initialize ChartData
 	chartData := &model.ChartData{
 		KillMails: newData.KillMails,
 		ESIData:   *esiData,
@@ -148,7 +153,7 @@ func (os *OrchestrateService) GetAllData(ctx context.Context, corporations, alli
 
 	// Refresh ESI data if necessary
 	if esiRefresh {
-		err = os.ESIService.RefreshCharacter(ctx, chartData, os.Client)
+		err = os.ESIService.RefreshEsiData(ctx, chartData, os.Client)
 		if err != nil {
 			os.Logger.Errorf("Error refreshing ESI data: %v", err)
 			return nil, err
@@ -174,7 +179,7 @@ func (os *OrchestrateService) GetAllData(ctx context.Context, corporations, alli
 }
 
 func (os *OrchestrateService) isESIDataStale(fileInfo fs.FileInfo) bool {
-	return time.Since(fileInfo.ModTime()) > 48*time.Hour || fileInfo.Size() <= 50*1024
+	return time.Since(fileInfo.ModTime()) > ESIDataStaleDuration || fileInfo.Size() <= MinESIDataSize
 }
 
 // GetMissingData fetches missing killmails based on data availability and parameters.
@@ -206,32 +211,8 @@ func (os *OrchestrateService) GetMissingData(ctx context.Context, params *config
 			return nil, fmt.Errorf("failed to save fetched data: %w", err)
 		}
 
-		aggregatedData = os.KillMailService.AggregateKillMailDumps(aggregatedData, monthlyKillMailData)
+		aggregatedData.KillMails = os.KillMailService.AggregateKillMailDumps(aggregatedData.KillMails, monthlyKillMailData.KillMails)
 	}
 
 	return aggregatedData, nil
-}
-
-// CombineEsiAndKillMail processes a kill mail and updates the aggregated data.
-func (os *OrchestrateService) CombineEsiAndKillMail(ctx context.Context, kmModel model.KillMail, aggregatedData *model.KillMailData, esiData *model.ESIData) error {
-	// Fetch the full killmail details using EsiService.
-	fullKillMail, err := os.ESIService.EsiClient.GetEsiKillMail(ctx, int(kmModel.KillMailID), kmModel.ZKB.Hash)
-	if err != nil {
-		return fmt.Errorf("failed to fetch full killmail for ID %d: %w", kmModel.KillMailID, err)
-	}
-
-	// Aggregate ESI data into the global ESIData.
-	err = os.ESIService.AggregateEsiData(ctx, fullKillMail, esiData)
-	if err != nil {
-		return fmt.Errorf("failed to aggregate ESI data: %w", err)
-	}
-
-	// Create a DetailedKillMail and append it to the aggregated killmails.
-	dKM := model.DetailedKillMail{
-		KillMail:    kmModel,
-		EsiKillMail: *fullKillMail,
-	}
-	aggregatedData.KillMails = append(aggregatedData.KillMails, dKM)
-
-	return nil
 }

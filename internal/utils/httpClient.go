@@ -2,6 +2,7 @@ package utils
 
 import (
 	"net/http"
+	"time"
 )
 
 // NewHTTPClientWithUserAgent creates an HTTP client that automatically includes the specified User-Agent header.
@@ -13,6 +14,7 @@ func NewHTTPClientWithUserAgent(userAgent string) *http.Client {
 	}
 
 	return &http.Client{
+		Timeout:   10 * time.Second,
 		Transport: customTransport,
 	}
 }

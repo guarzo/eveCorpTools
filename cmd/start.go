@@ -4,6 +4,7 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -22,6 +23,7 @@ import (
 	"github.com/gambtho/zkillanalytics/internal/persist"
 	"github.com/gambtho/zkillanalytics/internal/routes"
 	"github.com/gambtho/zkillanalytics/internal/service"
+	"github.com/gambtho/zkillanalytics/internal/utils"
 )
 
 // logRequestHost middleware logs the host and path of each incoming request
@@ -63,13 +65,6 @@ func hostBasedRouting(logger *logrus.Logger, orchestrateService *service.Orchest
 			}
 		})
 	}
-}
-
-// registerDefaultRoutes registers the routes for the killmail subdomain or default host
-func registerDefaultRoutes(r *mux.Router, esiService *service.EsiService) {
-	// Serve static files if needed
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-	r.NotFoundHandler = http.HandlerFunc(routes.NotFoundHandler)
 }
 
 // registerTPSRoutes registers the routes for the TPS subdomain
@@ -130,9 +125,7 @@ func StartServer(port int, userAgent string) {
 	}
 
 	// Initialize HTTP Client with Timeout
-	httpClient := &http.Client{
-		Timeout: 10 * time.Second,
-	}
+	httpClient := utils.NewHTTPClientWithUserAgent(userAgent)
 
 	esiClient := esi.NewEsiClient(config.BaseEsiURL, httpClient, cache, logger)
 	zkillClient := zkill.NewZkillClient(config.ZkillURL, httpClient, cache, logger)
@@ -160,10 +153,20 @@ func StartServer(port int, userAgent string) {
 	mainRouter.Use(logRequestHost(logger))
 	mainRouter.Use(hostBasedRouting(logger, orchestrateService))
 
-	// Register Default Routes (e.g., health check)
 	mainRouter.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		health := struct {
+			Status       string `json:"status"`
+			CacheStatus  string `json:"cache_status"`
+			ESIConnected bool   `json:"esi_connected"`
+			// Add more fields as needed
+		}{
+			Status:       "OK",
+			CacheStatus:  "Connected", // Implement actual cache status check
+			ESIConnected: true,        // Implement actual ESI connection check
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(health)
 	}).Methods("GET")
 
 	// Define server address

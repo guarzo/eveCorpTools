@@ -18,36 +18,12 @@ Access on localhost:8080, available routes are
 
 ## Todo
 
-- [ ] add weapon types
-- [ ] add damage done
-- [ ] add solo kills
-- [ ] add top systems
-- [ ] add CI/CD
+- [ ] continue from here - fix visuals https://chatgpt.com/share/671e7546-c53c-8006-af1d-8cb8d9a1e27d
+- [ ] make health check actually work -- add urls for refresh / clear cache / etc
+- [ ] can detailedkillmail just be a slice?
+- [ ] add github workflow deploy
+- [ ] cleanup unused urls (see above)
+- [ ] use free sql db?
+- [ ] more concurrency
 - [ ] add tests
 
-
-cmd/: Contains the application's entry point (main.go). Each subdirectory here can represent different executable commands if your project expands.
-
-internal/: Houses the core application code. The internal directory restricts the visibility of these packages to your module, preventing external usage.
-
-api/: Contains subpackages for each external API your application interacts with.
-
-esi/: Manages all interactions with the ESI (EVE Swagger Interface) API.
-
-zkill/: Manages all interactions with the ZKillboard API.
-
-config/: Handles configuration loading and management (e.g., environment variables, config files).
-
-model/: Defines the data models and structures used across the application.
-
-persist/: Manages data persistence logic, such as database interactions.
-
-repository/: Implements the Repository pattern, providing an abstraction layer over data sources (databases, APIs, etc.).
-
-service/: Contains business logic that orchestrates between repositories and APIs.
-
-utils/: Utility functions and helpers used across the application.
-
-migrations/: Holds database migration files if you're using a relational database.
-
-pkg/: For shared libraries or packages that could be used by external applications (optional based on project needs).

@@ -149,8 +149,8 @@ func (es *EsiService) AggregateEsiData(ctx context.Context, killMail *model.EsiK
 	return nil
 }
 
-// RefreshCharacter refreshes character information in ChartData.
-func (es *EsiService) RefreshCharacter(ctx context.Context, chartData *model.ChartData, client *http.Client) error {
+// RefreshEsiData refreshes character information in ChartData.
+func (es *EsiService) RefreshEsiData(ctx context.Context, chartData *model.ChartData, client *http.Client) error {
 	es.Logger.Info("Refreshing character information in ChartData.")
 
 	for characterID := range chartData.ESIData.CharacterInfos {
