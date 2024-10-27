@@ -17,13 +17,13 @@ type CharacterValueData struct {
 	Value float64
 }
 
-func RenderOurLossesValue(chartData *model.ChartData) *charts.Bar {
+func RenderOurLossesValue(orchestrateService *service.OrchestrateService, chartData *model.ChartData) *charts.Bar {
 	// Initialize a map to sum totalValue by each victim character
 	characterValues := make(map[string]float64)
 
 	if trackedCharacters == nil || len(trackedCharacters) == 0 {
 		fmt.Print(fmt.Sprintf("No tracked characters found, fetching from %d killmails", len(chartData.KillMails)))
-		trackedCharacters = service.GetTrackedCharacters(chartData.KillMails, &chartData.ESIData)
+		trackedCharacters = orchestrateService.GetTrackedCharactersFromKillMails(chartData.KillMails, &chartData.ESIData)
 	}
 
 	// Populate the characterValues map using victims from detailed killmails

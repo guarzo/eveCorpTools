@@ -41,25 +41,26 @@ func ServeRoute(route persist.Route, orchestrateService *service.OrchestrateServ
 			return
 		}
 
-		fmt.Println(fmt.Sprintf("Creating chart for %s from %s to %s based on mode %s", persist.RouteToString[route], startDate, endDate, modeStr))
-		// Fetch data and create chart
-		client := getHttpClient()
+		orchestrateService.Logger.Infof("Creating chart for %s from %s to %s based on mode %s", persist.RouteToString[route], startDate, endDate, modeStr)
 
-		if !WaitForMutexAndCallFunction(5) {
-			fmt.Println("Failed to acquire mutex")
-			LoadingHandler(w, r)
-		}
-		service.FetchAllMutex.Lock()
-		defer service.FetchAllMutex.Unlock()
+		corporations := orchestrateService.GetTrackedCorporations()
+		alliances := orchestrateService.GetTrackedAlliances()
+		characters := orchestrateService.GetTrackedCharacters()
 
 		// Fetch data and create chart using OrchestrateService
-		chartData, err := orchestrateService.GetAllData(r.Context(), route, startDate, endDate)
+		chartData, err := orchestrateService.GetAllData(r.Context(), corporations, alliances, characters, startDate, endDate)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Error fetching detailed killmails: %s", err), http.StatusInternalServerError)
+			if err.Error() == "another GetAllData operation is in progress" {
+				orchestrateService.Logger.Warn("Another GetAllData operation is in progress")
+				LoadingHandler(w, r)
+			} else {
+				orchestrateService.Logger.Errorf("Error fetching detailed killmails: %v", err)
+				http.Error(w, fmt.Sprintf("Error fetching detailed killmails: %s", err), http.StatusInternalServerError)
+			}
 			return
 		}
 
-		if err := generateChart(route, chartData, filePath, client, w); err != nil {
+		if err := generateChart(orchestrateService, route, chartData, filePath, w); err != nil {
 			http.Error(w, fmt.Sprintf("Error creating bar chart: %s", err), http.StatusInternalServerError)
 			return
 		}

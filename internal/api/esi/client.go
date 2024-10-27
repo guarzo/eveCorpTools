@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -112,6 +113,9 @@ func (esi *EsiClient) getEsiData(ctx context.Context, endpoint string, params ma
 		return nil, err
 	}
 
+	fmt.Println("sleeping in esi client -- url %s", requestURL)
+	time.Sleep(50000)
+
 	// Perform the HTTP request
 	resp, err := esi.Client.Do(req)
 	if err != nil {
@@ -122,7 +126,7 @@ func (esi *EsiClient) getEsiData(ctx context.Context, endpoint string, params ma
 
 	// Check for non-200 status codes
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := ioutil.ReadAll(resp.Body)
+		bodyBytes, _ := io.ReadAll(resp.Body)
 		esi.Logger.Errorf("Non-OK HTTP status: %s, body: %s", resp.Status, string(bodyBytes))
 		return nil, fmt.Errorf("non-OK HTTP status: %s", resp.Status)
 	}

@@ -6,9 +6,9 @@ import (
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
 
-	"github.com/gambtho/zkillanalytics/internal/data"
 	"github.com/gambtho/zkillanalytics/internal/model"
 	"github.com/gambtho/zkillanalytics/internal/persist"
+	"github.com/gambtho/zkillanalytics/internal/service"
 )
 
 // CharacterShipData holds the data for ship types used by each attacking character
@@ -18,7 +18,7 @@ type CharacterShipData struct {
 	Count         int
 }
 
-func RenderOurShips(chartData *model.ChartData) *charts.Bar {
+func RenderOurShips(orchestrator *service.OrchestrateService, chartData *model.ChartData) *charts.Bar {
 	// Initialize a map to count kills by each attacking character
 	characterShips := make(map[string]map[string]int)
 	characterKills := make(map[string]int)
@@ -32,7 +32,7 @@ func RenderOurShips(chartData *model.ChartData) *charts.Bar {
 			}
 
 			characterName := characterInfo.Name
-			shipName := data.QueryInvType(attacker.ShipTypeID)
+			shipName := orchestrator.LookupType(attacker.ShipTypeID)
 
 			// data-clean -- for ships we don't care about
 			if shipName == "" || shipName == "Capsule" || shipName == "#System" {

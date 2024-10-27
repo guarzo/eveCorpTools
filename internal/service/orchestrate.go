@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	fs "os"
-	"sync/atomic"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -33,8 +33,8 @@ type OrchestrateService struct {
 	Logger          *logrus.Logger
 	Client          *http.Client
 
-	// Atomic flag to ensure only one GetAllData runs at a time
-	isRunning uint32
+	// Mutex to ensure only one GetAllData runs at a time
+	mu sync.Mutex
 }
 
 // NewOrchestrateService initializes and returns a new OrchestrateService instance.
@@ -59,12 +59,10 @@ func NewOrchestrateService(
 // GetAllData orchestrates the data fetching process based on availability and necessity.
 // It ensures that only one instance runs at a time.
 func (os *OrchestrateService) GetAllData(ctx context.Context, corporations, alliances, characters []int, startString, endString string) (*model.ChartData, error) {
-	// Attempt to acquire the lock using atomic flag
-	if !atomic.CompareAndSwapUint32(&os.isRunning, 0, 1) {
+	if !os.AcquireMutex(5 * time.Second) {
 		return nil, fmt.Errorf("another GetAllData operation is in progress")
 	}
-	// Ensure the flag is reset after the operation
-	defer atomic.StoreUint32(&os.isRunning, 0)
+	defer os.ReleaseMutex()
 
 	// Parse the start and end dates
 	startDate, err := time.Parse("2006-01-02", startString)
@@ -80,7 +78,7 @@ func (os *OrchestrateService) GetAllData(ctx context.Context, corporations, alli
 
 	os.Logger.Infof("Fetching data from %s to %s...", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 	fetchStart := time.Now()
-
+	time.Sleep(500000)
 	year := startDate.Year()
 	esiRefresh := false
 
@@ -98,7 +96,7 @@ func (os *OrchestrateService) GetAllData(ctx context.Context, corporations, alli
 
 	esiData, err := persist.ReadEsiDataFromFile(esiFileName)
 	if err != nil || os.isESIDataStale(fileInfo) {
-		os.Logger.Errorf("error loading esi data from file: %v", err)
+		os.Logger.Warnf("Using new ESI File: %v", err)
 		esiData = &model.ESIData{
 			AllianceInfos:    make(map[int]model.Alliance),
 			CharacterInfos:   make(map[int]model.Character),
@@ -114,10 +112,9 @@ func (os *OrchestrateService) GetAllData(ctx context.Context, corporations, alli
 		CharacterIDs:   characters,
 	}
 
-	idChanged, newIDs, err := persist.CheckIfIdsChanged(fetchIDs)
-	if err != nil {
-		os.Logger.Errorf("Error checking if IDs changed: %v", err)
-		return nil, err
+	idChanged, newIDs, idStr := persist.CheckIfIdsChanged(fetchIDs)
+	if idStr != "" {
+		os.Logger.Info("Checking if IDs changed: %v", idStr)
 	}
 
 	// Create parameters for data fetching
@@ -215,4 +212,77 @@ func (os *OrchestrateService) GetMissingData(ctx context.Context, params *config
 	}
 
 	return aggregatedData, nil
+}
+
+// AcquireMutex attempts to acquire the mutex within the given timeout.
+func (os *OrchestrateService) AcquireMutex(timeout time.Duration) bool {
+	done := make(chan struct{})
+	go func() {
+		os.mu.Lock()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		return true
+	case <-time.After(timeout):
+		return false
+	}
+}
+
+// ReleaseMutex releases the mutex.
+func (os *OrchestrateService) ReleaseMutex() {
+	os.mu.Unlock()
+}
+
+// GetTrackedCorporations returns the list of tracked corporation IDs.
+func (os *OrchestrateService) GetTrackedCorporations() []int {
+	return persist.CorporationIDs
+}
+
+// GetTrackedAlliances returns the list of tracked alliance IDs.
+func (os *OrchestrateService) GetTrackedAlliances() []int {
+	return persist.AllianceIDs
+}
+
+// GetTrackedCharacters returns the list of tracked character IDs.
+func (os *OrchestrateService) GetTrackedCharacters() []int {
+	return persist.CharacterIDs
+}
+
+// GetTrackedCharactersFromKillMails extracts tracked character IDs from killmails and ESI data.
+func (os *OrchestrateService) GetTrackedCharactersFromKillMails(fullKillMail []model.DetailedKillMail, esiData *model.ESIData) []int {
+	var trackedCharacters []int
+
+	for _, km := range fullKillMail {
+		for _, attacker := range km.Attackers {
+			if persist.Contains(trackedCharacters, attacker.CharacterID) {
+				continue
+			}
+
+			_, exists := esiData.CharacterInfos[attacker.CharacterID]
+			if !exists {
+				continue
+			}
+
+			corpInfo, exists := esiData.CorporationInfos[attacker.CorporationID]
+			if !exists {
+				continue
+			}
+
+			allianceID := corpInfo.AllianceID
+
+			if persist.DisplayCharacter(attacker.CharacterID, attacker.CorporationID, allianceID) {
+				// fmt.Println(fmt.Sprintf("Adding character %d to tracked characters", attacker.CharacterID))
+				trackedCharacters = append(trackedCharacters, attacker.CharacterID)
+			}
+		}
+	}
+
+	// fmt.Println(fmt.Sprintf("Found %d tracked characters", len(trackedCharacters)))
+	return trackedCharacters
+}
+
+func (os *OrchestrateService) LookupType(id int) string {
+	return os.InvTypeService.QueryInvType(id)
 }

@@ -1,0 +1,111 @@
+//
+// import (
+//	"encoding/json"
+//	"fmt"
+//	"html/template"
+//	"net/http"
+//
+//	"github.com/gambtho/zkillanalytics/internal/model"
+//	"github.com/gambtho/zkillanalytics/internal/persist"
+//)
+//
+//func configHandler(w http.ResponseWriter) {
+//	tmpl, err := template.New("config.tmpl").Funcs(template.FuncMap{
+//		"json": func(v interface{}) (string, error) {
+//			a, err := json.Marshal(v)
+//			if err != nil {
+//				return "", err
+//			}
+//			return string(a), nil
+//		},
+//	}).ParseFiles("static/config.tmpl")
+//	if err != nil {
+//		http.Error(w, err.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//
+//	client := &http.Client{}
+//
+//	corporationIDs := persist.CorporationIDs
+//	allianceIDs := persist.AllianceIDs
+//	characterIDs := persist.CharacterIDs
+//	excludeCharacters := persist.ExcludeCharacters
+//
+//	corporationMap, err := CreateCorporationMap(client, corporationIDs)
+//	if err != nil {
+//		http.Error(w, fmt.Sprintf("Error creating corporation map: %s", err), http.StatusInternalServerError)
+//		return
+//	}
+//
+//	allianceMap, err := CreateAllianceMap(client, allianceIDs)
+//	if err != nil {
+//		http.Error(w, fmt.Sprintf("Error creating alliance map: %s", err), http.StatusInternalServerError)
+//		return
+//	}
+//
+//	characterMap, err := CreateCharacterMap(client, characterIDs)
+//	if err != nil {
+//		http.Error(w, fmt.Sprintf("Error creating character map: %s", err), http.StatusInternalServerError)
+//		return
+//	}
+//
+//	excludeCharacterMap, err := CreateCharacterMap(client, excludeCharacters)
+//	if err != nil {
+//		http.Error(w, fmt.Sprintf("Error creating exclude character map: %s", err), http.StatusInternalServerError)
+//		return
+//	}
+//
+//	type IDNamePair struct {
+//		ID   int
+//		Name string
+//	}
+//
+//	getIDNamePairs := func(dataMap map[int]model.Namer) []IDNamePair {
+//		var pairs []IDNamePair
+//		for id, info := range dataMap {
+//			pairs = append(pairs, IDNamePair{ID: id, Name: info.GetName()})
+//		}
+//		return pairs
+//	}
+//
+//	data := struct {
+//		Corporations      []IDNamePair
+//		Alliances         []IDNamePair
+//		Characters        []IDNamePair
+//		ExcludeCharacters []IDNamePair
+//	}{
+//		Corporations:      getIDNamePairs(corporationMap),
+//		Alliances:         getIDNamePairs(allianceMap),
+//		Characters:        getIDNamePairs(characterMap),
+//		ExcludeCharacters: getIDNamePairs(excludeCharacterMap),
+//	}
+//
+//	tmpl.Execute(w, data)
+//}
+//
+////func updateHandler(w http.ResponseWriter, r *http.Request) {
+////	if r.Method != http.MethodPost {
+////		http.Redirect(w, r, "/", http.StatusSeeOther)
+////		return
+////	}
+////
+////	corporationIDs = parseIDs(r.FormValue("corporationIDs"))
+////	allianceIDs = parseIDs(r.FormValue("allianceIDs"))
+////	characterIDs = parseIDs(r.FormValue("characterIDs"))
+////	excludeCharacters = parseIDs(r.FormValue("excludeCharacters"))
+////
+////	http.Redirect(w, r, "/", http.StatusSeeOther)
+////}
+////
+////func parseIDs(input string) []int {
+////	ids := []int{}
+////	for _, s := range strings.Split(input, ",") {
+////		if s != "" {
+////			id, err := strconv.Atoi(strings.TrimSpace(s))
+////			if err == nil {
+////				ids = append(ids, id)
+////			}
+////		}
+////	}
+////	return ids
+////}

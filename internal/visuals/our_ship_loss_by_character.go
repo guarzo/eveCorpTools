@@ -7,19 +7,18 @@ import (
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
 
-	"github.com/gambtho/zkillanalytics/internal/data"
 	"github.com/gambtho/zkillanalytics/internal/model"
 	"github.com/gambtho/zkillanalytics/internal/persist"
 	"github.com/gambtho/zkillanalytics/internal/service"
 )
 
-func RenderLostShipTypes(chartData *model.ChartData) *charts.Bar {
+func RenderLostShipTypes(orchestrator *service.OrchestrateService, chartData *model.ChartData) *charts.Bar {
 	// Initialize a map to count lost ship types
 	shipLosses := make(map[string]int)
 
 	if trackedCharacters == nil || len(trackedCharacters) == 0 {
 		fmt.Print(fmt.Sprintf("No tracked characters found, fetching from %d killmails", len(chartData.KillMails)))
-		trackedCharacters = service.GetTrackedCharacters(chartData.KillMails, &chartData.ESIData)
+		trackedCharacters = orchestrator.GetTrackedCharactersFromKillMails(chartData.KillMails, &chartData.ESIData)
 	}
 
 	// Populate the shipLosses map using victims from detailed killmails
@@ -29,7 +28,7 @@ func RenderLostShipTypes(chartData *model.ChartData) *charts.Bar {
 			continue
 		}
 
-		shipName := data.QueryInvType(victim.ShipTypeID)
+		shipName := orchestrator.LookupType(victim.ShipTypeID)
 
 		if shipName == "" || shipName == "Capsule" || shipName == "#System" || shipName == "Mobile Tractor Unit" {
 			continue

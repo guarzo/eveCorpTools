@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"context"
 	"encoding/json"
 	"html/template"
 	"log"
@@ -9,9 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gambtho/zkillanalytics/internal/api/esi"
 	"github.com/gambtho/zkillanalytics/internal/model"
 	"github.com/gambtho/zkillanalytics/internal/persist"
+	"github.com/gambtho/zkillanalytics/internal/service"
 )
 
 func LootAppraisalPageHandler(w http.ResponseWriter, r *http.Request) {
@@ -21,34 +22,35 @@ func LootAppraisalPageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func FetchCharacterNamesHandler(w http.ResponseWriter, r *http.Request) {
-	characterIDs := persist.CharacterIDs
-	client := &http.Client{}
-	var wg sync.WaitGroup
-	mu := &sync.Mutex{}
-	characterNames := make([]string, 0, len(characterIDs))
+func FetchCharacterNamesHandler(orchestrateService *service.OrchestrateService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		characterIDs := persist.CharacterIDs
+		var wg sync.WaitGroup
+		mu := &sync.Mutex{}
+		characterNames := make([]string, 0, len(characterIDs))
 
-	for _, id := range characterIDs {
-		wg.Add(1)
-		go func(id int) {
-			defer wg.Done()
-			character, err := esi.GetCharacterInfo(client, id)
-			if err != nil {
-				log.Printf("Error fetching character info for ID %d: %v", id, err)
-				return
-			}
-			mu.Lock()
-			characterNames = append(characterNames, character.Name)
-			mu.Unlock()
-		}(id)
-	}
+		for _, id := range characterIDs {
+			wg.Add(1)
+			go func(id int) {
+				defer wg.Done()
+				character, err := orchestrateService.ESIService.EsiClient.GetCharacterInfo(context.TODO(), id)
+				if err != nil {
+					log.Printf("Error fetching character info for ID %d: %v", id, err)
+					return
+				}
+				mu.Lock()
+				characterNames = append(characterNames, character.Name)
+				mu.Unlock()
+			}(id)
+		}
 
-	wg.Wait()
+		wg.Wait()
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(characterNames); err != nil {
-		log.Printf("Error encoding character names: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(characterNames); err != nil {
+			log.Printf("Error encoding character names: %v", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	}
 }
 

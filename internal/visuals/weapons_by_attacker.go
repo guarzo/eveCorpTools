@@ -6,12 +6,12 @@ import (
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
 
-	"github.com/gambtho/zkillanalytics/internal/data"
 	"github.com/gambtho/zkillanalytics/internal/model"
 	"github.com/gambtho/zkillanalytics/internal/persist"
+	"github.com/gambtho/zkillanalytics/internal/service"
 )
 
-func RenderWeaponsByCharacter(chartData *model.ChartData) *charts.Bar {
+func RenderWeaponsByCharacter(orchestrator *service.OrchestrateService, chartData *model.ChartData) *charts.Bar {
 	// Initialize a map to count weapons used by each attacking character
 	characterWeapons := make(map[string]map[string]int)
 	characterKills := make(map[string]int)
@@ -25,7 +25,7 @@ func RenderWeaponsByCharacter(chartData *model.ChartData) *charts.Bar {
 			}
 
 			characterName := characterInfo.Name
-			weaponName := data.QueryInvType(attacker.WeaponTypeID)
+			weaponName := orchestrator.LookupType(attacker.WeaponTypeID)
 
 			// If the weapon is the same as the ship, skip it
 			if attacker.WeaponTypeID == attacker.ShipTypeID {

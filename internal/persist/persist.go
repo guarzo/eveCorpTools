@@ -175,11 +175,11 @@ func LoadIdsFromFile() (model.Ids, error) {
 	return ids, nil
 }
 
-func CheckIfIdsChanged(ids *model.Ids) (bool, *model.Ids, error) {
+func CheckIfIdsChanged(ids *model.Ids) (bool, *model.Ids, string) {
 	// Assuming you have a way to get the old IDs
 	oldIds, err := LoadIdsFromFile()
 	if err != nil {
-		return false, nil, err
+		return true, nil, err.Error()
 	}
 
 	var newCharacterIds []int
@@ -217,7 +217,7 @@ func CheckIfIdsChanged(ids *model.Ids) (bool, *model.Ids, error) {
 		AllianceIDs:    newAllianceIds,
 		CharacterIDs:   newCharacterIds,
 		CorporationIDs: newCorporationIds,
-	}, nil
+	}, ""
 }
 
 // Contains checks if a slice Contains a specific element

@@ -1,79 +1,59 @@
 package routes
 
 import (
+	"context"
 	"fmt"
 	"html/template"
 	"net/http"
 	"path/filepath"
-	"time"
 
-	"github.com/gambtho/zkillanalytics/internal/api/esi"
 	"github.com/gambtho/zkillanalytics/internal/model"
 	"github.com/gambtho/zkillanalytics/internal/persist"
 	"github.com/gambtho/zkillanalytics/internal/service"
 	"github.com/gambtho/zkillanalytics/internal/visuals"
 )
 
-type roundTripperFunc func(*http.Request) (*http.Response, error)
-
-func (fn roundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
-	return fn(req)
-}
-
-func WaitForMutexAndCallFunction(retry int) bool {
-	count := 0
-	for count < retry {
-		if service.FetchAllMutex.TryLock() {
-			service.FetchAllMutex.Unlock()
-			return true
-		}
-		count++
-		time.Sleep(1 * time.Second) // Wait for 1 second before retrying
-	}
-	return false
-}
-
-func CreateCorporationMap(client *http.Client, ids []int) (map[int]model.Namer, error) {
-	corporationMap := make(map[int]model.Namer)
-
-	for _, id := range ids {
-		info, err := esi.GetCorporationInfo(client, id)
-		if err != nil {
-			return nil, err
-		}
-		corporationMap[id] = info
-	}
-
-	return corporationMap, nil
-}
-
-func CreateAllianceMap(client *http.Client, ids []int) (map[int]model.Namer, error) {
-	allianceMap := make(map[int]model.Namer)
-
-	for _, id := range ids {
-		info, err := esi.GetAllianceInfo(client, id)
-		if err != nil {
-			return nil, err
-		}
-		allianceMap[id] = info
-	}
-
-	return allianceMap, nil
-}
-
-func CreateCharacterMap(client *http.Client, ids []int) (map[int]model.Namer, error) {
-	characterMap := make(map[int]model.Namer)
-
-	for _, id := range ids {
-		info, err := esi.GetCharacterInfo(client, id)
-		if err != nil {
-			return nil, err
-		}
-		characterMap[id] = info
-	}
-
-	return characterMap, nil
-}
+//func CreateCorporationMap(client *http.Client, ids []int) (map[int]model.Namer, error) {
+//	corporationMap := make(map[int]model.Namer)
+//
+//	for _, id := range ids {
+//		info, err := esi.GetCorporationInfo(client, id)
+//		if err != nil {
+//			return nil, err
+//		}
+//		corporationMap[id] = info
+//	}
+//
+//	return corporationMap, nil
+//}
+//
+//func CreateAllianceMap(client *http.Client, ids []int) (map[int]model.Namer, error) {
+//	allianceMap := make(map[int]model.Namer)
+//
+//	for _, id := range ids {
+//		info, err := esi.GetAllianceInfo(client, id)
+//		if err != nil {
+//			return nil, err
+//		}
+//		allianceMap[id] = info
+//	}
+//
+//	return allianceMap, nil
+//}
+//
+//func CreateCharacterMap(client *http.Client, ids []int) (map[int]model.Namer, error) {
+//	characterMap := make(map[int]model.Namer)
+//
+//	for _, id := range ids {
+//		info, err := esi.GetCharacterInfo(client, id)
+//		if err != nil {
+//			return nil, err
+//		}
+//		characterMap[id] = info
+//	}
+//
+//	return characterMap, nil
+//}
 
 func NotFoundHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl, err := template.ParseFiles(filepath.Join("static", "404.tmpl"))
@@ -117,36 +97,26 @@ func generateFilePath(dir string, route persist.Route, startDate, endDate string
 		persist.HashParams(persist.IntSliceToString(persist.CorporationIDs)+persist.IntSliceToString(persist.AllianceIDs)+persist.IntSliceToString(persist.CharacterIDs)))
 }
 
-func getHttpClient() *http.Client {
-	return &http.Client{
-		Transport: roundTripperFunc(func(req *http.Request) (*http.Response, error) {
-			req.Header.Set("User-Agent", "guarzo.eve@gmail.com")
-			req.Header.Set("Accept-Encoding", "gzip")
-			return http.DefaultTransport.RoundTrip(req)
-		}),
-	}
-}
-
-func generateChart(route persist.Route, chartData *model.ChartData, filePath string, client *http.Client, w http.ResponseWriter) error {
+func generateChart(orchestrator *service.OrchestrateService, route persist.Route, chartData *model.ChartData, filePath string, w http.ResponseWriter) error {
 	fmt.Println("Generating chart for", persist.RouteToString[route])
 	switch route {
-	case persist.Config:
-		configHandler(w)
-		return nil
+	//case persist.Config:
+	//	configHandler(w)
+	//	return nil
 	default:
-		lastMonthData, err := fetchDataForSnippets(client, persist.PreviousMonth)
+		lastMonthData, err := fetchDataForSnippets(orchestrator, persist.PreviousMonth)
 		if err != nil {
 			return err
 		}
-		mtdData, err := fetchDataForSnippets(client, persist.MonthToDate)
+		mtdData, err := fetchDataForSnippets(orchestrator, persist.MonthToDate)
 		if err != nil {
 			return err
 		}
-		return visuals.RenderSnippets(chartData, lastMonthData, mtdData, filePath)
+		return visuals.RenderSnippets(orchestrator, chartData, lastMonthData, mtdData, filePath)
 	}
 }
 
-func fetchDataForSnippets(client *http.Client, dataMode persist.DataMode) (*model.ChartData, error) {
+func fetchDataForSnippets(orchestrator *service.OrchestrateService, dataMode persist.DataMode) (*model.ChartData, error) {
 	startDate, endDate := persist.GetDateRange(dataMode)
-	return service.GetAllData(client, persist.CorporationIDs, persist.AllianceIDs, persist.CharacterIDs, startDate, endDate)
+	return orchestrator.GetAllData(context.TODO(), persist.CorporationIDs, persist.AllianceIDs, persist.CharacterIDs, startDate, endDate)
 }

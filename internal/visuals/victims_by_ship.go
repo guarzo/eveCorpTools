@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/gambtho/zkillanalytics/internal/data"
 	"github.com/gambtho/zkillanalytics/internal/persist"
 	"github.com/gambtho/zkillanalytics/internal/service"
 
@@ -21,13 +20,13 @@ type ShipKillData struct {
 	Name       string
 }
 
-func RenderTopShipsKilled(chartData *model.ChartData) *charts.Bar {
+func RenderTopShipsKilled(orchestrator *service.OrchestrateService, chartData *model.ChartData) *charts.Bar {
 	// Initialize a map to count killmails by ship type
 	shipKillCounts := make(map[int]ShipKillData)
 
 	if trackedCharacters == nil || len(trackedCharacters) == 0 {
 		fmt.Print(fmt.Sprintf("No tracked characters found, fetching from %d killmails", len(chartData.KillMails)))
-		trackedCharacters = service.GetTrackedCharacters(chartData.KillMails, &chartData.ESIData)
+		trackedCharacters = orchestrator.GetTrackedCharactersFromKillMails(chartData.KillMails, &chartData.ESIData)
 	}
 
 	// Populate the kill count map using victims' ships from detailed killmails
@@ -38,7 +37,7 @@ func RenderTopShipsKilled(chartData *model.ChartData) *charts.Bar {
 		}
 
 		shipTypeID := km.EsiKillMail.Victim.ShipTypeID
-		shipName := data.QueryInvType(shipTypeID) // Fetch the ship name
+		shipName := orchestrator.LookupType(shipTypeID) // Fetch the ship name
 
 		if shipName == "" || shipName == "Capsule" || shipName == "#System" || shipName == "Mobile Tractor Unit" {
 			continue

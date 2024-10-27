@@ -10,8 +10,6 @@ import (
 	"github.com/gambtho/zkillanalytics/internal/persist"
 )
 
-var FetchAllMutex sync.Mutex
-
 // PrefetchService handles scheduled data prefetching.
 type PrefetchService struct {
 	OrchestrateService *OrchestrateService
@@ -38,8 +36,8 @@ func NewPrefetchService(os *OrchestrateService, logger *logrus.Logger) *Prefetch
 	}
 }
 
-// Start begins the prefetching process.
-// It ensures that only one instance runs at a time.
+// internal/service/prefetch.go
+
 func (pf *PrefetchService) Start(ctx context.Context) {
 	pf.runningMu.Lock()
 	defer pf.runningMu.Unlock()
@@ -55,7 +53,6 @@ func (pf *PrefetchService) Start(ctx context.Context) {
 	pf.Logger.Info("PrefetchService started.")
 }
 
-// run contains the main loop for prefetching.
 func (pf *PrefetchService) run(ctx context.Context) {
 	defer func() {
 		pf.runningMu.Lock()
@@ -86,24 +83,6 @@ func (pf *PrefetchService) run(ctx context.Context) {
 	}
 }
 
-// prefetch executes the data fetching logic.
-func (pf *PrefetchService) prefetch(ctx context.Context) {
-	begin, end := persist.GetDateRange(persist.YearToDate)
-	pf.Logger.Infof("Prefetching data for %s to %s...", begin, end)
-
-	// Use a derived context to allow for cancellation if needed
-	prefetchCtx, cancel := context.WithTimeout(ctx, 23*time.Hour) // Slightly less than 24h to allow shutdown
-	defer cancel()
-
-	// Attempt to fetch all data
-	_, err := pf.OrchestrateService.GetAllData(prefetchCtx, persist.CorporationIDs, persist.AllianceIDs, persist.CharacterIDs, begin, end)
-	if err != nil {
-		pf.Logger.Infof("Error fetching detailed killmails: %v", err)
-	}
-}
-
-// Stop gracefully stops the prefetching process.
-// It waits for the current prefetch to complete.
 func (pf *PrefetchService) Stop() {
 	pf.runningMu.Lock()
 	defer pf.runningMu.Unlock()
@@ -125,4 +104,20 @@ func (pf *PrefetchService) Stop() {
 	// Reset channels for potential future restarts
 	pf.stopChan = make(chan struct{})
 	pf.stopped = make(chan struct{})
+}
+
+// prefetch executes the data fetching logic.
+func (pf *PrefetchService) prefetch(ctx context.Context) {
+	begin, end := persist.GetDateRange(persist.YearToDate)
+	pf.Logger.Infof("Prefetching data for %s to %s...", begin, end)
+
+	// Use a derived context to allow for cancellation if needed
+	prefetchCtx, cancel := context.WithTimeout(ctx, 23*time.Hour) // Slightly less than 24h to allow shutdown
+	defer cancel()
+
+	// Attempt to fetch all data
+	_, err := pf.OrchestrateService.GetAllData(prefetchCtx, persist.CorporationIDs, persist.AllianceIDs, persist.CharacterIDs, begin, end)
+	if err != nil {
+		pf.Logger.Infof("Error fetching detailed killmails: %v", err)
+	}
 }

@@ -52,7 +52,7 @@ func hostBasedRouting(logger *logrus.Logger, orchestrateService *service.Orchest
 			case "loot.zoolanders.space":
 				// Serve loot routes
 				lootRouter := mux.NewRouter()
-				registerLootRoutes(lootRouter)
+				registerLootRoutes(lootRouter, orchestrateService)
 				lootRouter.ServeHTTP(w, r)
 			case "tps.zoolanders.space":
 				// Serve TPS routes
@@ -60,7 +60,7 @@ func hostBasedRouting(logger *logrus.Logger, orchestrateService *service.Orchest
 				registerTPSRoutes(tpsRouter, orchestrateService)
 				tpsRouter.ServeHTTP(w, r)
 			default:
-				//fmt.Println("Serving default route")
+				// Serve default routes
 				next.ServeHTTP(w, r)
 			}
 		})
@@ -73,19 +73,19 @@ func registerTPSRoutes(r *mux.Router, orchestrateService *service.OrchestrateSer
 	r.HandleFunc("/", routes.ServeRoute(persist.Snippets, orchestrateService)).Methods("GET")
 	r.HandleFunc("/lastMonth", routes.ServeRoute(persist.All, orchestrateService)).Methods("GET")
 	r.HandleFunc("/currentMonth", routes.ServeRoute(persist.All, orchestrateService)).Methods("GET")
-	r.HandleFunc("/config", routes.ServeRoute(persist.Config, orchestrateService)).Methods("GET")
+	//r.HandleFunc("/config", routes.ServeRoute(persist.Config, orchestrateService)).Methods("GET")
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	r.NotFoundHandler = http.HandlerFunc(routes.NotFoundHandler)
 }
 
 // registerLootRoutes registers the routes for the loot subdomain
-func registerLootRoutes(r *mux.Router) {
+func registerLootRoutes(r *mux.Router, o *service.OrchestrateService) {
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/loot-appraisal", http.StatusMovedPermanently)
 	}).Methods("GET")
 	r.HandleFunc("/loot-appraisal", routes.LootAppraisalPageHandler).Methods("GET")
 	r.HandleFunc("/appraise-loot", routes.AppraiseLootHandler).Methods("POST")
-	r.HandleFunc("/fetch-character-names", routes.FetchCharacterNamesHandler).Methods("GET")
+	r.HandleFunc("/fetch-character-names", routes.FetchCharacterNamesHandler(o)).Methods("GET")
 	r.HandleFunc("/save-loot-split", routes.SaveLootSplitHandler).Methods("POST")
 	r.HandleFunc("/delete-loot-split", routes.DeleteLootSplitHandler).Methods("POST")
 	r.HandleFunc("/save-loot-splits", routes.SaveLootSplitsHandler).Methods("POST")
@@ -101,7 +101,7 @@ func StartServer(port int, userAgent string) {
 	logger := logrus.New()
 	logger.SetFormatter(&logrus.JSONFormatter{})
 	logger.SetOutput(os.Stdout)
-	logger.SetLevel(logrus.InfoLevel)
+	logger.SetLevel(logrus.DebugLevel) // Set to Debug for more detailed logs
 
 	// Log runtime information
 	logger.Info("Initializing server...")
@@ -118,10 +118,24 @@ func StartServer(port int, userAgent string) {
 		logger.Fatal("Failed to initialize cache")
 	}
 
+	// Ensure necessary directories exist
+	dirs := []string{
+		"data",
+		"data/monthly",
+		"data/charts",
+	}
+	for _, dir := range dirs {
+		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+			logger.Fatalf("Failed to create directory %s: %v", dir, err)
+		} else {
+			logger.Infof("Ensured directory exists: %s", dir)
+		}
+	}
+
 	// Clear cache directory if needed
 	err := persist.DeleteFilesInDirectory(persist.GetChartsDirectory())
 	if err != nil {
-		logger.Errorf("Failed to clear cache directory: %v", err)
+		logger.Infof("Using new charts directory: %v", err)
 	}
 
 	// Initialize HTTP Client with Timeout
@@ -142,9 +156,13 @@ func StartServer(port int, userAgent string) {
 	// Initialize OrchestrateService with EsiService and KillMailService
 	orchestrateService := service.NewOrchestrateService(esiService, killMailService, invTypeService, cache, logger, httpClient)
 
-	// Initialize and start PrefetchService
+	// Create a root context that we can cancel on shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel() // Ensure resources are cleaned up
+
+	// Initialize and start PrefetchService with the root context
 	prefetchService := service.NewPrefetchService(orchestrateService, logger)
-	prefetchService.Start(context.Background())
+	prefetchService.Start(ctx)
 
 	// Initialize Main Router
 	mainRouter := mux.NewRouter()
@@ -184,19 +202,22 @@ func StartServer(port int, userAgent string) {
 		sigint := make(chan os.Signal, 1)
 		// Catch interrupt and terminate signals
 		signal.Notify(sigint, os.Interrupt, syscall.SIGTERM)
-		<-sigint
+		sig := <-sigint
 
 		// Received an interrupt signal, initiate graceful shutdown
-		logger.Info("Shutting down server...")
+		logger.Infof("Received signal: %v. Shutting down server...", sig)
+
+		// Cancel the root context to signal PrefetchService to stop
+		cancel()
 
 		// Create a deadline to wait for current operations to complete
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer shutdownCancel()
 
-		// Attempt graceful shutdown
-		if err := server.Shutdown(ctx); err != nil {
+		// Attempt graceful shutdown of the HTTP server
+		if err := server.Shutdown(shutdownCtx); err != nil {
 			// Error from closing listeners, or context timeout
-			logger.Fatalf("HTTP server Shutdown: %v", err)
+			logger.Errorf("HTTP server Shutdown: %v", err)
 		}
 
 		// Stop PrefetchService

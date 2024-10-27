@@ -12,10 +12,12 @@ import (
 
 var trackedCharacters []int
 
-func RenderSnippets(ytdChartData, lastMonthChartData, mtdChartData *model.ChartData, filePath string) error {
-	ytdTrackedCharacters := service.GetTrackedCharacters(ytdChartData.KillMails, &ytdChartData.ESIData)
-	lastMTrackedCharacters := service.GetTrackedCharacters(lastMonthChartData.KillMails, &lastMonthChartData.ESIData)
-	mtdTrackedCharacters := service.GetTrackedCharacters(mtdChartData.KillMails, &mtdChartData.ESIData)
+// RenderSnippets generates and renders chart snippets based on provided chart data.
+func RenderSnippets(orchestrateService *service.OrchestrateService, ytdChartData, lastMonthChartData, mtdChartData *model.ChartData, filePath string) error {
+	// Fetch tracked characters from OrchestrateService
+	ytdTrackedCharacters := orchestrateService.GetTrackedCharactersFromKillMails(ytdChartData.KillMails, &ytdChartData.ESIData)
+	lastMTrackedCharacters := orchestrateService.GetTrackedCharactersFromKillMails(lastMonthChartData.KillMails, &lastMonthChartData.ESIData)
+	mtdTrackedCharacters := orchestrateService.GetTrackedCharactersFromKillMails(mtdChartData.KillMails, &mtdChartData.ESIData)
 
 	trackedCharacters = append(trackedCharacters, ytdTrackedCharacters...)
 	trackedCharacters = append(trackedCharacters, lastMTrackedCharacters...)
@@ -26,9 +28,9 @@ func RenderSnippets(ytdChartData, lastMonthChartData, mtdChartData *model.ChartD
 		YTDChartHTML template.HTML
 		LMChartHTML  template.HTML
 	}{
-		MTDChartHTML: renderToHtml(RenderTopCharacters(mtdChartData), RenderOurShips(mtdChartData), RenderPointsPerCharacter(mtdChartData), RenderDamageDone(mtdChartData, "damage"), RenderDamageDone(mtdChartData, "blows"), RenderSolo(mtdChartData), RenderWeaponsByCharacter(mtdChartData), RenderVictims(mtdChartData), RenderTopShipsKilled(mtdChartData), RenderLostShipTypes(mtdChartData), RenderOurLossesValue(mtdChartData), RenderOurLossesCount(mtdChartData)),
-		YTDChartHTML: renderToHtml(RenderTopCharacters(ytdChartData), RenderOurShips(ytdChartData), RenderPointsPerCharacter(ytdChartData), RenderDamageDone(ytdChartData, "damage"), RenderDamageDone(ytdChartData, "blows"), RenderSolo(ytdChartData), RenderWeaponsByCharacter(ytdChartData), RenderVictims(ytdChartData), RenderTopShipsKilled(ytdChartData), RenderLostShipTypes(ytdChartData), RenderOurLossesValue(ytdChartData), RenderOurLossesCount(ytdChartData)),
-		LMChartHTML:  renderToHtml(RenderTopCharacters(lastMonthChartData), RenderOurShips(lastMonthChartData), RenderPointsPerCharacter(lastMonthChartData), RenderDamageDone(lastMonthChartData, "damage"), RenderDamageDone(lastMonthChartData, "blows"), RenderSolo(lastMonthChartData), RenderWeaponsByCharacter(lastMonthChartData), RenderVictims(lastMonthChartData), RenderTopShipsKilled(lastMonthChartData), RenderLostShipTypes(lastMonthChartData), RenderOurLossesValue(lastMonthChartData), RenderOurLossesCount(lastMonthChartData)),
+		MTDChartHTML: renderToHtml(RenderTopCharacters(mtdChartData), RenderOurShips(orchestrateService, mtdChartData), RenderPointsPerCharacter(mtdChartData), RenderDamageDone(mtdChartData, "damage"), RenderDamageDone(mtdChartData, "blows"), RenderSolo(mtdChartData), RenderWeaponsByCharacter(orchestrateService, mtdChartData), RenderVictims(mtdChartData), RenderTopShipsKilled(orchestrateService, mtdChartData), RenderLostShipTypes(orchestrateService, mtdChartData), RenderOurLossesValue(orchestrateService, mtdChartData), RenderOurLossesCount(orchestrateService, mtdChartData)),
+		YTDChartHTML: renderToHtml(RenderTopCharacters(ytdChartData), RenderOurShips(orchestrateService, ytdChartData), RenderPointsPerCharacter(ytdChartData), RenderDamageDone(ytdChartData, "damage"), RenderDamageDone(ytdChartData, "blows"), RenderSolo(ytdChartData), RenderWeaponsByCharacter(orchestrateService, ytdChartData), RenderVictims(ytdChartData), RenderTopShipsKilled(orchestrateService, ytdChartData), RenderLostShipTypes(orchestrateService, ytdChartData), RenderOurLossesValue(orchestrateService, ytdChartData), RenderOurLossesCount(orchestrateService, ytdChartData)),
+		LMChartHTML:  renderToHtml(RenderTopCharacters(lastMonthChartData), RenderOurShips(orchestrateService, lastMonthChartData), RenderPointsPerCharacter(lastMonthChartData), RenderDamageDone(lastMonthChartData, "damage"), RenderDamageDone(lastMonthChartData, "blows"), RenderSolo(lastMonthChartData), RenderWeaponsByCharacter(orchestrateService, lastMonthChartData), RenderVictims(lastMonthChartData), RenderTopShipsKilled(orchestrateService, lastMonthChartData), RenderLostShipTypes(orchestrateService, lastMonthChartData), RenderOurLossesValue(orchestrateService, lastMonthChartData), RenderOurLossesCount(orchestrateService, lastMonthChartData)),
 	}
 
 	tmpl, err := template.New("chart.tmpl").ParseFiles(filepath.Join("static", "chart.tmpl"))

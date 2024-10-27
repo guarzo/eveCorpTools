@@ -12,13 +12,13 @@ import (
 	"github.com/gambtho/zkillanalytics/internal/service"
 )
 
-func RenderOurLossesCount(chartData *model.ChartData) *charts.Bar {
+func RenderOurLossesCount(orchestrator *service.OrchestrateService, chartData *model.ChartData) *charts.Bar {
 	// Initialize a map to count losses by each victim character
 	characterLosses := make(map[string]int)
 
 	if trackedCharacters == nil || len(trackedCharacters) == 0 {
 		fmt.Print(fmt.Sprintf("No tracked characters found, fetching from %d killmails", len(chartData.KillMails)))
-		trackedCharacters = service.GetTrackedCharacters(chartData.KillMails, &chartData.ESIData)
+		trackedCharacters = orchestrator.GetTrackedCharactersFromKillMails(chartData.KillMails, &chartData.ESIData)
 	}
 
 	// Populate the characterLosses map using victims from detailed killmails
