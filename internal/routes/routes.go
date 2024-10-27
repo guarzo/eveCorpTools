@@ -13,7 +13,7 @@ import (
 )
 
 // ServeRoute is an HTTP handler that generates a bar chart based on the mode
-func ServeRoute(route persist.Route) http.HandlerFunc {
+func ServeRoute(route persist.Route, orchestrateService *service.OrchestrateService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Parse URL parameters to determine data mode
 		vars := mux.Vars(r)
@@ -52,7 +52,8 @@ func ServeRoute(route persist.Route) http.HandlerFunc {
 		service.FetchAllMutex.Lock()
 		defer service.FetchAllMutex.Unlock()
 
-		chartData, err := service.GetAllData(client, persist.CorporationIDs, persist.AllianceIDs, persist.CharacterIDs, startDate, endDate)
+		// Fetch data and create chart using OrchestrateService
+		chartData, err := orchestrateService.GetAllData(r.Context(), route, startDate, endDate)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error fetching detailed killmails: %s", err), http.StatusInternalServerError)
 			return

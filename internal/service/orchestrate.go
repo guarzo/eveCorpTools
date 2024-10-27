@@ -1,35 +1,98 @@
+// internal/service/orchestrate_service.go
+
 package service
 
 import (
+	"context"
 	"fmt"
 	"net/http"
-	"os"
+	fs "os"
+	"sync/atomic"
 	"time"
 
-	"github.com/gambtho/zkillanalytics/internal/api/zkill"
+	"github.com/sirupsen/logrus"
+
 	"github.com/gambtho/zkillanalytics/internal/config"
+	"github.com/gambtho/zkillanalytics/internal/data"
 	"github.com/gambtho/zkillanalytics/internal/model"
 	"github.com/gambtho/zkillanalytics/internal/persist"
 	"github.com/gambtho/zkillanalytics/internal/utils"
 )
 
-// GetAllData Main function to orchestrate data fetching based on availability and necessity.
-func GetAllData(client *http.Client, corporations, alliances, characters []int, startString, endString string) (*model.ChartData, error) {
-	fmt.Println(fmt.Sprintf("Fetching data for %s to %s...", startString, endString))
+// OrchestrateService coordinates data fetching, aggregation, and persistence.
+type OrchestrateService struct {
+	KillMailService *KillMailService
+	ESIService      *EsiService
+	InvTypeService  *data.InvTypeService
+	Cache           *persist.Cache
+	Logger          *logrus.Logger
+	Client          *http.Client
+
+	// Atomic flag to ensure only one GetAllData runs at a time
+	isRunning uint32
+}
+
+// NewOrchestrateService initializes and returns a new OrchestrateService instance.
+func NewOrchestrateService(
+	esiService *EsiService,
+	killMailService *KillMailService,
+	invTypeService *data.InvTypeService,
+	cache *persist.Cache,
+	logger *logrus.Logger,
+	client *http.Client,
+) *OrchestrateService {
+	return &OrchestrateService{
+		ESIService:      esiService,
+		KillMailService: killMailService,
+		InvTypeService:  invTypeService,
+		Cache:           cache,
+		Logger:          logger,
+		Client:          client,
+	}
+}
+
+// GetAllData orchestrates the data fetching process based on availability and necessity.
+// It ensures that only one instance runs at a time.
+func (os *OrchestrateService) GetAllData(ctx context.Context, corporations, alliances, characters []int, startString, endString string) (*model.ChartData, error) {
+	// Attempt to acquire the lock using atomic flag
+	if !atomic.CompareAndSwapUint32(&os.isRunning, 0, 1) {
+		return nil, fmt.Errorf("another GetAllData operation is in progress")
+	}
+	// Ensure the flag is reset after the operation
+	defer atomic.StoreUint32(&os.isRunning, 0)
+
+	// Parse the start and end dates
+	startDate, err := time.Parse("2006-01-02", startString)
+	if err != nil {
+		os.Logger.Errorf("Invalid start date format: %v", err)
+		return nil, err
+	}
+	endDate, err := time.Parse("2006-01-02", endString)
+	if err != nil {
+		os.Logger.Errorf("Invalid end date format: %v", err)
+		return nil, err
+	}
+
+	os.Logger.Infof("Fetching data from %s to %s...", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 	fetchStart := time.Now()
 
-	startDate, _ := time.Parse("2006-01-02", startString)
-	endDate, _ := time.Parse("2006-01-02", endString)
 	year := startDate.Year()
 	esiRefresh := false
 
-	dataAvailability, _ := utils.CheckDataAvailability(int(startDate.Month()), int(endDate.Month()), year)
+	// Check data availability
+	dataAvailability, err := utils.CheckDataAvailability(int(startDate.Month()), int(endDate.Month()), year)
+	if err != nil {
+		os.Logger.Errorf("Error checking data availability: %v", err)
+		return nil, err
+	}
+
+	// Load ESI data
 
 	esiFileName := persist.GenerateEsiDataFileName()
-	fileInfo, err := os.Stat(esiFileName)
+	fileInfo, err := fs.Stat(esiFileName)
 
 	esiData, err := persist.ReadEsiDataFromFile(esiFileName)
-	if err != nil || time.Since(fileInfo.ModTime()) > 48*time.Hour || fileInfo.Size() <= 50*1024 {
+	if err != nil || os.isESIDataStale(fileInfo) {
 		fmt.Println("Error loading esi data from file:", err)
 		esiData = &model.ESIData{
 			AllianceInfos:    make(map[int]model.Alliance),
@@ -39,6 +102,7 @@ func GetAllData(client *http.Client, corporations, alliances, characters []int, 
 		esiRefresh = true
 	}
 
+	// Check if IDs have changed
 	fetchIDs := &model.Ids{
 		CorporationIDs: corporations,
 		AllianceIDs:    alliances,
@@ -47,31 +111,36 @@ func GetAllData(client *http.Client, corporations, alliances, characters []int, 
 
 	idChanged, newIDs, err := persist.CheckIfIdsChanged(fetchIDs)
 	if err != nil {
-		fmt.Println("Error checking if IDs changed:", err)
-	}
-
-	params := config.NewParams(client, corporations, alliances, characters, year, esiData, idChanged, newIDs)
-
-	// Fetch missing data if necessary
-	newData, err := GetMissingData(params, dataAvailability)
-	if err != nil {
+		os.Logger.Errorf("Error checking if IDs changed: %v", err)
 		return nil, err
 	}
 
-	// Combine new data with any previously fetched data for a complete year-to-date view
+	// Create parameters for data fetching
+	params := config.NewParams(os.Client, corporations, alliances, characters, year, esiData, idChanged, newIDs)
+
+	// Fetch missing data if necessary
+	newData, err := os.GetMissingData(ctx, &params, dataAvailability)
+	if err != nil {
+		os.Logger.Errorf("Error fetching missing data: %v", err)
+		return nil, err
+	}
+
+	// Aggregate existing monthly data into ChartData
 	for month := int(startDate.Month()); month <= int(endDate.Month()); month++ {
 		if dataAvailability[month] {
 			// Load existing data from file
 			fileName := persist.GenerateZkillFileName(year, month)
-			monthData, err := persist.ReadKillMailDataFromFile(fileName)
+			monthlyKillMailData, err := persist.ReadKillMailDataFromFile(fileName)
 			if err != nil {
-				fmt.Println("Error loading data from file:", err)
+				os.Logger.Errorf("Error loading data from file %s: %v", fileName, err)
 				continue
 			}
-			newData = AggregateKillMailDumps(newData, monthData)
+			// Aggregate KillMailData into ChartData
+			newData = os.KillMailService.AggregateKillMailDumps(newData, monthlyKillMailData)
 		}
 	}
 
+	// Initialize ChartData if it's nil
 	chartData := &model.ChartData{
 		KillMails: newData.KillMails,
 		ESIData:   *esiData,
@@ -79,105 +148,90 @@ func GetAllData(client *http.Client, corporations, alliances, characters []int, 
 
 	// Refresh ESI data if necessary
 	if esiRefresh {
-		RefreshCharacter(chartData, client)
+		err = os.ESIService.RefreshCharacter(ctx, chartData, os.Client)
+		if err != nil {
+			os.Logger.Errorf("Error refreshing ESI data: %v", err)
+			return nil, err
+		}
 	}
 
-	err = persist.SaveEsiDataToFile(persist.GenerateEsiDataFileName(), &chartData.ESIData)
+	// Persist ESI data and IDs
+	err = persist.SaveEsiDataToFile(esiFileName, esiData)
 	if err != nil {
-		fmt.Println(fmt.Println("Error saving esi data:", err))
+		os.Logger.Errorf("Error saving ESI data: %v", err)
+		return nil, err
 	}
 
 	err = persist.SaveIdsToFile(fetchIDs)
 	if err != nil {
-		fmt.Println(fmt.Println("Error saving ids data:", err))
+		os.Logger.Errorf("Error saving IDs data: %v", err)
+		return nil, err
 	}
 
 	fetchTotalTime := time.Since(fetchStart)
-	fmt.Println(fmt.Sprintf("Data fetching complete in %f seconds", fetchTotalTime.Seconds()))
+	os.Logger.Infof("Data fetching complete in %.2f seconds", fetchTotalTime.Seconds())
 	return chartData, nil
 }
 
-func GetMissingData(params config.Params, dataAvailability map[int]bool) (*model.KillMailData, error) {
+func (os *OrchestrateService) isESIDataStale(fileInfo fs.FileInfo) bool {
+	return time.Since(fileInfo.ModTime()) > 48*time.Hour || fileInfo.Size() <= 50*1024
+}
+
+// GetMissingData fetches missing killmails based on data availability and parameters.
+func (os *OrchestrateService) GetMissingData(ctx context.Context, params *config.Params, dataAvailability map[int]bool) (*model.KillMailData, error) {
 	aggregatedData := &model.KillMailData{
 		KillMails: []model.DetailedKillMail{},
 	}
 
 	for month, available := range dataAvailability {
-		var err error
-
 		if available && !params.ChangedIDs {
+			// Data for this month is already available and IDs haven't changed; skip fetching.
 			continue
 		}
 
 		if params.ChangedIDs {
-			// do full pull if IDs have changed
+			// IDs have changed; perform a full data pull for this month.
 			available = false
 		}
 
-		tempParams := params
-
-		newData, err := GetDataForMonth(tempParams, month)
+		monthlyKillMailData, err := os.KillMailService.GetKillMailDataForMonth(ctx, params, month)
 		if err != nil {
+			os.Logger.Errorf("Error fetching data for month %d: %v", month, err)
 			return nil, err
 		}
 
 		fileName := persist.GenerateZkillFileName(params.Year, month)
-		if err = persist.SaveKillMailsToFile(fileName, newData); err != nil {
+		if err = persist.SaveKillMailsToFile(fileName, monthlyKillMailData); err != nil {
+			os.Logger.Errorf("Failed to save fetched data to file %s: %v", fileName, err)
 			return nil, fmt.Errorf("failed to save fetched data: %w", err)
 		}
-		aggregatedData = AggregateKillMailDumps(aggregatedData, newData)
+
+		aggregatedData = os.KillMailService.AggregateKillMailDumps(aggregatedData, monthlyKillMailData)
 	}
 
 	return aggregatedData, nil
 }
 
-// GetDataForMonth fetches and processes data for a specific month when it's not already downloaded.
-func GetDataForMonth(params config.Params, month int) (*model.KillMailData, error) {
-	aggregatedMonthData := &model.KillMailData{
-		KillMails: []model.DetailedKillMail{},
+// CombineEsiAndKillMail processes a kill mail and updates the aggregated data.
+func (os *OrchestrateService) CombineEsiAndKillMail(ctx context.Context, kmModel model.KillMail, aggregatedData *model.KillMailData, esiData *model.ESIData) error {
+	// Fetch the full killmail details using EsiService.
+	fullKillMail, err := os.ESIService.EsiClient.GetEsiKillMail(ctx, int(kmModel.KillMailID), kmModel.ZKB.Hash)
+	if err != nil {
+		return fmt.Errorf("failed to fetch full killmail for ID %d: %w", kmModel.KillMailID, err)
 	}
 
-	// Create a map to keep track of the kill mail IDs that have been added
-	killMailIDs := make(map[int]bool)
-
-	// Fetch data for all entity types and aggregate
-	entityGroups := map[string][]int{
-		config.EntityTypeCorporation: params.Corporations,
-		config.EntityTypeAlliance:    params.Alliances,
-		config.EntityTypeCharacter:   params.Characters,
+	// Aggregate ESI data into the global ESIData.
+	err = os.ESIService.AggregateEsiData(ctx, fullKillMail, esiData)
+	if err != nil {
+		return fmt.Errorf("failed to aggregate ESI data: %w", err)
 	}
 
-	fmt.Println(fmt.Sprintf("Fetching data for %04d-%02d...", params.Year, month))
-
-	// Assume FetchEntityPageData is a generic function to fetch data for corporations, alliances, or characters
-	fetchEntityPageData := func(entityType string, entityID int, page int) ([]model.KillMail, error) {
-		var err error
-		var killMails []model.KillMail
-		switch entityType {
-		case config.EntityTypeCorporation:
-			killMails, err = zkill.GetCorporatePageData(config.ZkillURL, params.Client, entityID, page, params.Year, month)
-		case config.EntityTypeAlliance:
-			killMails, err = zkill.GetAlliancePageData(config.ZkillURL, params.Client, entityID, page, params.Year, month)
-		case config.EntityTypeCharacter:
-			killMails, err = zkill.GetCharacterPageData(config.ZkillURL, params.Client, entityID, page, params.Year, month)
-		}
-		fmt.Println(fmt.Sprintf("FetchEntityPageData %d killmails for %s %d, page %d", len(killMails), entityType, entityID, page))
-		return killMails, err
+	// Create a DetailedKillMail and append it to the aggregated killmails.
+	dKM := model.DetailedKillMail{
+		KillMail:    kmModel,
+		EsiKillMail: *fullKillMail,
 	}
+	aggregatedData.KillMails = append(aggregatedData.KillMails, dKM)
 
-	rawKillMails := GetRawKillMails(entityGroups, fetchEntityPageData)
-
-	AggregateKillMails(params, rawKillMails, killMailIDs, aggregatedMonthData)
-
-	GetVictimKillMails(params, month, aggregatedMonthData, killMailIDs)
-
-	fmt.Println(fmt.Sprintf("For month %04d-%02d, fetched %d killmails", params.Year, month, len(aggregatedMonthData.KillMails)))
-	fmt.Println(fmt.Sprintf("Currently %d characters, %d corporations, and %d alliances", len(params.EsiData.CharacterInfos), len(params.EsiData.CorporationInfos), len(params.EsiData.AllianceInfos)))
-
-	if len(aggregatedMonthData.KillMails) == 0 {
-		fmt.Println(fmt.Sprintf("No killmails found for %04d-%02d", params.Year, month))
-		fmt.Println("Returning empty data")
-	}
-
-	return aggregatedMonthData, nil
+	return nil
 }

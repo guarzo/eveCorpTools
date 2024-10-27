@@ -65,7 +65,7 @@ func CreateCharacterMap(client *http.Client, ids []int) (map[int]model.Namer, er
 	characterMap := make(map[int]model.Namer)
 
 	for _, id := range ids {
-		info, err := esi.FetchCharacterInfo(client, id)
+		info, err := esi.GetCharacterInfo(client, id)
 		if err != nil {
 			return nil, err
 		}

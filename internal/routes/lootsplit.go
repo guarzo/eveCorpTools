@@ -32,7 +32,7 @@ func FetchCharacterNamesHandler(w http.ResponseWriter, r *http.Request) {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			character, err := esi.FetchCharacterInfo(client, id)
+			character, err := esi.GetCharacterInfo(client, id)
 			if err != nil {
 				log.Printf("Error fetching character info for ID %d: %v", id, err)
 				return
