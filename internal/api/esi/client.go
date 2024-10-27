@@ -87,6 +87,7 @@ func (esi *EsiClient) generateCacheKey(endpoint string, params map[string]string
 
 // getEsiData is a generic method to fetch raw data for any ESI endpoint with caching.
 func (esi *EsiClient) getEsiData(ctx context.Context, endpoint string, params map[string]string) ([]byte, error) {
+	esi.Logger.Debugf("Getting ESI Data")
 	// Generate a unique cache key based on endpoint and sorted parameters.
 	cacheKey := esi.generateCacheKey(endpoint, params)
 
@@ -104,17 +105,12 @@ func (esi *EsiClient) getEsiData(ctx context.Context, endpoint string, params ma
 		return nil, err
 	}
 
-	esi.Logger.Infof("Fetching ESI data from URL %s", requestURL)
-
 	// Create HTTP request
 	req, err := http.NewRequestWithContext(ctx, "GET", requestURL, nil)
 	if err != nil {
 		esi.Logger.Errorf("Failed to create request: %v", err)
 		return nil, err
 	}
-
-	fmt.Println("sleeping in esi client -- url %s", requestURL)
-	time.Sleep(50000)
 
 	// Perform the HTTP request
 	resp, err := esi.Client.Do(req)
@@ -141,8 +137,6 @@ func (esi *EsiClient) getEsiData(ctx context.Context, endpoint string, params ma
 	// Cache the fetched data.
 	if err := esi.Cache.Set(cacheKey, data, defaultCacheExpiration); err != nil {
 		esi.Logger.Errorf("Failed to set cache for key %s: %v", cacheKey, err)
-	} else {
-		esi.Logger.Infof("Cached data for key %s", cacheKey)
 	}
 
 	return data, nil

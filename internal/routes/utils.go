@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"path/filepath"
 
+	"github.com/gambtho/zkillanalytics/internal/config"
 	"github.com/gambtho/zkillanalytics/internal/model"
 	"github.com/gambtho/zkillanalytics/internal/persist"
 	"github.com/gambtho/zkillanalytics/internal/service"
@@ -76,39 +77,39 @@ func LoadingHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, nil)
 }
 
-func getDataMode(modeStr, lastPart string) persist.DataMode {
-	dataMode, ok := persist.StringToDataMode[modeStr]
+func getDataMode(modeStr, lastPart string) config.DataMode {
+	dataMode, ok := config.StringToDataMode[modeStr]
 	if !ok {
-		dataMode = persist.YearToDate
+		dataMode = config.YearToDate
 	}
 
 	if lastPart == "lastMonth" {
-		dataMode = persist.PreviousMonth
+		dataMode = config.PreviousMonth
 	}
 	if lastPart == "currentMonth" {
-		dataMode = persist.MonthToDate
+		dataMode = config.MonthToDate
 	}
 
 	return dataMode
 }
 
-func generateFilePath(dir string, route persist.Route, startDate, endDate string) string {
-	return persist.GenerateChartFileName(dir, persist.RouteToString[route], startDate, endDate,
-		persist.HashParams(persist.IntSliceToString(persist.CorporationIDs)+persist.IntSliceToString(persist.AllianceIDs)+persist.IntSliceToString(persist.CharacterIDs)))
+func generateFilePath(dir string, route config.Route, startDate, endDate string) string {
+	return persist.GenerateChartFileName(dir, config.RouteToString[route], startDate, endDate,
+		persist.HashParams(persist.IntSliceToString(config.CorporationIDs)+persist.IntSliceToString(config.AllianceIDs)+persist.IntSliceToString(config.CharacterIDs)))
 }
 
-func generateChart(orchestrator *service.OrchestrateService, route persist.Route, chartData *model.ChartData, filePath string, w http.ResponseWriter) error {
-	fmt.Println("Generating chart for", persist.RouteToString[route])
+func generateChart(orchestrator *service.OrchestrateService, route config.Route, chartData *model.ChartData, filePath string, w http.ResponseWriter) error {
+	fmt.Println("Generating chart for", config.RouteToString[route])
 	switch route {
 	//case persist.Config:
 	//	configHandler(w)
 	//	return nil
 	default:
-		lastMonthData, err := fetchDataForSnippets(orchestrator, persist.PreviousMonth)
+		lastMonthData, err := fetchDataForSnippets(orchestrator, config.PreviousMonth)
 		if err != nil {
 			return err
 		}
-		mtdData, err := fetchDataForSnippets(orchestrator, persist.MonthToDate)
+		mtdData, err := fetchDataForSnippets(orchestrator, config.MonthToDate)
 		if err != nil {
 			return err
 		}
@@ -116,7 +117,7 @@ func generateChart(orchestrator *service.OrchestrateService, route persist.Route
 	}
 }
 
-func fetchDataForSnippets(orchestrator *service.OrchestrateService, dataMode persist.DataMode) (*model.ChartData, error) {
+func fetchDataForSnippets(orchestrator *service.OrchestrateService, dataMode config.DataMode) (*model.ChartData, error) {
 	startDate, endDate := persist.GetDateRange(dataMode)
-	return orchestrator.GetAllData(context.TODO(), persist.CorporationIDs, persist.AllianceIDs, persist.CharacterIDs, startDate, endDate)
+	return orchestrator.GetAllData(context.TODO(), config.CorporationIDs, config.AllianceIDs, config.CharacterIDs, startDate, endDate)
 }

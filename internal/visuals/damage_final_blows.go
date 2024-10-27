@@ -6,8 +6,8 @@ import (
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
 
+	"github.com/gambtho/zkillanalytics/internal/config"
 	"github.com/gambtho/zkillanalytics/internal/model"
-	"github.com/gambtho/zkillanalytics/internal/persist"
 )
 
 type CharacterData struct {
@@ -33,7 +33,7 @@ func RenderDamageDone(chartData *model.ChartData, displayType string) *charts.Ba
 
 			characterName := characterInfo.Name
 
-			if persist.DisplayCharacter(attacker.CharacterID, attacker.CorporationID, attacker.AllianceID) {
+			if config.DisplayCharacter(attacker.CharacterID, attacker.CorporationID, attacker.AllianceID) {
 				// Get the character data from the map, or initialize a new one if it doesn't exist
 				data, exists := characterDataMap[characterName]
 				if !exists {

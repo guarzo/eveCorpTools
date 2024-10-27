@@ -4,21 +4,23 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+
+	"github.com/gambtho/zkillanalytics/internal/config"
 )
 
 // GetDateRange returns the start and end dates based on the data mode
-func GetDateRange(mode DataMode) (startDate, endDate string) {
+func GetDateRange(mode config.DataMode) (startDate, endDate string) {
 	currentYear := time.Now().Format("2006")
 	currentMonth, _ := time.Parse("01", time.Now().Format("01"))
 
 	switch mode {
-	case YearToDate:
+	case config.YearToDate:
 		startDate = fmt.Sprintf("%s-01-01", currentYear)
 		endDate = time.Now().Format("2006-01-02")
-	case MonthToDate:
+	case config.MonthToDate:
 		startDate = fmt.Sprintf("%s-%02d-01", currentYear, currentMonth.Month())
 		endDate = time.Now().Format("2006-01-02")
-	case PreviousMonth:
+	case config.PreviousMonth:
 		lastMonth := currentMonth.Month() - 1
 		if lastMonth == 0 {
 			lastMonth = 12

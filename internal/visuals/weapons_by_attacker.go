@@ -6,8 +6,8 @@ import (
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
 
+	"github.com/gambtho/zkillanalytics/internal/config"
 	"github.com/gambtho/zkillanalytics/internal/model"
-	"github.com/gambtho/zkillanalytics/internal/persist"
 	"github.com/gambtho/zkillanalytics/internal/service"
 )
 
@@ -38,7 +38,7 @@ func RenderWeaponsByCharacter(orchestrator *service.OrchestrateService, chartDat
 				continue
 			}
 
-			if persist.DisplayCharacter(attacker.CharacterID, attacker.CorporationID, attacker.AllianceID) {
+			if config.DisplayCharacter(attacker.CharacterID, attacker.CorporationID, attacker.AllianceID) {
 				if _, found := characterWeapons[characterName]; !found {
 					characterWeapons[characterName] = make(map[string]int)
 				}

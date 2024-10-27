@@ -78,7 +78,7 @@ func (os *OrchestrateService) GetAllData(ctx context.Context, corporations, alli
 
 	os.Logger.Infof("Fetching data from %s to %s...", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 	fetchStart := time.Now()
-	time.Sleep(500000)
+	os.Logger.Info("really starting")
 	year := startDate.Year()
 	esiRefresh := false
 
@@ -114,11 +114,11 @@ func (os *OrchestrateService) GetAllData(ctx context.Context, corporations, alli
 
 	idChanged, newIDs, idStr := persist.CheckIfIdsChanged(fetchIDs)
 	if idStr != "" {
-		os.Logger.Info("Checking if IDs changed: %v", idStr)
+		os.Logger.Infof("Checking if IDs changed: %s", idStr)
 	}
 
 	// Create parameters for data fetching
-	params := config.NewParams(os.Client, corporations, alliances, characters, year, esiData, idChanged, newIDs)
+	params := model.NewParams(os.Client, corporations, alliances, characters, year, esiData, idChanged, newIDs)
 
 	// Fetch missing data if necessary
 	newData, err := os.GetMissingData(ctx, &params, dataAvailability)
@@ -180,7 +180,7 @@ func (os *OrchestrateService) isESIDataStale(fileInfo fs.FileInfo) bool {
 }
 
 // GetMissingData fetches missing killmails based on data availability and parameters.
-func (os *OrchestrateService) GetMissingData(ctx context.Context, params *config.Params, dataAvailability map[int]bool) (*model.KillMailData, error) {
+func (os *OrchestrateService) GetMissingData(ctx context.Context, params *model.Params, dataAvailability map[int]bool) (*model.KillMailData, error) {
 	aggregatedData := &model.KillMailData{
 		KillMails: []model.DetailedKillMail{},
 	}
@@ -237,17 +237,17 @@ func (os *OrchestrateService) ReleaseMutex() {
 
 // GetTrackedCorporations returns the list of tracked corporation IDs.
 func (os *OrchestrateService) GetTrackedCorporations() []int {
-	return persist.CorporationIDs
+	return config.CorporationIDs
 }
 
 // GetTrackedAlliances returns the list of tracked alliance IDs.
 func (os *OrchestrateService) GetTrackedAlliances() []int {
-	return persist.AllianceIDs
+	return config.AllianceIDs
 }
 
 // GetTrackedCharacters returns the list of tracked character IDs.
 func (os *OrchestrateService) GetTrackedCharacters() []int {
-	return persist.CharacterIDs
+	return config.CharacterIDs
 }
 
 // GetTrackedCharactersFromKillMails extracts tracked character IDs from killmails and ESI data.
@@ -272,7 +272,7 @@ func (os *OrchestrateService) GetTrackedCharactersFromKillMails(fullKillMail []m
 
 			allianceID := corpInfo.AllianceID
 
-			if persist.DisplayCharacter(attacker.CharacterID, attacker.CorporationID, allianceID) {
+			if config.DisplayCharacter(attacker.CharacterID, attacker.CorporationID, allianceID) {
 				// fmt.Println(fmt.Sprintf("Adding character %d to tracked characters", attacker.CharacterID))
 				trackedCharacters = append(trackedCharacters, attacker.CharacterID)
 			}

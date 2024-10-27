@@ -6,8 +6,8 @@ import (
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
 
+	"github.com/gambtho/zkillanalytics/internal/config"
 	"github.com/gambtho/zkillanalytics/internal/model"
-	"github.com/gambtho/zkillanalytics/internal/persist"
 )
 
 func RenderSolo(chartData *model.ChartData) *charts.Bar {
@@ -24,7 +24,7 @@ func RenderSolo(chartData *model.ChartData) *charts.Bar {
 
 			characterName := characterInfo.Name
 
-			if persist.DisplayCharacter(attacker.CharacterID, attacker.CorporationID, attacker.AllianceID) {
+			if config.DisplayCharacter(attacker.CharacterID, attacker.CorporationID, attacker.AllianceID) {
 				// Only increment the kill count if the kill was a solo kill
 				if km.ZKB.Solo {
 					characterKills[characterName]++

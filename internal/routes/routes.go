@@ -8,12 +8,13 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"github.com/gambtho/zkillanalytics/internal/config"
 	"github.com/gambtho/zkillanalytics/internal/persist"
 	"github.com/gambtho/zkillanalytics/internal/service"
 )
 
 // ServeRoute is an HTTP handler that generates a bar chart based on the mode
-func ServeRoute(route persist.Route, orchestrateService *service.OrchestrateService) http.HandlerFunc {
+func ServeRoute(route config.Route, orchestrateService *service.OrchestrateService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Parse URL parameters to determine data mode
 		vars := mux.Vars(r)
@@ -36,12 +37,12 @@ func ServeRoute(route persist.Route, orchestrateService *service.OrchestrateServ
 
 		// Check if the file already exists
 		if _, err := os.Stat(filePath); err == nil {
-			fmt.Println(fmt.Sprintf("Serving existing chart for %s from %s to %s based on mode %s", persist.RouteToString[route], startDate, endDate, modeStr))
+			fmt.Println(fmt.Sprintf("Serving existing chart for %s from %s to %s based on mode %s", config.RouteToString[route], startDate, endDate, modeStr))
 			http.ServeFile(w, r, filePath)
 			return
 		}
 
-		orchestrateService.Logger.Infof("Creating chart for %s from %s to %s based on mode %s", persist.RouteToString[route], startDate, endDate, modeStr)
+		orchestrateService.Logger.Infof("Creating chart for %s from %s to %s based on mode %s", config.RouteToString[route], startDate, endDate, modeStr)
 
 		corporations := orchestrateService.GetTrackedCorporations()
 		alliances := orchestrateService.GetTrackedAlliances()

@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gambtho/zkillanalytics/internal/config"
 	"github.com/gambtho/zkillanalytics/internal/model"
-	"github.com/gambtho/zkillanalytics/internal/persist"
 	"github.com/gambtho/zkillanalytics/internal/service"
 )
 
@@ -24,7 +24,7 @@ func LootAppraisalPageHandler(w http.ResponseWriter, r *http.Request) {
 
 func FetchCharacterNamesHandler(orchestrateService *service.OrchestrateService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		characterIDs := persist.CharacterIDs
+		characterIDs := config.CharacterIDs
 		var wg sync.WaitGroup
 		mu := &sync.Mutex{}
 		characterNames := make([]string, 0, len(characterIDs))

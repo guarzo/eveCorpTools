@@ -6,6 +6,7 @@ import (
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
 
+	"github.com/gambtho/zkillanalytics/internal/config"
 	"github.com/gambtho/zkillanalytics/internal/model"
 	"github.com/gambtho/zkillanalytics/internal/persist"
 )
@@ -24,11 +25,11 @@ func RenderVictims(chartData *model.ChartData) *charts.Bar {
 	// Populate the kill count map using victims from detailed killmails
 	for _, km := range chartData.KillMails {
 		victimCorpID := km.EsiKillMail.Victim.CorporationID
-		if persist.Contains(persist.CorporationIDs, victimCorpID) {
+		if persist.Contains(config.CorporationIDs, victimCorpID) {
 			continue
 		}
 		corpInfo, exists := chartData.CorporationInfos[victimCorpID]
-		if !exists || persist.Contains(persist.AllianceIDs, corpInfo.AllianceID) {
+		if !exists || persist.Contains(config.AllianceIDs, corpInfo.AllianceID) {
 			continue
 		}
 

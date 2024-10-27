@@ -6,8 +6,8 @@ import (
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
 
+	"github.com/gambtho/zkillanalytics/internal/config"
 	"github.com/gambtho/zkillanalytics/internal/model"
-	"github.com/gambtho/zkillanalytics/internal/persist"
 	"github.com/gambtho/zkillanalytics/internal/service"
 )
 
@@ -40,7 +40,7 @@ func RenderOurShips(orchestrator *service.OrchestrateService, chartData *model.C
 				continue
 			}
 
-			if persist.DisplayCharacter(attacker.CharacterID, attacker.CorporationID, attacker.AllianceID) {
+			if config.DisplayCharacter(attacker.CharacterID, attacker.CorporationID, attacker.AllianceID) {
 
 				if _, found := characterShips[characterName]; !found {
 					characterShips[characterName] = make(map[string]int)

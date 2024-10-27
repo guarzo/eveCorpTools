@@ -6,8 +6,8 @@ import (
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
 
+	"github.com/gambtho/zkillanalytics/internal/config"
 	"github.com/gambtho/zkillanalytics/internal/model"
-	"github.com/gambtho/zkillanalytics/internal/persist"
 )
 
 // CharacterKillData holds the data for character kill counts
@@ -24,7 +24,7 @@ func RenderTopCharacters(chartData *model.ChartData) *charts.Bar {
 	// Populate the kill count map using all attackers from detailed killmails
 	for _, km := range chartData.KillMails {
 		for _, attacker := range km.EsiKillMail.Attackers {
-			if !persist.ExcludeCharacterID(attacker.CharacterID) {
+			if !config.ExcludeCharacterID(attacker.CharacterID) {
 				if data, found := characterKills[attacker.CharacterID]; found {
 					data.KillCount++
 					characterKills[attacker.CharacterID] = data

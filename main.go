@@ -40,6 +40,12 @@ func main() {
 		userAgent = "placeholder@gmail.com"
 	}
 
+	version := os.Getenv("VERSION")
+	if version == "" {
+		fmt.Println("No version provided in environment, using placeholder")
+		userAgent = "placeholder@gmail.com"
+	}
+
 	// Start the web server
-	cmd.StartServer(port, userAgent)
+	cmd.StartServer(port, userAgent, version)
 }

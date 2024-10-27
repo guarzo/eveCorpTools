@@ -70,9 +70,9 @@ func hostBasedRouting(logger *logrus.Logger, orchestrateService *service.Orchest
 // registerTPSRoutes registers the routes for the TPS subdomain
 func registerTPSRoutes(r *mux.Router, orchestrateService *service.OrchestrateService) {
 	// Use ServeRoute with OrchestrateService
-	r.HandleFunc("/", routes.ServeRoute(persist.Snippets, orchestrateService)).Methods("GET")
-	r.HandleFunc("/lastMonth", routes.ServeRoute(persist.All, orchestrateService)).Methods("GET")
-	r.HandleFunc("/currentMonth", routes.ServeRoute(persist.All, orchestrateService)).Methods("GET")
+	r.HandleFunc("/", routes.ServeRoute(config.Snippets, orchestrateService)).Methods("GET")
+	r.HandleFunc("/lastMonth", routes.ServeRoute(config.All, orchestrateService)).Methods("GET")
+	r.HandleFunc("/currentMonth", routes.ServeRoute(config.All, orchestrateService)).Methods("GET")
 	//r.HandleFunc("/config", routes.ServeRoute(persist.Config, orchestrateService)).Methods("GET")
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	r.NotFoundHandler = http.HandlerFunc(routes.NotFoundHandler)
@@ -96,12 +96,22 @@ func registerLootRoutes(r *mux.Router, o *service.OrchestrateService) {
 }
 
 // StartServer starts the HTTP server with the specified routes
-func StartServer(port int, userAgent string) {
+func StartServer(port int, userAgent, version string) {
 	// Initialize Logger
 	logger := logrus.New()
-	logger.SetFormatter(&logrus.JSONFormatter{})
 	logger.SetOutput(os.Stdout)
 	logger.SetLevel(logrus.DebugLevel) // Set to Debug for more detailed logs
+
+	// Enable caller reporting
+	logger.SetReportCaller(true)
+
+	// Choose a formatter that supports caller fields
+	logger.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp:   true,
+		DisableColors:   false,
+		ForceColors:     true,
+		TimestampFormat: "2006-01-02 15:04:05",
+	})
 
 	// Log runtime information
 	logger.Info("Initializing server...")
@@ -220,7 +230,7 @@ func StartServer(port int, userAgent string) {
 			logger.Errorf("HTTP server Shutdown: %v", err)
 		}
 
-		// Stop PrefetchService
+		// Stop PrefetchService and wait for it to finish
 		prefetchService.Stop()
 
 		close(idleConnsClosed)
@@ -228,7 +238,7 @@ func StartServer(port int, userAgent string) {
 
 	// Start the server in a goroutine
 	go func() {
-		logger.Infof("Starting server on port %d", port)
+		logger.Infof("Starting server version %s on port %d", version, port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			// Error starting or closing listener
 			logger.Fatalf("HTTP server ListenAndServe: %v", err)

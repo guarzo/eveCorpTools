@@ -1,24 +1,22 @@
+// internal/service/prefetch.go
+
 package service
 
 import (
 	"context"
+	"os"
 	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/gambtho/zkillanalytics/internal/config"
 	"github.com/gambtho/zkillanalytics/internal/persist"
 )
 
 // PrefetchService handles scheduled data prefetching.
 type PrefetchService struct {
 	OrchestrateService *OrchestrateService
-
-	// Control channels
-	stopChan  chan struct{}
-	stopped   chan struct{}
-	runningMu sync.Mutex
-	running   bool
 
 	// WaitGroup to track ongoing prefetch operations
 	wg sync.WaitGroup
@@ -30,38 +28,21 @@ type PrefetchService struct {
 func NewPrefetchService(os *OrchestrateService, logger *logrus.Logger) *PrefetchService {
 	return &PrefetchService{
 		OrchestrateService: os,
-		stopChan:           make(chan struct{}),
-		stopped:            make(chan struct{}),
 		Logger:             logger,
 	}
 }
 
-// internal/service/prefetch.go
-
+// Start begins the prefetching process.
 func (pf *PrefetchService) Start(ctx context.Context) {
-	pf.runningMu.Lock()
-	defer pf.runningMu.Unlock()
-
-	if pf.running {
-		pf.Logger.Info("PrefetchService is already running. Start request ignored.")
-		return
-	}
-
-	pf.running = true
 	pf.wg.Add(1)
 	go pf.run(ctx)
 	pf.Logger.Info("PrefetchService started.")
 }
 
+// run contains the main loop for prefetching.
 func (pf *PrefetchService) run(ctx context.Context) {
-	defer func() {
-		pf.runningMu.Lock()
-		pf.running = false
-		pf.runningMu.Unlock()
-		pf.wg.Done()
-		close(pf.stopped)
-		pf.Logger.Info("PrefetchService stopped.")
-	}()
+	defer pf.wg.Done()
+	pf.Logger.Info("PrefetchService is running.")
 
 	ticker := time.NewTicker(24 * time.Hour)
 	defer ticker.Stop()
@@ -73,9 +54,6 @@ func (pf *PrefetchService) run(ctx context.Context) {
 		select {
 		case <-ticker.C:
 			pf.prefetch(ctx)
-		case <-pf.stopChan:
-			pf.Logger.Info("PrefetchService received stop signal.")
-			return
 		case <-ctx.Done():
 			pf.Logger.Info("PrefetchService received context cancellation.")
 			return
@@ -83,41 +61,39 @@ func (pf *PrefetchService) run(ctx context.Context) {
 	}
 }
 
-func (pf *PrefetchService) Stop() {
-	pf.runningMu.Lock()
-	defer pf.runningMu.Unlock()
-
-	if !pf.running {
-		pf.Logger.Info("PrefetchService is not running. Stop request ignored.")
-		return
-	}
-
-	// Signal the run loop to stop
-	close(pf.stopChan)
-
-	// Wait for the run loop to acknowledge and stop
-	<-pf.stopped
-
-	// Wait for all prefetch operations to finish
-	pf.wg.Wait()
-
-	// Reset channels for potential future restarts
-	pf.stopChan = make(chan struct{})
-	pf.stopped = make(chan struct{})
-}
-
-// prefetch executes the data fetching logic.
 func (pf *PrefetchService) prefetch(ctx context.Context) {
-	begin, end := persist.GetDateRange(persist.YearToDate)
+	pf.Logger.Info("Starting prefetch operation.")
+	begin, end := persist.GetDateRange(config.YearToDate)
 	pf.Logger.Infof("Prefetching data for %s to %s...", begin, end)
 
-	// Use a derived context to allow for cancellation if needed
-	prefetchCtx, cancel := context.WithTimeout(ctx, 23*time.Hour) // Slightly less than 24h to allow shutdown
+	// Use a derived context with a timeout to prevent indefinite blocking
+	prefetchCtx, cancel := context.WithTimeout(ctx, 23*time.Hour)
 	defer cancel()
 
-	// Attempt to fetch all data
-	_, err := pf.OrchestrateService.GetAllData(prefetchCtx, persist.CorporationIDs, persist.AllianceIDs, persist.CharacterIDs, begin, end)
+	pf.Logger.Info("Calling GetAllData...")
+	chartData, err := pf.OrchestrateService.GetAllData(prefetchCtx, config.CorporationIDs, config.AllianceIDs, config.CharacterIDs, begin, end)
 	if err != nil {
-		pf.Logger.Infof("Error fetching detailed killmails: %v", err)
+		pf.Logger.Errorf("Error fetching detailed killmails: %v", err)
+		return
+	}
+	pf.Logger.Infof("Prefetch completed successfully with %d killmails.", len(chartData.KillMails))
+}
+
+// Stop gracefully waits for the prefetching process to complete with a timeout.
+func (pf *PrefetchService) Stop() {
+	pf.Logger.Info("Waiting for PrefetchService to stop...")
+
+	done := make(chan struct{})
+	go func() {
+		pf.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		pf.Logger.Info("PrefetchService stopped.")
+	case <-time.After(1 * time.Second):
+		pf.Logger.Error("PrefetchService did not stop within the timeout. Forcing exit.")
+		os.Exit(1)
 	}
 }

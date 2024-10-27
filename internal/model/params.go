@@ -1,10 +1,7 @@
-package config
+package model
 
 import (
 	"net/http"
-
-	"github.com/gambtho/zkillanalytics/internal/model"
-	"github.com/gambtho/zkillanalytics/internal/persist"
 )
 
 type Params struct {
@@ -13,13 +10,12 @@ type Params struct {
 	Alliances    []int
 	Characters   []int
 	Year         int
-	EsiData      *model.ESIData
+	EsiData      *ESIData
 	ChangedIDs   bool
-	NewIDs       *model.Ids
-	*persist.EntityLastPage
+	NewIDs       *Ids
 }
 
-func NewParams(client *http.Client, corporations, alliances, characters []int, year int, esiData *model.ESIData, changedIDs bool, newIDs *model.Ids) Params {
+func NewParams(client *http.Client, corporations, alliances, characters []int, year int, esiData *ESIData, changedIDs bool, newIDs *Ids) Params {
 	return Params{
 		Client:       client,
 		Corporations: corporations,
