@@ -24,6 +24,8 @@ COPY --from=builder /app/static /static
 # Copy the Go binary
 COPY --from=builder /app/zkill /zkill
 
+COPY --from=builder /app/.env /.env
+
 # Define a volume for data persistence
 VOLUME ["/data"]
 

@@ -51,15 +51,14 @@ func (km *KillMailService) GetKillMailDataForMonth(ctx context.Context, params *
 
 	km.Logger.Infof("Fetching data for %04d-%02d...", params.Year, month)
 
-	const maxPages = 100       // Define a sensible maximum number of pages
-	const maxKillMails = 10000 // Define a sensible maximum number of killmails
+	const maxPages = 100 // Define a sensible maximum number of pages
 	processedKillMails := 0
 
 	for entityType, entityIDs := range entityGroups {
 		for _, entityID := range entityIDs {
 			// Fetch kills
 			page := 1
-			for page <= maxPages && processedKillMails < maxKillMails {
+			for page <= maxPages {
 				killMails, err := km.ZKillClient.GetKillsPageData(ctx, entityType, entityID, page, params.Year, month)
 				if err != nil {
 					km.Logger.Errorf("Error fetching kills for %s ID %d page %d: %v", entityType, entityID, page, err)
@@ -76,16 +75,11 @@ func (km *KillMailService) GetKillMailDataForMonth(ctx context.Context, params *
 
 				page++
 				processedKillMails += len(killMails)
-
-				if processedKillMails >= maxKillMails {
-					km.Logger.Warnf("Reached maximum killmail processing limit: %d", maxKillMails)
-					break
-				}
 			}
 
 			// Fetch losses
 			page = 1
-			for page <= maxPages && processedKillMails < maxKillMails {
+			for page <= maxPages {
 				lossKillMails, err := km.ZKillClient.GetLossPageData(ctx, entityType, entityID, page, params.Year, month)
 				if err != nil {
 					km.Logger.Errorf("Error fetching losses for %s ID %d page %d: %v", entityType, entityID, page, err)
@@ -104,11 +98,6 @@ func (km *KillMailService) GetKillMailDataForMonth(ctx context.Context, params *
 
 				page++
 				processedKillMails += len(lossKillMails)
-
-				if processedKillMails >= maxKillMails {
-					km.Logger.Warnf("Reached maximum killmail processing limit: %d", maxKillMails)
-					break
-				}
 			}
 		}
 	}
