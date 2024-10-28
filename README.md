@@ -18,8 +18,7 @@ Access on localhost:8080, available routes are
 
 ## Todo
 
-- [ ] continue from here - fix visuals https://chatgpt.com/share/671e7546-c53c-8006-af1d-8cb8d9a1e27d
-- [ ] able to clear cache via url / save cache to file
+- [ ] able to clear cache via url
 - [ ] make health check actually work -- add urls for refresh / clear cache / etc
 - [ ] can detailedkillmail just be a slice?
 - [ ] add github workflow deploy
