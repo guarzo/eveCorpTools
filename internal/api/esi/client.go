@@ -21,7 +21,7 @@ import (
 )
 
 // Define a default cache expiration duration.
-const defaultCacheExpiration = 25 * time.Hour
+const defaultCacheExpiration = 770 * time.Hour // slightly more than 1 month
 
 // EsiClient encapsulates the HTTP client and cache for ESI API interactions.
 type EsiClient struct {
