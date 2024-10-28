@@ -1,8 +1,9 @@
-// internal/persist/in_memory_cache.go
-
 package persist
 
 import (
+	"encoding/json"
+	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -17,8 +18,8 @@ type Cache struct {
 }
 
 type cacheItem struct {
-	value      []byte
-	expiration time.Time
+	Value      []byte    `json:"value"`
+	Expiration time.Time `json:"expiration"`
 }
 
 // NewInMemoryCache initializes a new Cache with a provided Logger.
@@ -40,11 +41,11 @@ func (c *Cache) Get(key string) ([]byte, bool) {
 	defer c.mutex.RUnlock()
 
 	item, exists := c.data[key]
-	if !exists || time.Now().After(item.expiration) {
+	if !exists || time.Now().After(item.Expiration) {
 		return nil, false
 	}
 
-	return item.value, true
+	return item.Value, true
 }
 
 // Set stores data in the cache with the associated key and expiration duration.
@@ -53,8 +54,8 @@ func (c *Cache) Set(key string, value []byte, expiration time.Duration) error {
 	defer c.mutex.Unlock()
 
 	c.data[key] = cacheItem{
-		value:      value,
-		expiration: time.Now().Add(expiration),
+		Value:      value,
+		Expiration: time.Now().Add(expiration),
 	}
 
 	return nil
@@ -69,11 +70,61 @@ func (c *Cache) cleanupExpiredItems() {
 		now := time.Now()
 		c.mutex.Lock()
 		for key, item := range c.data {
-			if now.After(item.expiration) {
+			if now.After(item.Expiration) {
 				delete(c.data, key)
 				c.Logger.Infof("Cache item expired and removed: %s", key)
 			}
 		}
 		c.mutex.Unlock()
 	}
+}
+
+// SaveToFile saves the entire cache to a file in JSON format.
+func (c *Cache) SaveToFile(filename string) error {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// Serialize the cache data to JSON and write to file
+	encoder := json.NewEncoder(file)
+	if err := encoder.Encode(c.data); err != nil {
+		return err
+	}
+
+	c.Logger.Infof("Cache successfully saved to file: %s", filename)
+	return nil
+}
+
+// LoadFromFile loads the cache from a JSON file.
+func (c *Cache) LoadFromFile(filename string) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	file, err := os.Open(filename)
+	if err != nil {
+		if os.IsNotExist(err) {
+			c.Logger.Warnf("Cache file does not exist: %s", filename)
+			return nil // Not an error if the cache file doesn't exist
+		}
+		return err
+	}
+	defer file.Close()
+
+	// Decode JSON data into the cache
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&c.data); err != nil {
+		return err
+	}
+
+	c.Logger.Infof("Cache successfully loaded from file: %s", filename)
+	return nil
+}
+
+func GenerateCacheDataFileName() string {
+	return fmt.Sprintf("%s/cache.json", GenerateRelativeDirectoryPath(dataDirectory))
 }

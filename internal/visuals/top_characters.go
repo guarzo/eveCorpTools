@@ -6,8 +6,8 @@ import (
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
 
-	"github.com/gambtho/zkillanalytics/internal/config"
-	"github.com/gambtho/zkillanalytics/internal/model"
+	"github.com/guarzo/zkillanalytics/internal/config"
+	"github.com/guarzo/zkillanalytics/internal/model"
 )
 
 // CharacterKillData holds the data for character kill counts

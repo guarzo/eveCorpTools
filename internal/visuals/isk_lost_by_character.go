@@ -7,9 +7,9 @@ import (
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
 
-	"github.com/gambtho/zkillanalytics/internal/model"
-	"github.com/gambtho/zkillanalytics/internal/persist"
-	"github.com/gambtho/zkillanalytics/internal/service"
+	"github.com/guarzo/zkillanalytics/internal/model"
+	"github.com/guarzo/zkillanalytics/internal/persist"
+	"github.com/guarzo/zkillanalytics/internal/service"
 )
 
 type CharacterValueData struct {

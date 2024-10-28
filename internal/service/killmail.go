@@ -5,13 +5,14 @@ package service
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/gambtho/zkillanalytics/internal/api/zkill"
-	"github.com/gambtho/zkillanalytics/internal/config"
-	"github.com/gambtho/zkillanalytics/internal/model"
-	"github.com/gambtho/zkillanalytics/internal/persist"
+	"github.com/guarzo/zkillanalytics/internal/api/zkill"
+	"github.com/guarzo/zkillanalytics/internal/config"
+	"github.com/guarzo/zkillanalytics/internal/model"
+	"github.com/guarzo/zkillanalytics/internal/persist"
 )
 
 // KillMailService handles killmail-related operations.
@@ -20,6 +21,9 @@ type KillMailService struct {
 	EsiService  *EsiService
 	Cache       *persist.Cache
 	Logger      *logrus.Logger
+
+	// Mutex to protect killMailIDs map if accessed concurrently
+	killMailMu sync.Mutex
 }
 
 // NewKillMailService creates a new instance of KillMailService.
@@ -47,39 +51,46 @@ func (km *KillMailService) GetKillMailDataForMonth(ctx context.Context, params *
 
 	km.Logger.Infof("Fetching data for %04d-%02d...", params.Year, month)
 
+	const maxPages = 100       // Define a sensible maximum number of pages
+	const maxKillMails = 10000 // Define a sensible maximum number of killmails
+	processedKillMails := 0
+
 	for entityType, entityIDs := range entityGroups {
 		for _, entityID := range entityIDs {
+			// Fetch kills
 			page := 1
-			for {
-				killMails, err := km.ZKillClient.GetKillsPageData(entityType, entityID, page, params.Year, month)
+			for page <= maxPages && processedKillMails < maxKillMails {
+				killMails, err := km.ZKillClient.GetKillsPageData(ctx, entityType, entityID, page, params.Year, month)
 				if err != nil {
 					km.Logger.Errorf("Error fetching kills for %s ID %d page %d: %v", entityType, entityID, page, err)
 					break
 				}
-
-				km.Logger.Debugf("for page %d, %d kills", page, len(killMails))
 				if len(killMails) == 0 {
 					break
 				}
 
 				err = km.processKillMails(ctx, killMails, killMailIDs, aggregatedMonthData)
 				if err != nil {
-					km.Logger.Errorf("Error processing kills for %s ID %d page %d: %v", entityType, entityID, page, err)
 					break
 				}
-				km.Logger.Debugf("in kills on page %d", page)
+
 				page++
+				processedKillMails += len(killMails)
+
+				if processedKillMails >= maxKillMails {
+					km.Logger.Warnf("Reached maximum killmail processing limit: %d", maxKillMails)
+					break
+				}
 			}
 
-			// Repeat similarly for loss killmails
+			// Fetch losses
 			page = 1
-			for {
-				lossKillMails, err := km.ZKillClient.GetLossPageData(entityType, entityID, page, params.Year, month)
+			for page <= maxPages && processedKillMails < maxKillMails {
+				lossKillMails, err := km.ZKillClient.GetLossPageData(ctx, entityType, entityID, page, params.Year, month)
 				if err != nil {
 					km.Logger.Errorf("Error fetching losses for %s ID %d page %d: %v", entityType, entityID, page, err)
 					break
 				}
-				km.Logger.Debugf("for page %d, %d losses", page, len(lossKillMails))
 
 				if len(lossKillMails) == 0 {
 					break
@@ -90,18 +101,16 @@ func (km *KillMailService) GetKillMailDataForMonth(ctx context.Context, params *
 					km.Logger.Errorf("Error processing losses for %s ID %d page %d: %v", entityType, entityID, page, err)
 					break
 				}
-				km.Logger.Debugf("in loss on page %d", page)
 
 				page++
-				km.Logger.Debugf("finished page %d", page)
+				processedKillMails += len(lossKillMails)
+
+				if processedKillMails >= maxKillMails {
+					km.Logger.Warnf("Reached maximum killmail processing limit: %d", maxKillMails)
+					break
+				}
 			}
 		}
-	}
-
-	km.Logger.Debugf("about to get victim kill mails")
-	err := km.GetVictimKillMails(ctx, params, month, aggregatedMonthData, killMailIDs)
-	if err != nil {
-		return nil, fmt.Errorf("error fetching victim kill mails: %w", err)
 	}
 
 	return aggregatedMonthData, nil
@@ -109,18 +118,12 @@ func (km *KillMailService) GetKillMailDataForMonth(ctx context.Context, params *
 
 // processKillMails processes a slice of KillMail and updates aggregated data.
 func (km *KillMailService) processKillMails(ctx context.Context, killMails []model.KillMail, killMailIDs map[int]bool, aggregatedData *model.KillMailData) error {
-	km.Logger.Debugf("%d killmails to process", len(killMails))
 	for index, mail := range killMails {
-		km.Logger.Debugf("Processing %d", index)
 		// Check if the killmail ID is already processed.
 		if _, exists := killMailIDs[int(mail.KillMailID)]; exists {
+			km.Logger.Debugf("Killmail ID %d already processed. Skipping.", mail.KillMailID)
 			continue
 		}
-
-		// Log progress every 100 killmails.
-		//if index%100 == 0 {
-		km.Logger.Infof("Processing killmail ID %d...%d of %d", mail.KillMailID, index, len(killMails))
-		//}
 
 		// Process the full killmail and update aggregated data.
 		err := km.AddEsiKillMail(ctx, mail, aggregatedData)
@@ -131,41 +134,13 @@ func (km *KillMailService) processKillMails(ctx context.Context, killMails []mod
 
 		// Mark the killmail ID as processed.
 		killMailIDs[int(mail.KillMailID)] = true
-	}
 
-	km.Logger.Debugf("finished processKillMails")
-	return nil
-}
-
-// GetVictimKillMails fetches killmails where the victim is part of specified entities.
-func (km *KillMailService) GetVictimKillMails(ctx context.Context, params *model.Params, month int, aggregatedData *model.KillMailData, killMailIDs map[int]bool) error {
-	// Define entity groups for victims.
-	entityGroups := map[string][]int{
-		config.EntityTypeCorporation: params.Corporations,
-		config.EntityTypeAlliance:    params.Alliances,
-		config.EntityTypeCharacter:   params.Characters,
-	}
-
-	km.Logger.Infof("Fetching victim kill mails for %04d-%02d...", params.Year, month)
-
-	// Iterate over each entity type and their IDs.
-	for entityType, entityIDs := range entityGroups {
-		for _, entityID := range entityIDs {
-			km.Logger.Infof("victim kills probably needs paging....")
-			victimKillMails, err := km.ZKillClient.GetVictimKillsPageData(entityType, entityID, 1, params.Year, month)
-			if err != nil {
-				km.Logger.Errorf("Error fetching victim kills for %s ID %d: %v", entityType, entityID, err)
-				continue
-			}
-
-			// Process fetched victim killmails.
-			err = km.processKillMails(ctx, victimKillMails, killMailIDs, aggregatedData)
-			if err != nil {
-				km.Logger.Errorf("Error processing victim kills for %s ID %d: %v", entityType, entityID, err)
-				continue
-			}
+		// Optional: Log progress at intervals
+		if (index+1)%100 == 0 {
+			km.Logger.Infof("Processed %d killmails out of %d", index+1, len(killMails))
 		}
 	}
+	km.Logger.Debugf("Processed %d killmails", len(killMails))
 
 	return nil
 }

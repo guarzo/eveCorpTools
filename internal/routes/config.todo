@@ -5,8 +5,8 @@
 //	"html/template"
 //	"net/http"
 //
-//	"github.com/gambtho/zkillanalytics/internal/model"
-//	"github.com/gambtho/zkillanalytics/internal/persist"
+//	"github.com/guarzo/zkillanalytics/internal/model"
+//	"github.com/guarzo/zkillanalytics/internal/persist"
 //)
 //
 //func configHandler(w http.ResponseWriter) {

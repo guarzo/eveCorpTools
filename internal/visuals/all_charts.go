@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/gambtho/zkillanalytics/internal/model"
-	"github.com/gambtho/zkillanalytics/internal/service"
+	"github.com/guarzo/zkillanalytics/internal/model"
+	"github.com/guarzo/zkillanalytics/internal/service"
 )
 
 var trackedCharacters []int
@@ -22,6 +22,8 @@ func RenderSnippets(orchestrateService *service.OrchestrateService, ytdChartData
 	trackedCharacters = append(trackedCharacters, ytdTrackedCharacters...)
 	trackedCharacters = append(trackedCharacters, lastMTrackedCharacters...)
 	trackedCharacters = append(trackedCharacters, mtdTrackedCharacters...)
+
+	orchestrateService.Logger.Infof("there are %d tracked characters", len(trackedCharacters))
 
 	data := struct {
 		MTDChartHTML template.HTML

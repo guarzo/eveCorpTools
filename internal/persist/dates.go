@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gambtho/zkillanalytics/internal/config"
+	"github.com/guarzo/zkillanalytics/internal/config"
 )
 
 // GetDateRange returns the start and end dates based on the data mode

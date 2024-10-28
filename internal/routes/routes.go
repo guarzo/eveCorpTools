@@ -8,9 +8,9 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/gambtho/zkillanalytics/internal/config"
-	"github.com/gambtho/zkillanalytics/internal/persist"
-	"github.com/gambtho/zkillanalytics/internal/service"
+	"github.com/guarzo/zkillanalytics/internal/config"
+	"github.com/guarzo/zkillanalytics/internal/persist"
+	"github.com/guarzo/zkillanalytics/internal/service"
 )
 
 // ServeRoute is an HTTP handler that generates a bar chart based on the mode

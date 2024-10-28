@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gambtho/zkillanalytics/internal/config"
-	"github.com/gambtho/zkillanalytics/internal/model"
-	"github.com/gambtho/zkillanalytics/internal/service"
+	"github.com/guarzo/zkillanalytics/internal/config"
+	"github.com/guarzo/zkillanalytics/internal/model"
+	"github.com/guarzo/zkillanalytics/internal/service"
 )
 
 func LootAppraisalPageHandler(w http.ResponseWriter, r *http.Request) {

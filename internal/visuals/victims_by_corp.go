@@ -6,9 +6,9 @@ import (
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
 
-	"github.com/gambtho/zkillanalytics/internal/config"
-	"github.com/gambtho/zkillanalytics/internal/model"
-	"github.com/gambtho/zkillanalytics/internal/persist"
+	"github.com/guarzo/zkillanalytics/internal/config"
+	"github.com/guarzo/zkillanalytics/internal/model"
+	"github.com/guarzo/zkillanalytics/internal/persist"
 )
 
 // CorporationKillMailData holds the data for corporation kill counts

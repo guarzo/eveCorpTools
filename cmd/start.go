@@ -16,14 +16,14 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
-	"github.com/gambtho/zkillanalytics/internal/api/esi"
-	"github.com/gambtho/zkillanalytics/internal/api/zkill"
-	"github.com/gambtho/zkillanalytics/internal/config"
-	"github.com/gambtho/zkillanalytics/internal/data"
-	"github.com/gambtho/zkillanalytics/internal/persist"
-	"github.com/gambtho/zkillanalytics/internal/routes"
-	"github.com/gambtho/zkillanalytics/internal/service"
-	"github.com/gambtho/zkillanalytics/internal/utils"
+	"github.com/guarzo/zkillanalytics/internal/api/esi"
+	"github.com/guarzo/zkillanalytics/internal/api/zkill"
+	"github.com/guarzo/zkillanalytics/internal/config"
+	"github.com/guarzo/zkillanalytics/internal/data"
+	"github.com/guarzo/zkillanalytics/internal/persist"
+	"github.com/guarzo/zkillanalytics/internal/routes"
+	"github.com/guarzo/zkillanalytics/internal/service"
+	"github.com/guarzo/zkillanalytics/internal/utils"
 )
 
 // logRequestHost middleware logs the host and path of each incoming request
@@ -34,6 +34,21 @@ func logRequestHost(logger *logrus.Logger) mux.MiddlewareFunc {
 				"host": r.Host,
 				"path": r.URL.Path,
 			}).Info("Incoming request")
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// loggingMiddleware logs detailed information about each incoming HTTP request.
+func loggingMiddleware(logger *logrus.Logger) mux.MiddlewareFunc {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			logger.WithFields(logrus.Fields{
+				"method": r.Method,
+				"path":   r.URL.Path,
+				"host":   r.Host,
+				"remote": r.RemoteAddr,
+			}).Info("Handling request")
 			next.ServeHTTP(w, r)
 		})
 	}
@@ -50,17 +65,17 @@ func hostBasedRouting(logger *logrus.Logger, orchestrateService *service.Orchest
 
 			switch r.Host {
 			case "loot.zoolanders.space":
-				// Serve loot routes
+				logger.Info("Routing to Loot Router")
 				lootRouter := mux.NewRouter()
 				registerLootRoutes(lootRouter, orchestrateService)
 				lootRouter.ServeHTTP(w, r)
 			case "tps.zoolanders.space":
-				// Serve TPS routes
+				logger.Info("Routing to TPS Router")
 				tpsRouter := mux.NewRouter()
 				registerTPSRoutes(tpsRouter, orchestrateService)
 				tpsRouter.ServeHTTP(w, r)
 			default:
-				// Serve default routes
+				logger.Info("Routing to Default Router")
 				next.ServeHTTP(w, r)
 			}
 		})
@@ -69,23 +84,22 @@ func hostBasedRouting(logger *logrus.Logger, orchestrateService *service.Orchest
 
 // registerTPSRoutes registers the routes for the TPS subdomain
 func registerTPSRoutes(r *mux.Router, orchestrateService *service.OrchestrateService) {
-	// Use ServeRoute with OrchestrateService
 	r.HandleFunc("/", routes.ServeRoute(config.Snippets, orchestrateService)).Methods("GET")
 	r.HandleFunc("/lastMonth", routes.ServeRoute(config.All, orchestrateService)).Methods("GET")
 	r.HandleFunc("/currentMonth", routes.ServeRoute(config.All, orchestrateService)).Methods("GET")
-	//r.HandleFunc("/config", routes.ServeRoute(persist.Config, orchestrateService)).Methods("GET")
+	// r.HandleFunc("/config", routes.ServeRoute(persist.Config, orchestrateService)).Methods("GET")
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	r.NotFoundHandler = http.HandlerFunc(routes.NotFoundHandler)
 }
 
 // registerLootRoutes registers the routes for the loot subdomain
-func registerLootRoutes(r *mux.Router, o *service.OrchestrateService) {
+func registerLootRoutes(r *mux.Router, orchestrateService *service.OrchestrateService) {
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/loot-appraisal", http.StatusMovedPermanently)
 	}).Methods("GET")
 	r.HandleFunc("/loot-appraisal", routes.LootAppraisalPageHandler).Methods("GET")
 	r.HandleFunc("/appraise-loot", routes.AppraiseLootHandler).Methods("POST")
-	r.HandleFunc("/fetch-character-names", routes.FetchCharacterNamesHandler(o)).Methods("GET")
+	r.HandleFunc("/fetch-character-names", routes.FetchCharacterNamesHandler(orchestrateService)).Methods("GET")
 	r.HandleFunc("/save-loot-split", routes.SaveLootSplitHandler).Methods("POST")
 	r.HandleFunc("/delete-loot-split", routes.DeleteLootSplitHandler).Methods("POST")
 	r.HandleFunc("/save-loot-splits", routes.SaveLootSplitsHandler).Methods("POST")
@@ -95,19 +109,46 @@ func registerLootRoutes(r *mux.Router, o *service.OrchestrateService) {
 	r.NotFoundHandler = http.HandlerFunc(routes.NotFoundHandler)
 }
 
+// registerDefaultRoutes registers the default routes for hosts like localhost:8080 or zoolanders.space
+func registerDefaultRoutes(r *mux.Router, orchestrateService *service.OrchestrateService, logger *logrus.Logger) {
+	// Route "/" to ServeRoute with config.Snippets
+	r.HandleFunc("/", routes.ServeRoute(config.Snippets, orchestrateService)).Methods("GET")
+
+	// Route "/lastMonth" to ServeRoute with config.All
+	r.HandleFunc("/lastMonth", routes.ServeRoute(config.All, orchestrateService)).Methods("GET")
+
+	// Health Check Endpoint
+	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		health := struct {
+			Status       string `json:"status"`
+			CacheStatus  string `json:"cache_status"`
+			ESIConnected bool   `json:"esi_connected"`
+			// Add more fields as needed
+		}{
+			Status:       "OK",
+			CacheStatus:  "Connected", // Implement actual cache status check
+			ESIConnected: true,        // Implement actual ESI connection check
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(health)
+	}).Methods("GET")
+
+	// Register a route to list all routes (Optional)
+	r.HandleFunc("/routes", routes.ListRoutesHandler(r, logger)).Methods("GET")
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+}
+
 // StartServer starts the HTTP server with the specified routes
 func StartServer(port int, userAgent, version string) {
 	// Initialize Logger
 	logger := logrus.New()
 	logger.SetOutput(os.Stdout)
-	logger.SetLevel(logrus.DebugLevel) // Set to Debug for more detailed logs
-
-	// Enable caller reporting
-	logger.SetReportCaller(true)
+	logger.SetLevel(logrus.InfoLevel) // Set to Debug for more detailed logs
 
 	// Choose a formatter that supports caller fields
 	logger.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp:   true,
+		FullTimestamp:   false,
 		DisableColors:   false,
 		ForceColors:     true,
 		TimestampFormat: "2006-01-02 15:04:05",
@@ -126,6 +167,14 @@ func StartServer(port int, userAgent, version string) {
 	cache := persist.NewInMemoryCache(logger)
 	if cache == nil {
 		logger.Fatal("Failed to initialize cache")
+	}
+
+	// Load cache from file at startup
+	cacheFile := persist.GenerateCacheDataFileName()
+	if err := cache.LoadFromFile(cacheFile); err != nil {
+		logger.Errorf("Failed to load cache from file: %v", err)
+	} else {
+		logger.Infof("Cache loaded from %s", cacheFile)
 	}
 
 	// Ensure necessary directories exist
@@ -148,7 +197,7 @@ func StartServer(port int, userAgent, version string) {
 		logger.Infof("Using new charts directory: %v", err)
 	}
 
-	// Initialize HTTP Client with Timeout
+	// Initialize HTTP Client with User-Agent
 	httpClient := utils.NewHTTPClientWithUserAgent(userAgent)
 
 	esiClient := esi.NewEsiClient(config.BaseEsiURL, httpClient, cache, logger)
@@ -178,24 +227,28 @@ func StartServer(port int, userAgent, version string) {
 	mainRouter := mux.NewRouter()
 
 	// Apply Middlewares
-	mainRouter.Use(logRequestHost(logger))
-	mainRouter.Use(hostBasedRouting(logger, orchestrateService))
+	mainRouter.Use(loggingMiddleware(logger))                    // Detailed request logging
+	mainRouter.Use(logRequestHost(logger))                       // Existing host/path logging
+	mainRouter.Use(hostBasedRouting(logger, orchestrateService)) // Host-based routing
 
-	mainRouter.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		health := struct {
-			Status       string `json:"status"`
-			CacheStatus  string `json:"cache_status"`
-			ESIConnected bool   `json:"esi_connected"`
-			// Add more fields as needed
-		}{
-			Status:       "OK",
-			CacheStatus:  "Connected", // Implement actual cache status check
-			ESIConnected: true,        // Implement actual ESI connection check
-		}
+	// Register Default Routes
+	registerDefaultRoutes(mainRouter, orchestrateService, logger)
 
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(health)
-	}).Methods("GET")
+	// Register Subdomain Routes (handled by hostBasedRouting middleware)
+	// No need to register them here; they're handled within the middleware
+
+	// Log all registered routes for debugging
+	utils.ListRoutes(mainRouter, logger)
+
+	// Implement a catch-all NotFoundHandler (already handled within registerDefaultRoutes, but reaffirm)
+	mainRouter.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logger.WithFields(logrus.Fields{
+			"method": r.Method,
+			"path":   r.URL.Path,
+			"host":   r.Host,
+		}).Warn("Route not found")
+		http.Error(w, "404 page not found", http.StatusNotFound)
+	})
 
 	// Define server address
 	addr := fmt.Sprintf(":%d", port)

@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"sort"
@@ -15,12 +14,12 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/gambtho/zkillanalytics/internal/model"
-	"github.com/gambtho/zkillanalytics/internal/persist"
+	"github.com/guarzo/zkillanalytics/internal/model"
+	"github.com/guarzo/zkillanalytics/internal/persist"
 )
 
 // Define a default cache expiration duration.
-const defaultCacheExpiration = 24 * time.Hour
+const defaultCacheExpiration = 25 * time.Hour
 
 // EsiClient encapsulates the HTTP client and cache for ESI API interactions.
 type EsiClient struct {
@@ -94,7 +93,7 @@ func (esi *EsiClient) getEsiData(ctx context.Context, endpoint string, params ma
 	// Attempt to retrieve data from the cache.
 	cachedData, found := esi.Cache.Get(cacheKey)
 	if found {
-		esi.Logger.Infof("Cache hit for key %s", cacheKey)
+		// esi.Logger.Infof("Cache hit for key %s", cacheKey)
 		return cachedData, nil
 	}
 
@@ -128,7 +127,7 @@ func (esi *EsiClient) getEsiData(ctx context.Context, endpoint string, params ma
 	}
 
 	// Read the response body
-	data, err := ioutil.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		esi.Logger.Errorf("Failed to read response body: %v", err)
 		return nil, err

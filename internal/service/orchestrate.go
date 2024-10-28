@@ -12,16 +12,16 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/gambtho/zkillanalytics/internal/config"
-	"github.com/gambtho/zkillanalytics/internal/data"
-	"github.com/gambtho/zkillanalytics/internal/model"
-	"github.com/gambtho/zkillanalytics/internal/persist"
-	"github.com/gambtho/zkillanalytics/internal/utils"
+	"github.com/guarzo/zkillanalytics/internal/config"
+	"github.com/guarzo/zkillanalytics/internal/data"
+	"github.com/guarzo/zkillanalytics/internal/model"
+	"github.com/guarzo/zkillanalytics/internal/persist"
+	"github.com/guarzo/zkillanalytics/internal/utils"
 )
 
 const (
 	ESIDataStaleDuration = 48 * time.Hour
-	MinESIDataSize       = 50 * 1024 // 50KB
+	MinESIDataSize       = 20 // 50b
 )
 
 // OrchestrateService coordinates data fetching, aggregation, and persistence.
@@ -148,6 +148,13 @@ func (os *OrchestrateService) GetAllData(ctx context.Context, corporations, alli
 		ESIData:   *esiData,
 	}
 
+	// Populate tracked characters in ESIData
+	err = os.ESIService.LoadTrackedCharacters(ctx, chartData)
+	if err != nil {
+		os.Logger.Errorf("Error loading tracked characters into ESI data: %v", err)
+		return nil, err
+	}
+
 	// Refresh ESI data if necessary
 	if esiRefresh {
 		err = os.ESIService.RefreshEsiData(ctx, chartData, os.Client)
@@ -254,32 +261,48 @@ func (os *OrchestrateService) GetTrackedCharacters() []int {
 func (os *OrchestrateService) GetTrackedCharactersFromKillMails(fullKillMail []model.DetailedKillMail, esiData *model.ESIData) []int {
 	var trackedCharacters []int
 
+	os.Logger.Debugf("tracked characters, killmail length: %d", len(fullKillMail))
+
 	for _, km := range fullKillMail {
 		for _, attacker := range km.Attackers {
 			if persist.Contains(trackedCharacters, attacker.CharacterID) {
+				os.Logger.Debugf("Character %d already tracked, skipping", attacker.CharacterID)
 				continue
 			}
 
+			// Verify esiData contains attacker.CharacterID
 			_, exists := esiData.CharacterInfos[attacker.CharacterID]
 			if !exists {
+				if attacker.CharacterID == 2121953857 {
+					os.Logger.Debugf("Character %d not found in ESI data, skipping", attacker.CharacterID)
+				}
 				continue
 			}
 
+			// Verify esiData contains attacker.CorporationID
 			corpInfo, exists := esiData.CorporationInfos[attacker.CorporationID]
 			if !exists {
+				if attacker.CharacterID == 2121953857 {
+					os.Logger.Debugf("Corporation %d for character %d not found in ESI data, skipping", attacker.CorporationID, attacker.CharacterID)
+				}
 				continue
 			}
 
 			allianceID := corpInfo.AllianceID
 
+			// Check DisplayCharacter
 			if config.DisplayCharacter(attacker.CharacterID, attacker.CorporationID, allianceID) {
-				// fmt.Println(fmt.Sprintf("Adding character %d to tracked characters", attacker.CharacterID))
+				os.Logger.Debugf("Adding character %d to tracked characters", attacker.CharacterID)
 				trackedCharacters = append(trackedCharacters, attacker.CharacterID)
+			} else {
+				if attacker.CharacterID == 2121953857 {
+					os.Logger.Debugf("Character %d did not pass DisplayCharacter check", attacker.CharacterID)
+				}
 			}
 		}
 	}
 
-	// fmt.Println(fmt.Sprintf("Found %d tracked characters", len(trackedCharacters)))
+	os.Logger.Debugf("Found %d tracked characters", len(trackedCharacters))
 	return trackedCharacters
 }
 

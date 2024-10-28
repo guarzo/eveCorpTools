@@ -7,11 +7,11 @@ import (
 	"net/http"
 	"path/filepath"
 
-	"github.com/gambtho/zkillanalytics/internal/config"
-	"github.com/gambtho/zkillanalytics/internal/model"
-	"github.com/gambtho/zkillanalytics/internal/persist"
-	"github.com/gambtho/zkillanalytics/internal/service"
-	"github.com/gambtho/zkillanalytics/internal/visuals"
+	"github.com/guarzo/zkillanalytics/internal/config"
+	"github.com/guarzo/zkillanalytics/internal/model"
+	"github.com/guarzo/zkillanalytics/internal/persist"
+	"github.com/guarzo/zkillanalytics/internal/service"
+	"github.com/guarzo/zkillanalytics/internal/visuals"
 )
 
 //func CreateCorporationMap(client *http.Client, ids []int) (map[int]model.Namer, error) {
@@ -67,14 +67,29 @@ func NotFoundHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func LoadingHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("loading page redirect`")
-	tmpl, err := template.ParseFiles(filepath.Join("static", "loading.tmpl"))
+	fmt.Println("loading page redirect")
+
+	// Parse template
+	tmplPath := filepath.Join("static", "loading.tmpl")
+	tmpl, err := template.ParseFiles(tmplPath)
 	if err != nil {
+		fmt.Printf("Error parsing template %s: %v\n", tmplPath, err)
 		http.Error(w, "Loading Page Not Found", http.StatusNotFound)
 		return
 	}
+
+	// Set headers and write response
 	w.WriteHeader(http.StatusOK)
-	tmpl.Execute(w, nil)
+	if err := tmpl.Execute(w, nil); err != nil {
+		fmt.Printf("Error executing template %s: %v\n", tmplPath, err)
+		http.Error(w, "Failed to render loading page", http.StatusInternalServerError)
+		return
+	}
+
+	// Explicitly flush the response
+	if flusher, ok := w.(http.Flusher); ok {
+		flusher.Flush()
+	}
 }
 
 func getDataMode(modeStr, lastPart string) config.DataMode {

@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gambtho/zkillanalytics/internal/model"
+	"github.com/guarzo/zkillanalytics/internal/model"
 )
 
 // RetryWithExponentialBackoff retries the provided function with exponential backoff.

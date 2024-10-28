@@ -5,7 +5,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/gambtho/zkillanalytics/internal/persist"
+	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
+
+	"github.com/guarzo/zkillanalytics/internal/persist"
 )
 
 // CheckDataAvailability checks which months within a range have data files already present.
@@ -40,4 +43,23 @@ func CheckDataAvailability(startMonth, endMonth, year int) (map[int]bool, error)
 		}
 	}
 	return dataAvailability, nil
+}
+
+// ListRoutes logs all registered routes in the router.
+func ListRoutes(router *mux.Router, logger *logrus.Logger) {
+	err := router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+		pathTemplate, err := route.GetPathTemplate()
+		if err != nil {
+			pathTemplate = "unknown path"
+		}
+		methods, err := route.GetMethods()
+		if err != nil || len(methods) == 0 {
+			methods = []string{"ANY"}
+		}
+		logger.Infof("Registered route: %s [%s]", pathTemplate, methods)
+		return nil
+	})
+	if err != nil {
+		logger.Errorf("Error walking routes: %v", err)
+	}
 }

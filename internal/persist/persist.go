@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gambtho/zkillanalytics/internal/model"
+	"github.com/guarzo/zkillanalytics/internal/model"
 )
 
 const dataDirectory = "data/monthly"

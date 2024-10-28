@@ -9,7 +9,7 @@ import (
 
 	"github.com/joho/godotenv"
 
-	"github.com/gambtho/zkillanalytics/cmd"
+	"github.com/guarzo/zkillanalytics/cmd"
 )
 
 func main() {

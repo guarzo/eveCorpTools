@@ -1,4 +1,4 @@
-module github.com/gambtho/zkillanalytics
+module github.com/guarzo/zkillanalytics
 
 go 1.23.0
 
