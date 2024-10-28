@@ -40,6 +40,12 @@ func main() {
 		userAgent = "placeholder@gmail.com"
 	}
 
+	hostConfig := os.Getenv("HOST_CONFIG")
+	if hostConfig == "" {
+		fmt.Println("No hostConfig provided in environment, using placeholder")
+		userAgent = "tps.zoolanders.space"
+	}
+
 	version := os.Getenv("VERSION")
 	if version == "" {
 		fmt.Println("No version provided in environment, using placeholder")
@@ -47,5 +53,5 @@ func main() {
 	}
 
 	// Start the web server
-	cmd.StartServer(port, userAgent, version)
+	cmd.StartServer(port, userAgent, version, hostConfig)
 }

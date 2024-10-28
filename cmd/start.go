@@ -6,10 +6,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -44,39 +46,56 @@ func loggingMiddleware(logger *logrus.Logger) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			logger.WithFields(logrus.Fields{
-				"method": r.Method,
-				"path":   r.URL.Path,
-				"host":   r.Host,
-				"remote": r.RemoteAddr,
+				"method":    r.Method,
+				"path":      r.URL.Path,
+				"host":      r.Host,
+				"remote":    r.RemoteAddr,
+				"userAgent": r.UserAgent(),
 			}).Info("Handling request")
 			next.ServeHTTP(w, r)
 		})
 	}
 }
 
-// hostBasedRouting middleware routes requests based on the host
-func hostBasedRouting(logger *logrus.Logger, orchestrateService *service.OrchestrateService) mux.MiddlewareFunc {
+// hostBasedRouting middleware routes requests based on the host or hostConfig directly
+func hostBasedRouting(logger *logrus.Logger, tpsRouter, lootRouter, defaultRouter *mux.Router, hostConfig string) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			logger.WithFields(logrus.Fields{
-				"host": r.Host,
-				"path": r.URL.Path,
-			}).Info("Routing request based on host")
+			// Extract hostname without port
+			host, _, err := net.SplitHostPort(r.Host)
+			if err != nil {
+				// If there's no port, use the entire Host
+				host = r.Host
+			}
 
-			switch r.Host {
+			// Override host if it's localhost and hostConfig is provided
+			effectiveHost := host
+			if strings.EqualFold(host, "localhost") && hostConfig != "" {
+				effectiveHost = hostConfig
+			}
+
+			logger.WithFields(logrus.Fields{
+				"originalHost":   r.Host,
+				"effectiveHost":  effectiveHost,
+				"path":           r.URL.Path,
+				"hostConfigUsed": strings.EqualFold(host, "localhost") && hostConfig != "",
+				"userAgent":      r.UserAgent(),
+			}).Info("Routing request based on effectiveHost")
+
+			// Route based on effectiveHost rather than r.Host
+			switch effectiveHost {
 			case "loot.zoolanders.space":
 				logger.Info("Routing to Loot Router")
-				lootRouter := mux.NewRouter()
-				registerLootRoutes(lootRouter, orchestrateService)
 				lootRouter.ServeHTTP(w, r)
+				return // Terminate after handling
 			case "tps.zoolanders.space":
 				logger.Info("Routing to TPS Router")
-				tpsRouter := mux.NewRouter()
-				registerTPSRoutes(tpsRouter, orchestrateService)
 				tpsRouter.ServeHTTP(w, r)
+				return // Terminate after handling
 			default:
 				logger.Info("Routing to Default Router")
-				next.ServeHTTP(w, r)
+				defaultRouter.ServeHTTP(w, r)
+				return // Terminate after handling
 			}
 		})
 	}
@@ -107,16 +126,15 @@ func registerLootRoutes(r *mux.Router, orchestrateService *service.OrchestrateSe
 	r.HandleFunc("/loot-summary", routes.LootSummaryHandler).Methods("GET")
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	r.NotFoundHandler = http.HandlerFunc(routes.NotFoundHandler)
+
+	// Optional: Handle /favicon.ico to prevent 404 errors
+	r.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	}).Methods("GET")
 }
 
 // registerDefaultRoutes registers the default routes for hosts like localhost:8080 or zoolanders.space
 func registerDefaultRoutes(r *mux.Router, orchestrateService *service.OrchestrateService, logger *logrus.Logger) {
-	// Route "/" to ServeRoute with config.Snippets
-	r.HandleFunc("/", routes.ServeRoute(config.Snippets, orchestrateService)).Methods("GET")
-
-	// Route "/lastMonth" to ServeRoute with config.All
-	r.HandleFunc("/lastMonth", routes.ServeRoute(config.All, orchestrateService)).Methods("GET")
-
 	// Health Check Endpoint
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		health := struct {
@@ -136,11 +154,21 @@ func registerDefaultRoutes(r *mux.Router, orchestrateService *service.Orchestrat
 
 	// Register a route to list all routes (Optional)
 	r.HandleFunc("/routes", routes.ListRoutesHandler(r, logger)).Methods("GET")
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+
+	// Add a handler for the root path
+	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Welcome to the Default Router!"))
+	}).Methods("GET")
+
+	// Optional: Handle /favicon.ico to prevent 404 errors
+	r.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	}).Methods("GET")
 }
 
 // StartServer starts the HTTP server with the specified routes
-func StartServer(port int, userAgent, version string) {
+func StartServer(port int, userAgent, version, hostConfig string) {
 	// Initialize Logger
 	logger := logrus.New()
 	logger.SetOutput(os.Stdout)
@@ -159,9 +187,23 @@ func StartServer(port int, userAgent, version string) {
 	logger.WithFields(logrus.Fields{
 		"GOMAXPROCS":     fmt.Sprintf("%d", runtime.GOMAXPROCS(0)),
 		"GOMEMLIMIT":     "Not Set", // Adjust based on actual usage or remove if not applicable
-		"VERSION":        os.Getenv("VERSION"),
+		"VERSION":        version,
 		"Listen Address": fmt.Sprintf(":%d", port),
+		"HOST_CONFIG":    hostConfig,
 	}).Info("Runtime information")
+
+	logger.Infof("host is %s", hostConfig)
+
+	// Validate host_config
+	validHosts := map[string]bool{
+		"tps.zoolanders.space":  true,
+		"loot.zoolanders.space": true,
+		"localhost":             true, // Optionally include "localhost" as a valid default
+	}
+
+	if hostConfig != "" && !validHosts[hostConfig] {
+		logger.Fatalf("Invalid host_config: %s. Must be one of %v", hostConfig, keys(validHosts))
+	}
 
 	// Initialize Cache
 	cache := persist.NewInMemoryCache(logger)
@@ -177,6 +219,11 @@ func StartServer(port int, userAgent, version string) {
 		logger.Infof("Cache loaded from %s", cacheFile)
 	}
 
+	failedChars, err := persist.LoadFailedCharacters()
+	if err != nil {
+		logger.Errorf("Failed to load failed characters: %v", err)
+	}
+
 	// Ensure necessary directories exist
 	dirs := []string{
 		"data",
@@ -184,7 +231,7 @@ func StartServer(port int, userAgent, version string) {
 		"data/charts",
 	}
 	for _, dir := range dirs {
-		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		if err = os.MkdirAll(dir, os.ModePerm); err != nil {
 			logger.Fatalf("Failed to create directory %s: %v", dir, err)
 		} else {
 			logger.Infof("Ensured directory exists: %s", dir)
@@ -192,7 +239,7 @@ func StartServer(port int, userAgent, version string) {
 	}
 
 	// Clear cache directory if needed
-	err := persist.DeleteFilesInDirectory(persist.GetChartsDirectory())
+	err = persist.DeleteFilesInDirectory(persist.GetChartsDirectory())
 	if err != nil {
 		logger.Infof("Using new charts directory: %v", err)
 	}
@@ -200,20 +247,14 @@ func StartServer(port int, userAgent, version string) {
 	// Initialize HTTP Client with User-Agent
 	httpClient := utils.NewHTTPClientWithUserAgent(userAgent)
 
-	esiClient := esi.NewEsiClient(config.BaseEsiURL, httpClient, cache, logger)
+	esiClient := esi.NewEsiClient(config.BaseEsiURL, failedChars, httpClient, cache, logger)
 	zkillClient := zkill.NewZkillClient(config.ZkillURL, httpClient, cache, logger)
 
-	// Initialize EsiService
+	// Initialize Services
 	esiService := service.NewEsiService(esiClient, cache, logger)
-
-	// Initialize InvTypeService
 	invTypeService := data.NewInvTypeService(logger) // Ensure this function exists and is correctly implemented
-
-	// Initialize KillMailService with EsiService
 	killMailService := service.NewKillMailService(zkillClient, esiService, cache, logger)
-
-	// Initialize OrchestrateService with EsiService and KillMailService
-	orchestrateService := service.NewOrchestrateService(esiService, killMailService, invTypeService, cache, logger, httpClient)
+	orchestrateService := service.NewOrchestrateService(esiService, killMailService, invTypeService, failedChars, cache, logger, httpClient)
 
 	// Create a root context that we can cancel on shutdown
 	ctx, cancel := context.WithCancel(context.Background())
@@ -227,20 +268,29 @@ func StartServer(port int, userAgent, version string) {
 	mainRouter := mux.NewRouter()
 
 	// Apply Middlewares
-	mainRouter.Use(loggingMiddleware(logger))                    // Detailed request logging
-	mainRouter.Use(logRequestHost(logger))                       // Existing host/path logging
-	mainRouter.Use(hostBasedRouting(logger, orchestrateService)) // Host-based routing
+	mainRouter.Use(loggingMiddleware(logger)) // Detailed request logging
+	mainRouter.Use(logRequestHost(logger))    // Existing host/path logging
 
-	// Register Default Routes
-	registerDefaultRoutes(mainRouter, orchestrateService, logger)
+	// Initialize Subrouters
+	tpsRouter := mux.NewRouter()
+	registerTPSRoutes(tpsRouter, orchestrateService)
+	logger.Info("Registered TPS subdomain routes")
 
-	// Register Subdomain Routes (handled by hostBasedRouting middleware)
-	// No need to register them here; they're handled within the middleware
+	lootRouter := mux.NewRouter()
+	registerLootRoutes(lootRouter, orchestrateService)
+	logger.Info("Registered Loot subdomain routes")
+
+	defaultRouter := mux.NewRouter()
+	registerDefaultRoutes(defaultRouter, orchestrateService, logger)
+	logger.Info("Registered Default routes")
+
+	// Apply Host-Based Routing Middleware with Pre-Initialized Subrouters
+	mainRouter.Use(hostBasedRouting(logger, tpsRouter, lootRouter, defaultRouter, hostConfig))
 
 	// Log all registered routes for debugging
 	utils.ListRoutes(mainRouter, logger)
 
-	// Implement a catch-all NotFoundHandler (already handled within registerDefaultRoutes, but reaffirm)
+	// Implement a catch-all NotFoundHandler
 	mainRouter.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger.WithFields(logrus.Fields{
 			"method": r.Method,
@@ -301,4 +351,13 @@ func StartServer(port int, userAgent, version string) {
 	// Block until graceful shutdown is complete
 	<-idleConnsClosed
 	logger.Info("Server gracefully stopped")
+}
+
+// Helper function to get keys of a map
+func keys(m map[string]bool) []string {
+	var list []string
+	for k := range m {
+		list = append(list, k)
+	}
+	return list
 }

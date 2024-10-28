@@ -29,6 +29,7 @@ type OrchestrateService struct {
 	KillMailService *KillMailService
 	ESIService      *EsiService
 	InvTypeService  *data.InvTypeService
+	Failed          *model.FailedCharacters
 	Cache           *persist.Cache
 	Logger          *logrus.Logger
 	Client          *http.Client
@@ -42,6 +43,7 @@ func NewOrchestrateService(
 	esiService *EsiService,
 	killMailService *KillMailService,
 	invTypeService *data.InvTypeService,
+	failed *model.FailedCharacters,
 	cache *persist.Cache,
 	logger *logrus.Logger,
 	client *http.Client,
@@ -50,6 +52,7 @@ func NewOrchestrateService(
 		ESIService:      esiService,
 		KillMailService: killMailService,
 		InvTypeService:  invTypeService,
+		Failed:          failed,
 		Cache:           cache,
 		Logger:          logger,
 		Client:          client,
@@ -137,6 +140,13 @@ func (os *OrchestrateService) GetAllData(ctx context.Context, corporations, alli
 				os.Logger.Errorf("Error loading data from file %s: %v", fileName, err)
 				continue
 			}
+			// Populate tracked characters in ESIData
+			err = os.ESIService.LoadTrackedCharacters(ctx, monthlyKillMailData.KillMails, esiData)
+			if err != nil {
+				os.Logger.Errorf("Error loading tracked characters into ESI data: %v", err)
+				return nil, err
+			}
+
 			// Aggregate KillMailData into NewData
 			newData.KillMails = os.KillMailService.AggregateKillMailDumps(newData.KillMails, monthlyKillMailData.KillMails)
 		}
@@ -146,13 +156,6 @@ func (os *OrchestrateService) GetAllData(ctx context.Context, corporations, alli
 	chartData := &model.ChartData{
 		KillMails: newData.KillMails,
 		ESIData:   *esiData,
-	}
-
-	// Populate tracked characters in ESIData
-	err = os.ESIService.LoadTrackedCharacters(ctx, chartData)
-	if err != nil {
-		os.Logger.Errorf("Error loading tracked characters into ESI data: %v", err)
-		return nil, err
 	}
 
 	// Refresh ESI data if necessary
@@ -175,6 +178,10 @@ func (os *OrchestrateService) GetAllData(ctx context.Context, corporations, alli
 	if err != nil {
 		os.Logger.Errorf("Error saving IDs data: %v", err)
 		return nil, err
+	}
+
+	if saveErr := persist.SaveFailedCharacters(os.Failed); saveErr != nil {
+		os.Logger.Errorf("Error saving IDs data: %v", err)
 	}
 
 	fetchTotalTime := time.Since(fetchStart)
@@ -273,18 +280,12 @@ func (os *OrchestrateService) GetTrackedCharactersFromKillMails(fullKillMail []m
 			// Verify esiData contains attacker.CharacterID
 			_, exists := esiData.CharacterInfos[attacker.CharacterID]
 			if !exists {
-				if attacker.CharacterID == 2121953857 {
-					os.Logger.Debugf("Character %d not found in ESI data, skipping", attacker.CharacterID)
-				}
 				continue
 			}
 
 			// Verify esiData contains attacker.CorporationID
 			corpInfo, exists := esiData.CorporationInfos[attacker.CorporationID]
 			if !exists {
-				if attacker.CharacterID == 2121953857 {
-					os.Logger.Debugf("Corporation %d for character %d not found in ESI data, skipping", attacker.CorporationID, attacker.CharacterID)
-				}
 				continue
 			}
 
@@ -292,12 +293,7 @@ func (os *OrchestrateService) GetTrackedCharactersFromKillMails(fullKillMail []m
 
 			// Check DisplayCharacter
 			if config.DisplayCharacter(attacker.CharacterID, attacker.CorporationID, allianceID) {
-				os.Logger.Debugf("Adding character %d to tracked characters", attacker.CharacterID)
 				trackedCharacters = append(trackedCharacters, attacker.CharacterID)
-			} else {
-				if attacker.CharacterID == 2121953857 {
-					os.Logger.Debugf("Character %d did not pass DisplayCharacter check", attacker.CharacterID)
-				}
 			}
 		}
 	}

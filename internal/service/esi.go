@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/sirupsen/logrus"
@@ -57,12 +58,18 @@ func (es *EsiService) GetCorporationInfo(ctx context.Context, corporationID int)
 
 // GetCharacterInfo retrieves detailed information about a character.
 func (es *EsiService) GetCharacterInfo(ctx context.Context, characterID int) (*model.Character, error) {
-	es.Logger.Infof("Fetching character ID: %d", characterID)
-
 	// Fetch character details using EsiClient.
 	char, err := es.EsiClient.GetCharacterInfo(ctx, characterID)
 	if err != nil {
-		es.Logger.Errorf("Error fetching character info: %v", err)
+		var notFoundError *model.NotFoundError
+		if errors.As(err, &notFoundError) {
+			// Handle the 404 case silently or with a warning, without logging as an error
+			es.Logger.Debugf("Character %d not found; skipping\n", characterID)
+
+		} else {
+			es.Logger.Errorf("Error fetching character info: %v", err)
+		}
+
 		return nil, err
 	}
 
@@ -84,54 +91,54 @@ func (es *EsiService) GetAllianceInfo(ctx context.Context, allianceID int) (*mod
 }
 
 // LoadTrackedCharacters loads all tracked characters from the killmails into ESIData.
-func (es *EsiService) LoadTrackedCharacters(ctx context.Context, chartData *model.ChartData) error {
+func (es *EsiService) LoadTrackedCharacters(ctx context.Context, killMails []model.DetailedKillMail, esiData *model.ESIData) error {
 	es.Logger.Info("Loading tracked characters into ESIData")
 
-	for _, km := range chartData.KillMails {
+	for _, km := range killMails {
 		// Add victim to ESI data if not already present
 		if km.Victim.CharacterID != 0 {
-			if _, exists := chartData.ESIData.CharacterInfos[km.Victim.CharacterID]; !exists {
+			if _, exists := esiData.CharacterInfos[km.Victim.CharacterID]; !exists {
 				victimData, err := es.GetCharacterInfo(ctx, km.Victim.CharacterID)
 				if err != nil {
 					es.Logger.Errorf("Failed to fetch victim character data for ID %d: %v", km.Victim.CharacterID, err)
 					continue
 				}
-				chartData.ESIData.CharacterInfos[km.Victim.CharacterID] = *victimData
+				esiData.CharacterInfos[km.Victim.CharacterID] = *victimData
 			}
 		}
 
 		// Add attackers to ESI data if not already present
 		for _, attacker := range km.Attackers {
 			if attacker.CharacterID != 0 {
-				if _, exists := chartData.ESIData.CharacterInfos[attacker.CharacterID]; !exists {
+				if _, exists := esiData.CharacterInfos[attacker.CharacterID]; !exists {
 					attackerData, err := es.GetCharacterInfo(ctx, attacker.CharacterID)
 					if err != nil {
 						es.Logger.Errorf("Failed to fetch attacker character data for ID %d: %v", attacker.CharacterID, err)
 						continue
 					}
-					chartData.ESIData.CharacterInfos[attacker.CharacterID] = *attackerData
+					esiData.CharacterInfos[attacker.CharacterID] = *attackerData
 				}
 			}
 
 			// Add corporation and alliance info for attacker
 			if attacker.CorporationID != 0 {
-				if _, exists := chartData.ESIData.CorporationInfos[attacker.CorporationID]; !exists {
+				if _, exists := esiData.CorporationInfos[attacker.CorporationID]; !exists {
 					corpData, err := es.GetCorporationInfo(ctx, attacker.CorporationID)
 					if err != nil {
 						es.Logger.Errorf("Failed to fetch corporation data for ID %d: %v", attacker.CorporationID, err)
 						continue
 					}
-					chartData.ESIData.CorporationInfos[attacker.CorporationID] = *corpData
+					esiData.CorporationInfos[attacker.CorporationID] = *corpData
 				}
 			}
 			if attacker.AllianceID != 0 {
-				if _, exists := chartData.ESIData.AllianceInfos[attacker.AllianceID]; !exists {
+				if _, exists := esiData.AllianceInfos[attacker.AllianceID]; !exists {
 					allianceData, err := es.GetAllianceInfo(ctx, attacker.AllianceID)
 					if err != nil {
 						es.Logger.Errorf("Failed to fetch alliance data for ID %d: %v", attacker.AllianceID, err)
 						continue
 					}
-					chartData.ESIData.AllianceInfos[attacker.AllianceID] = *allianceData
+					esiData.AllianceInfos[attacker.AllianceID] = *allianceData
 				}
 			}
 		}

@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -144,4 +145,18 @@ type LootSplit struct {
 	SplitDetails  map[string]string `json:"splitDetails"`
 	BattleReport  string            `json:"battleReport"`
 	Date          string            `json:"date"`
+}
+
+// FailedCharacters represents a structure to hold failed character IDs.
+type FailedCharacters struct {
+	CharacterIDs map[int]bool `json:"character_ids"`
+}
+
+// NotFoundError is a custom error type for representing 404 errors.
+type NotFoundError struct {
+	CharacterID int
+}
+
+func (e *NotFoundError) Error() string {
+	return fmt.Sprintf("character %d not found (404)", e.CharacterID)
 }

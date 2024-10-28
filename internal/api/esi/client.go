@@ -5,11 +5,13 @@ package esi
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -24,16 +26,18 @@ const defaultCacheExpiration = 25 * time.Hour
 // EsiClient encapsulates the HTTP client and cache for ESI API interactions.
 type EsiClient struct {
 	BaseURL string
+	Failed  *model.FailedCharacters
 	Client  *http.Client
 	Cache   *persist.Cache
 	Logger  *logrus.Logger
 }
 
 // NewEsiClient initializes and returns a new EsiClient.
-func NewEsiClient(baseURL string, client *http.Client, cache *persist.Cache, logger *logrus.Logger) *EsiClient {
+func NewEsiClient(baseURL string, failed *model.FailedCharacters, client *http.Client, cache *persist.Cache, logger *logrus.Logger) *EsiClient {
 	return &EsiClient{
 		BaseURL: baseURL,
 		Client:  client,
+		Failed:  failed,
 		Cache:   cache,
 		Logger:  logger,
 	}
@@ -186,6 +190,12 @@ func (esi *EsiClient) AggregateEsi(ctx context.Context, killMail *model.EsiKillM
 		if _, exists := esiData.CharacterInfos[killMail.Victim.CharacterID]; !exists {
 			charData, err := esi.GetCharacterInfo(ctx, killMail.Victim.CharacterID)
 			if err != nil {
+				var notFoundError *model.NotFoundError
+				if errors.As(err, &notFoundError) {
+					// Handle the 404 case silently or with a warning, without logging as an error
+					esi.Logger.Debugf("Character %d not found; skipping\n", killMail.Victim.CharacterID)
+					return nil
+				}
 				return fmt.Errorf("failed to fetch character details: %w", err)
 			}
 			esiData.CharacterInfos[killMail.Victim.CharacterID] = *charData
@@ -219,6 +229,12 @@ func (esi *EsiClient) AggregateEsi(ctx context.Context, killMail *model.EsiKillM
 			if _, exists := esiData.CharacterInfos[attacker.CharacterID]; !exists {
 				charData, err := esi.GetCharacterInfo(ctx, attacker.CharacterID)
 				if err != nil {
+					var notFoundError *model.NotFoundError
+					if errors.As(err, &notFoundError) {
+						// Handle the 404 case silently or with a warning, without logging as an error
+						esi.Logger.Infof("Character %d not found; skipping\n", attacker.CharacterID)
+						return nil
+					}
 					return fmt.Errorf("failed to fetch character details for attacker: %w", err)
 				}
 				esiData.CharacterInfos[attacker.CharacterID] = *charData
@@ -251,8 +267,15 @@ func (esi *EsiClient) GetCorporationInfo(ctx context.Context, corporationID int)
 	return &corporation, nil
 }
 
-// GetCharacterInfo fetches and returns character details.
+// internal/api/esi/esi.go
+
 func (esi *EsiClient) GetCharacterInfo(ctx context.Context, characterID int) (*model.Character, error) {
+	// Check if character ID is in the failed list before making the call.
+	if _, exists := esi.Failed.CharacterIDs[characterID]; exists {
+		esi.Logger.Warnf("Skipping character %d as it previously failed with a 404", characterID)
+		return nil, &model.NotFoundError{CharacterID: characterID}
+	}
+
 	endpoint := fmt.Sprintf("characters/%d/", characterID)
 	params := map[string]string{
 		"datasource": "tranquility",
@@ -261,9 +284,20 @@ func (esi *EsiClient) GetCharacterInfo(ctx context.Context, characterID int) (*m
 
 	data, err := esi.getEsiData(ctx, endpoint, params)
 	if err != nil {
+		// Log the exact error message to help debug
+		esi.Logger.Debugf("Error fetching character ID %d: %v", characterID, err)
+
+		// Check if error message contains "404" to catch similar errors
+		if strings.Contains(err.Error(), "404") {
+			esi.Logger.Warnf("Character %d not found, adding to failed list", characterID)
+			esi.Failed.CharacterIDs[characterID] = true
+			// Save updated failed characters to file
+			if saveErr := persist.SaveFailedCharacters(esi.Failed); saveErr != nil {
+				esi.Logger.Errorf("Failed to save failed character ID %d: %v", characterID, saveErr)
+			}
+		}
 		return nil, err
 	}
-
 	var character model.Character
 	if err := json.Unmarshal(data, &character); err != nil {
 		esi.Logger.Errorf("Failed to unmarshal character data for ID %d: %v", characterID, err)
