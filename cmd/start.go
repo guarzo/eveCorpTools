@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -209,6 +208,10 @@ func StartServer(port int, userAgent, version, hostConfig string) {
 	// Initialize Services
 	esiService := service.NewEsiService(esiClient, cache, logger)
 	invTypeService := data.NewInvTypeService(logger) // Ensure this function exists and is correctly implemented
+	err = invTypeService.LoadInvTypes()
+	if err != nil {
+		logger.Fatalf("failed to load invtypes %v", err)
+	}
 	killMailService := service.NewKillMailService(zkillClient, esiService, cache, logger)
 	orchestrateService := service.NewOrchestrateService(esiService, killMailService, invTypeService, failedChars, cache, logger, httpClient)
 
@@ -230,14 +233,22 @@ func StartServer(port int, userAgent, version, hostConfig string) {
 	// Function to create a host matcher that handles hostConfig
 	hostMatcher := func(targetHost string) mux.MatcherFunc {
 		return func(r *http.Request, rm *mux.RouteMatch) bool {
-			host, _, err := net.SplitHostPort(r.Host)
-			if err != nil {
-				host = r.Host
+			host := r.Host
+			// Remove port if present
+			if idx := strings.Index(host, ":"); idx != -1 {
+				host = host[:idx]
 			}
 			if strings.EqualFold(host, "localhost") && hostConfig != "" {
 				host = hostConfig
 			}
-			return strings.EqualFold(host, targetHost)
+			match := strings.EqualFold(host, targetHost)
+			logger.WithFields(logrus.Fields{
+				"originalHost":  r.Host,
+				"effectiveHost": host,
+				"targetHost":    targetHost,
+				"match":         match,
+			}).Debug("Host matching")
+			return match
 		}
 	}
 
