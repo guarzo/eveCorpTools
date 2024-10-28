@@ -57,50 +57,6 @@ func loggingMiddleware(logger *logrus.Logger) mux.MiddlewareFunc {
 	}
 }
 
-// hostBasedRouting middleware routes requests based on the host or hostConfig directly
-func hostBasedRouting(logger *logrus.Logger, tpsRouter, lootRouter, defaultRouter *mux.Router, hostConfig string) mux.MiddlewareFunc {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Extract hostname without port
-			host, _, err := net.SplitHostPort(r.Host)
-			if err != nil {
-				// If there's no port, use the entire Host
-				host = r.Host
-			}
-
-			// Override host if it's localhost and hostConfig is provided
-			effectiveHost := host
-			if strings.EqualFold(host, "localhost") && hostConfig != "" {
-				effectiveHost = hostConfig
-			}
-
-			logger.WithFields(logrus.Fields{
-				"originalHost":   r.Host,
-				"effectiveHost":  effectiveHost,
-				"path":           r.URL.Path,
-				"hostConfigUsed": strings.EqualFold(host, "localhost") && hostConfig != "",
-				"userAgent":      r.UserAgent(),
-			}).Info("Routing request based on effectiveHost")
-
-			// Route based on effectiveHost rather than r.Host
-			switch effectiveHost {
-			case "loot.zoolanders.space":
-				logger.Info("Routing to Loot Router")
-				lootRouter.ServeHTTP(w, r)
-				return // Terminate after handling
-			case "tps.zoolanders.space":
-				logger.Info("Routing to TPS Router")
-				tpsRouter.ServeHTTP(w, r)
-				return // Terminate after handling
-			default:
-				logger.Info("Routing to Default Router")
-				defaultRouter.ServeHTTP(w, r)
-				return // Terminate after handling
-			}
-		})
-	}
-}
-
 // registerTPSRoutes registers the routes for the TPS subdomain
 func registerTPSRoutes(r *mux.Router, orchestrateService *service.OrchestrateService) {
 	r.HandleFunc("/", routes.ServeRoute(config.Snippets, orchestrateService)).Methods("GET")
@@ -271,21 +227,33 @@ func StartServer(port int, userAgent, version, hostConfig string) {
 	mainRouter.Use(loggingMiddleware(logger)) // Detailed request logging
 	mainRouter.Use(logRequestHost(logger))    // Existing host/path logging
 
-	// Initialize Subrouters
-	tpsRouter := mux.NewRouter()
+	// Function to create a host matcher that handles hostConfig
+	hostMatcher := func(targetHost string) mux.MatcherFunc {
+		return func(r *http.Request, rm *mux.RouteMatch) bool {
+			host, _, err := net.SplitHostPort(r.Host)
+			if err != nil {
+				host = r.Host
+			}
+			if strings.EqualFold(host, "localhost") && hostConfig != "" {
+				host = hostConfig
+			}
+			return strings.EqualFold(host, targetHost)
+		}
+	}
+
+	// Initialize Subrouters with Host Matchers
+	tpsRouter := mainRouter.MatcherFunc(hostMatcher("tps.zoolanders.space")).Subrouter()
 	registerTPSRoutes(tpsRouter, orchestrateService)
 	logger.Info("Registered TPS subdomain routes")
 
-	lootRouter := mux.NewRouter()
+	lootRouter := mainRouter.MatcherFunc(hostMatcher("loot.zoolanders.space")).Subrouter()
 	registerLootRoutes(lootRouter, orchestrateService)
 	logger.Info("Registered Loot subdomain routes")
 
-	defaultRouter := mux.NewRouter()
+	// Default Router handles all other hosts
+	defaultRouter := mainRouter.NewRoute().Subrouter()
 	registerDefaultRoutes(defaultRouter, orchestrateService, logger)
 	logger.Info("Registered Default routes")
-
-	// Apply Host-Based Routing Middleware with Pre-Initialized Subrouters
-	mainRouter.Use(hostBasedRouting(logger, tpsRouter, lootRouter, defaultRouter, hostConfig))
 
 	// Log all registered routes for debugging
 	utils.ListRoutes(mainRouter, logger)
