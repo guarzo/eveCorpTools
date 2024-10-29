@@ -1,6 +1,7 @@
 package visuals
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"os"
@@ -9,6 +10,18 @@ import (
 	"github.com/guarzo/zkillanalytics/internal/model"
 	"github.com/guarzo/zkillanalytics/internal/service"
 )
+
+// In your visuals package
+type ChartJSData struct {
+	Labels   []string         `json:"labels"`
+	Datasets []ChartJSDataset `json:"datasets"`
+}
+
+type ChartJSDataset struct {
+	Label           string   `json:"label"`
+	Data            []int    `json:"data"`
+	BackgroundColor []string `json:"backgroundColor"`
+}
 
 var trackedCharacters []int
 
@@ -25,27 +38,55 @@ func RenderSnippets(orchestrateService *service.OrchestrateService, ytdChartData
 
 	orchestrateService.Logger.Infof("there are %d tracked characters", len(trackedCharacters))
 
-	data := struct {
-		MTDChartHTML template.HTML
-		YTDChartHTML template.HTML
-		LMChartHTML  template.HTML
-	}{
-		MTDChartHTML: renderToHtml(RenderTopCharacters(mtdChartData), RenderOurShips(orchestrateService, mtdChartData), RenderPointsPerCharacter(mtdChartData), RenderDamageDone(mtdChartData, "damage"), RenderDamageDone(mtdChartData, "blows"), RenderSolo(mtdChartData), RenderWeaponsByCharacter(orchestrateService, mtdChartData), RenderVictims(mtdChartData), RenderTopShipsKilled(orchestrateService, mtdChartData), RenderLostShipTypes(orchestrateService, mtdChartData), RenderOurLossesValue(orchestrateService, mtdChartData), RenderOurLossesCount(orchestrateService, mtdChartData)),
-		YTDChartHTML: renderToHtml(RenderTopCharacters(ytdChartData), RenderOurShips(orchestrateService, ytdChartData), RenderPointsPerCharacter(ytdChartData), RenderDamageDone(ytdChartData, "damage"), RenderDamageDone(ytdChartData, "blows"), RenderSolo(ytdChartData), RenderWeaponsByCharacter(orchestrateService, ytdChartData), RenderVictims(ytdChartData), RenderTopShipsKilled(orchestrateService, ytdChartData), RenderLostShipTypes(orchestrateService, ytdChartData), RenderOurLossesValue(orchestrateService, ytdChartData), RenderOurLossesCount(orchestrateService, ytdChartData)),
-		LMChartHTML:  renderToHtml(RenderTopCharacters(lastMonthChartData), RenderOurShips(orchestrateService, lastMonthChartData), RenderPointsPerCharacter(lastMonthChartData), RenderDamageDone(lastMonthChartData, "damage"), RenderDamageDone(lastMonthChartData, "blows"), RenderSolo(lastMonthChartData), RenderWeaponsByCharacter(orchestrateService, lastMonthChartData), RenderVictims(lastMonthChartData), RenderTopShipsKilled(orchestrateService, lastMonthChartData), RenderLostShipTypes(orchestrateService, lastMonthChartData), RenderOurLossesValue(orchestrateService, lastMonthChartData), RenderOurLossesCount(orchestrateService, lastMonthChartData)),
+	mtdKillCountData, err := PrepareKillCountChartData(mtdChartData)
+	if err != nil {
+		return fmt.Errorf("failed to prepare MTD Kill Count data: %w", err)
+	}
+	mtdKillCountDataJSON, err := json.Marshal(mtdKillCountData)
+	if err != nil {
+		return fmt.Errorf("failed to marshal MTD Kill Count data: %w", err)
 	}
 
-	tmpl, err := template.New("chart.tmpl").ParseFiles(filepath.Join("static", "chart.tmpl"))
+	ytdKillCountData, err := PrepareKillCountChartData(ytdChartData)
+	if err != nil {
+		return fmt.Errorf("failed to prepare ytd Kill Count data: %w", err)
+	}
+	ytdKillCountDataJSON, err := json.Marshal(ytdKillCountData)
+	if err != nil {
+		return fmt.Errorf("failed to marshal ytd Kill Count data: %w", err)
+	}
+
+	lastMKillCountData, err := PrepareKillCountChartData(lastMonthChartData)
+	if err != nil {
+		return fmt.Errorf("failed to prepare lastM Kill Count data: %w", err)
+	}
+	lastMKillCountDataJSON, err := json.Marshal(lastMKillCountData)
+	if err != nil {
+		return fmt.Errorf("failed to marshal lastM Kill Count data: %w", err)
+	}
+
+	data := struct {
+		MTDKillCountData   template.JS
+		YTDKillCountData   template.JS
+		LastMKillCountData template.JS
+	}{
+		MTDKillCountData:   template.JS(mtdKillCountDataJSON),
+		YTDKillCountData:   template.JS(ytdKillCountDataJSON),
+		LastMKillCountData: template.JS(lastMKillCountDataJSON),
+	}
+
+	// Render the template
+	tmpl, err := template.New("tps.tmpl").ParseFiles(filepath.Join("static", "tps.tmpl"))
 	if err != nil {
 		return fmt.Errorf("failed to parse template: %w", err)
 	}
 
-	// Save the chart to an HTML file
 	f, err := os.Create(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
 	}
 	defer f.Close()
+
 	err = tmpl.Execute(f, data)
 	if err != nil {
 		return fmt.Errorf("failed to execute template: %w", err)

@@ -3,9 +3,6 @@ package visuals
 import (
 	"sort"
 
-	"github.com/go-echarts/go-echarts/v2/charts"
-	"github.com/go-echarts/go-echarts/v2/opts"
-
 	"github.com/guarzo/zkillanalytics/internal/config"
 	"github.com/guarzo/zkillanalytics/internal/model"
 )
@@ -17,7 +14,7 @@ type CharacterKillData struct {
 	Name        string
 }
 
-func RenderTopCharacters(chartData *model.ChartData) *charts.Bar {
+func PrepareKillCountChartData(chartData *model.ChartData) (ChartJSData, error) {
 	// Initialize a map to count kills by character
 	characterKills := make(map[int]CharacterKillData)
 
@@ -41,7 +38,6 @@ func RenderTopCharacters(chartData *model.ChartData) *charts.Bar {
 		}
 	}
 
-	// Convert the map to a slice of CharacterKillData and sort by kill count
 	var sortedData []CharacterKillData
 	for _, data := range characterKills {
 		sortedData = append(sortedData, data)
@@ -50,27 +46,32 @@ func RenderTopCharacters(chartData *model.ChartData) *charts.Bar {
 		return sortedData[i].KillCount > sortedData[j].KillCount
 	})
 
-	//// Limit to the top 20 characters
+	// Limit to top 20 characters
 	if len(sortedData) > 20 {
 		sortedData = sortedData[:20]
 	}
 
-	// Prepare data for the chart
-	var characterNames []string
-	var counts []opts.BarData
-	for i, data := range sortedData {
-		characterNames = append(characterNames, data.Name)
-		counts = append(counts, opts.BarData{
-			Value: data.KillCount,
-			ItemStyle: &opts.ItemStyle{
-				Color: colors[i%len(colors)],
-			},
-		})
+	// Prepare data for Chart.js
+	var labels []string
+	var data []int
+	var backgroundColors []string
+
+	for i, d := range sortedData {
+		labels = append(labels, d.Name)
+		data = append(data, d.KillCount)
+		backgroundColors = append(backgroundColors, colors[i%len(colors)])
 	}
 
-	// Create a new bar chart instance
-	bar := newBarChart("           Kill Count", false)
-	bar.SetXAxis(characterNames).
-		AddSeries("", counts)
-	return bar
+	chartJSData := ChartJSData{
+		Labels: labels,
+		Datasets: []ChartJSDataset{
+			{
+				Label:           "Kill Count",
+				Data:            data,
+				BackgroundColor: backgroundColors,
+			},
+		},
+	}
+
+	return chartJSData, nil
 }

@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"mime"
 	"net/http"
 	"os"
 	"os/signal"
@@ -148,6 +149,11 @@ func StartServer(port int, userAgent, version, hostConfig string) {
 	}).Info("Runtime information")
 
 	logger.Infof("host is %s", hostConfig)
+
+	err := mime.AddExtensionType(".js", "application/javascript")
+	if err != nil {
+		logger.Errorf("error attaching mime extension %v]", err)
+	}
 
 	// Validate host_config
 	validHosts := map[string]bool{

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Zoolanders TPS Reports</title>
+    <!-- Bootstrap CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    >
+    <!-- Custom CSS -->
+    <link rel="stylesheet" type="text/css" href="/static/css/tps.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&family=Montserrat:wght@700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Favicon -->
+    <link rel="icon" href="/static/images/favicon.ico" type="image/x-icon">
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+</head>
+<body>
+    <!-- Header -->
+    <header class="position-relative text-center my-5 p-5">
+        <div class="container">
+            <h1 class="display-3 animate__animated animate__fadeInDown">Zoolanders TPS Reports</h1>
+            <p class="lead animate__animated animate__fadeInUp">Your Gateway to Fleet Analytics</p>
+        </div>
+    </header>
+
+
+    <main>
+    <div class="container">
+        <!-- Tabs for Navigation -->
+        <ul class="nav nav-tabs mt-4" id="chartTab" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" id="mtd-tab" data-bs-toggle="tab" href="#mtdChartContainer" role="tab">MTD</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="lm-tab" data-bs-toggle="tab" href="#lmChartContainer" role="tab">Last Month</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="ytd-tab" data-bs-toggle="tab" href="#ytdChartContainer" role="tab">YTD</a>
+            </li>
+        </ul>
+
+        <!-- Chart Containers -->
+        <div class="tab-content">
+            <div class="tab-pane fade show active chart-container" id="mtdChartContainer" role="tabpanel" aria-labelledby="mtd-tab">
+                <canvas id="mtdKillCountChart"></canvas>
+            </div>
+            <div class="tab-pane fade chart-container" id="lmChartContainer" role="tabpanel" aria-labelledby="lm-tab">
+                <canvas id="lmKillCountChart"></canvas>
+            </div>
+            <div class="tab-pane fade chart-container" id="ytdChartContainer" role="tabpanel" aria-labelledby="ytd-tab">
+                <canvas id="ytdKillCountChart"></canvas>
+            </div>
+        </div>
+    </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <img src="/static/images/zoo_logo.png" alt="Zoolanders Logo">
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <!-- Include Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Pass data from Go to JavaScript -->
+    <script>
+        window.mtdKillCountData = {{.MTDKillCountData}};
+        window.lmKillCountData = {{.LastMKillCountData}};
+        window.ytdKillCountData = {{.YTDKillCountData}};
+    </script>
+    <!-- Custom JS -->
+    <script src="/static/js/tps.js"></script>
+</body>
+</html>
