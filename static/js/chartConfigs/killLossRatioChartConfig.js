@@ -1,6 +1,10 @@
-// chartConfigs/killLossRatioChartConfig.js
-import { truncateLabel, commonOptions } from '../utils.js';
+// static/js/chartConfigs/killLossRatioChartConfig.js
 
+import { truncateLabel, getCommonOptions } from '../utils.js';
+
+/**
+ * Configuration for the Kill-to-Loss Ratio Chart
+ */
 const killLossRatioChartConfig = {
     id: 'killLossRatioChart',
     instance: null,
@@ -10,15 +14,11 @@ const killLossRatioChartConfig = {
         lastMonth: 'lastMKillLossRatioData',
     },
     type: 'bar',
-    options: {
-        ...commonOptions,
+    options: getCommonOptions('Kill-to-Loss Ratio', {
         plugins: {
-            ...commonOptions.plugins,
             legend: { display: false },
             tooltip: {
-                ...commonOptions.plugins.tooltip,
                 callbacks: {
-                    ...commonOptions.plugins.tooltip.callbacks,
                     label: function (context) {
                         const data = context.chart.data.originalData[context.dataIndex];
                         const kills = data.Kills || 0;
@@ -31,9 +31,9 @@ const killLossRatioChartConfig = {
         },
         scales: {
             x: {
-                ...commonOptions.scales.x,
+                type: 'category',
                 ticks: {
-                    ...commonOptions.scales.x.ticks,
+                    color: '#ffffff',
                     maxRotation: 45,
                     minRotation: 45,
                     autoSkip: false,
@@ -41,12 +41,13 @@ const killLossRatioChartConfig = {
                 grid: { display: false },
             },
             y: {
-                ...commonOptions.scales.y,
+                ticks: { color: '#ffffff' },
+                grid: { color: '#444' },
+                beginAtZero: true,
             },
         },
-    },
+    }),
     processData: function (data) {
-        // ... processing logic remains the same ...
         const labels = data.map(item => item.CharacterName || 'Unknown');
         const ratios = data.map(item => item.Ratio || 0);
 

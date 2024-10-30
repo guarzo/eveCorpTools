@@ -1,6 +1,10 @@
-// chartConfigs/valueOverTimeChartConfig.js
-import { commonOptions } from '../utils.js';
+// static/js/chartConfigs/valueOverTimeChartConfig.js
 
+import { getCommonOptions } from '../utils.js';
+
+/**
+ * Configuration for the Value Over Time Chart
+ */
 const valueOverTimeChartConfig = {
     id: 'valueOverTimeChart',
     instance: null,
@@ -10,27 +14,27 @@ const valueOverTimeChartConfig = {
         lastMonth: 'lastMValueOverTimeData',
     },
     type: 'line',
-    options: {
-        ...commonOptions,
+    options: getCommonOptions('Value Over Time', {
         plugins: {
-            ...commonOptions.plugins,
             legend: { display: false },
         },
         scales: {
             x: {
-                ...commonOptions.scales.x,
                 type: 'time',
                 time: {
                     unit: 'day',
                 },
+                ticks: { color: '#ffffff' },
+                grid: { color: '#444' },
             },
             y: {
-                ...commonOptions.scales.y,
+                ticks: { color: '#ffffff' },
+                grid: { color: '#444' },
+                beginAtZero: true,
             },
         },
-    },
+    }),
     processData: function (data) {
-        // ... processing logic remains the same ...
         const labels = data.map(item => new Date(item.Time));
         const values = data.map(item => item.Value || 0);
 
@@ -40,6 +44,7 @@ const valueOverTimeChartConfig = {
             borderColor: 'rgba(54, 162, 235, 1)',
             backgroundColor: 'rgba(54, 162, 235, 0.5)',
             fill: true,
+            tension: 0.4, // Smooth the line
         }];
 
         return { labels, datasets };

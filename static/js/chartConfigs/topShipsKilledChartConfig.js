@@ -1,6 +1,10 @@
-// chartConfigs/topShipsKilledChartConfig.js
-import { truncateLabel, commonOptions } from '../utils.js';
+// static/js/chartConfigs/topShipsKilledChartConfig.js
 
+import { truncateLabel, getCommonOptions } from '../utils.js';
+
+/**
+ * Configuration for the Top Ships Killed Chart
+ */
 const topShipsKilledChartConfig = {
     id: 'topShipsKilledChart',
     instance: null,
@@ -10,30 +14,40 @@ const topShipsKilledChartConfig = {
         lastMonth: 'lastMTopShipsKilledData',
     },
     type: 'bar',
-    options: {
-        ...commonOptions,
+    options: getCommonOptions('Top Ships Killed', {
         indexAxis: 'y',
         plugins: {
-            ...commonOptions.plugins,
             legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    // Custom tooltip to display Ship Name and Kill Count
+                    label: function (context) {
+                        const shipName = context.dataset.label;
+                        const killCount = context.parsed.x;
+                        return `${shipName}: ${killCount}`;
+                    },
+                },
+            },
         },
         scales: {
             x: {
-                ...commonOptions.scales.x,
+                type: 'linear',
                 beginAtZero: true,
+                ticks: { color: '#ffffff' },
+                grid: { color: '#444' },
             },
             y: {
-                ...commonOptions.scales.y,
+                type: 'category',
+                labels: [], // Labels are set dynamically in processData
                 ticks: {
-                    ...commonOptions.scales.y.ticks,
+                    color: '#ffffff',
                     autoSkip: false,
                 },
                 grid: { display: false },
             },
         },
-    },
+    }),
     processData: function (data) {
-        // ... processing logic remains the same ...
         const labels = data.map(item => item.ShipName || 'Unknown');
         const killCounts = data.map(item => item.KillCount || 0);
 

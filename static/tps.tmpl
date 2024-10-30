@@ -11,13 +11,18 @@
     <link rel="stylesheet" type="text/css" href="/static/css/tps.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto&family=Montserrat:wght@700&display=swap" rel="stylesheet">
-    <!-- Chart.js -->
+    <!-- Chart.js Library -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Date Adapter for Chart.js (Version 3) -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
+    <!-- Sunburst Chart Plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-sunburst@1.0.0"></script>
+    <!-- Matrix Chart Plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@1.0.0"></script>
     <!-- Favicon -->
     <link rel="icon" href="/static/images/favicon.ico" type="image/x-icon">
     <!-- Animate.css -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
-    <link rel="icon" href="/static/images/favicon.ico" type="image/x-icon">
 </head>
 <body>
     <!-- Header -->
@@ -135,6 +140,11 @@
         window.ytdKillActivityData = {{ .YTDKillActivityData }};
         window.lastMKillActivityData = {{ .LastMKillActivityData }};
 
+        // Victims Sunburst Data
+        window.mtdVictimsSunburstData = {{ .MTDVictimsSunburstData }};
+        window.ytdVictimsSunburstData = {{ .YTDVictimsSunburstData }};
+        window.lastMVictimsSunburstData = {{ .LastMVictimsSunburstData }};
+
         // Kill Heatmap Data
         window.mtdKillHeatmapData = {{ .MTDKillHeatmapData }};
         window.ytdKillHeatmapData = {{ .YTDKillHeatmapData }};
@@ -156,6 +166,6 @@
         window.lastMValueOverTimeData = {{ .LastMValueOverTimeData }};
     </script>
     <!-- Custom JS -->
-    <script type="module" src="static/js/tps.new.js"></script></body>
+    <script type="module" src="static/js/tps.js"></script>
 </body>
 </html>
