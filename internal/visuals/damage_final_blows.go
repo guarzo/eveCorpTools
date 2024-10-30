@@ -14,54 +14,56 @@ type CharacterData struct {
 	DamageDone int
 }
 
-// Function to process data
-func GetDamageOrFinalBlowsData(chartData *model.ChartData, displayType string) []CharacterData {
-	// Initialize a map to count final blows and damage done by each character
-	characterDataMap := make(map[string]*CharacterData)
+func GetDamageAndFinalBlows(chartData *model.ChartData) []CharacterData {
+	characterStats := make(map[int]*CharacterData)
 
-	// Process the killmails
 	for _, km := range chartData.KillMails {
 		for _, attacker := range km.EsiKillMail.Attackers {
-			characterInfo, exists := chartData.CharacterInfos[attacker.CharacterID]
-			if !exists {
+			characterID := attacker.CharacterID
+			if characterID == 0 {
 				continue
 			}
 
-			characterName := characterInfo.Name
-
+			// Check if the character is one of ours
 			if config.DisplayCharacter(attacker.CharacterID, attacker.CorporationID, attacker.AllianceID) {
-				// Get or create the character data
-				data, exists := characterDataMap[characterName]
-				if !exists {
-					data = &CharacterData{Name: characterName}
-					characterDataMap[characterName] = data
-				}
+				continue
+			}
 
-				// Update data
-				if attacker.FinalBlow {
-					data.FinalBlows++
+			// Get character info
+			characterInfo := chartData.CharacterInfos[characterID]
+			//if characterInfo == nil {
+			//	continue
+			//}
+
+			// Initialize character data if not exists
+			data, exists := characterStats[characterID]
+			if !exists {
+				data = &CharacterData{
+					Name: characterInfo.Name,
 				}
-				data.DamageDone += attacker.DamageDone
+				characterStats[characterID] = data
+			}
+
+			// Accumulate damage done
+			data.DamageDone += attacker.DamageDone
+
+			// Check for final blow
+			if attacker.FinalBlow {
+				data.FinalBlows++
 			}
 		}
 	}
 
-	// Convert the map to a slice
-	var characterDataSlice []CharacterData
-	for _, data := range characterDataMap {
-		characterDataSlice = append(characterDataSlice, *data)
+	// Convert map to slice
+	var result []CharacterData
+	for _, data := range characterStats {
+		result = append(result, *data)
 	}
 
-	// Sort the data
-	if displayType == "damage" {
-		sort.Slice(characterDataSlice, func(i, j int) bool {
-			return characterDataSlice[i].DamageDone > characterDataSlice[j].DamageDone
-		})
-	} else if displayType == "blows" {
-		sort.Slice(characterDataSlice, func(i, j int) bool {
-			return characterDataSlice[i].FinalBlows > characterDataSlice[j].FinalBlows
-		})
-	}
+	// Sort by damage done or final blows if desired
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].DamageDone > result[j].DamageDone
+	})
 
-	return characterDataSlice
+	return result
 }

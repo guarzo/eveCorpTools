@@ -10,7 +10,7 @@ import (
 	"github.com/guarzo/zkillanalytics/internal/model"
 )
 
-func RenderPointsPerCharacter(chartData *model.ChartData) *charts.Bar {
+func GetPointsPerCharacter(chartData *model.ChartData) *charts.Bar {
 	// Initialize a map to count points by each attacking character
 	characterPoints := make(map[string]int)
 

@@ -3,7 +3,6 @@ package visuals
 import (
 	"sort"
 
-	"github.com/guarzo/zkillanalytics/internal/config"
 	"github.com/guarzo/zkillanalytics/internal/model"
 )
 
@@ -12,26 +11,44 @@ type CharacterKillData struct {
 	CharacterID int
 	KillCount   int
 	Name        string
+	Points      int
+	SoloKills   int
+}
+
+type ChartJSData struct {
+	Labels   []string         `json:"labels"`
+	Datasets []ChartJSDataset `json:"datasets"`
+}
+
+type ChartJSDataset struct {
+	Label           string   `json:"label"`
+	Data            []int    `json:"data"`
+	BackgroundColor []string `json:"backgroundColor"`
 }
 
 func PrepareKillCountChartData(chartData *model.ChartData) (ChartJSData, error) {
-	// Initialize a map to count kills by character
 	characterKills := make(map[int]CharacterKillData)
 
-	// Populate the kill count map using all attackers from detailed killmails
 	for _, km := range chartData.KillMails {
 		for _, attacker := range km.EsiKillMail.Attackers {
-			if !config.ExcludeCharacterID(attacker.CharacterID) {
-				if data, found := characterKills[attacker.CharacterID]; found {
-					data.KillCount++
-					characterKills[attacker.CharacterID] = data
-				} else {
-					if character, exists := chartData.CharacterInfos[attacker.CharacterID]; exists {
-						characterKills[attacker.CharacterID] = CharacterKillData{
-							CharacterID: attacker.CharacterID,
-							KillCount:   1,
-							Name:        character.Name,
-						}
+			characterID := attacker.CharacterID
+			if characterID == 0 {
+				continue
+			}
+
+			if !isOurCharacter(characterID) {
+				continue
+			}
+
+			if data, found := characterKills[characterID]; found {
+				data.KillCount++
+				characterKills[characterID] = data
+			} else {
+				if character, exists := chartData.CharacterInfos[characterID]; exists {
+					characterKills[characterID] = CharacterKillData{
+						CharacterID: characterID,
+						KillCount:   1,
+						Name:        character.Name,
 					}
 				}
 			}
@@ -53,12 +70,12 @@ func PrepareKillCountChartData(chartData *model.ChartData) (ChartJSData, error) 
 
 	// Prepare data for Chart.js
 	var labels []string
-	var data []int
+	var dataValues []int
 	var backgroundColors []string
 
 	for i, d := range sortedData {
 		labels = append(labels, d.Name)
-		data = append(data, d.KillCount)
+		dataValues = append(dataValues, d.KillCount)
 		backgroundColors = append(backgroundColors, colors[i%len(colors)])
 	}
 
@@ -67,7 +84,7 @@ func PrepareKillCountChartData(chartData *model.ChartData) (ChartJSData, error) 
 		Datasets: []ChartJSDataset{
 			{
 				Label:           "Kill Count",
-				Data:            data,
+				Data:            dataValues,
 				BackgroundColor: backgroundColors,
 			},
 		},

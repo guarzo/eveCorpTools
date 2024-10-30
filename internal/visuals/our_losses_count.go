@@ -12,7 +12,7 @@ import (
 	"github.com/guarzo/zkillanalytics/internal/service"
 )
 
-func RenderOurLossesCount(orchestrator *service.OrchestrateService, chartData *model.ChartData) *charts.Bar {
+func GetOurLossesCount(chartData *model.ChartData, orchestrator *service.OrchestrateService) *charts.Bar {
 	// Initialize a map to count losses by each victim character
 	characterLosses := make(map[string]int)
 

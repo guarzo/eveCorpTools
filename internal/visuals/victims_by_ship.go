@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/guarzo/zkillanalytics/internal/persist"
-	"github.com/guarzo/zkillanalytics/internal/service"
-
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
+
+	"github.com/guarzo/zkillanalytics/internal/persist"
 
 	"github.com/guarzo/zkillanalytics/internal/model"
 )
@@ -20,7 +19,7 @@ type ShipKillData struct {
 	Name       string
 }
 
-func RenderTopShipsKilled(orchestrator *service.OrchestrateService, chartData *model.ChartData) *charts.Bar {
+func GetTopShipsKilled(chartData *model.ChartData) *charts.Bar {
 	// Initialize a map to count killmails by ship type
 	shipKillCounts := make(map[int]ShipKillData)
 

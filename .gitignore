@@ -1,5 +1,4 @@
 data
-.env
 .mise.toml
 apikey.txt
 acaapi.yaml

@@ -10,7 +10,7 @@ import (
 	"github.com/guarzo/zkillanalytics/internal/model"
 )
 
-func RenderSolo(chartData *model.ChartData) *charts.Bar {
+func GetSoloKills(chartData *model.ChartData) *charts.Bar {
 	// Initialize a map to count final blows by each attacking character
 	characterKills := make(map[string]int)
 

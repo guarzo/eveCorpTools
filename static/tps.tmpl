@@ -17,6 +17,7 @@
     <link rel="icon" href="/static/images/favicon.ico" type="image/x-icon">
     <!-- Animate.css -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link rel="icon" href="/static/images/favicon.ico" type="image/x-icon">
 </head>
 <body>
     <!-- Header -->
@@ -45,14 +46,53 @@
 
         <!-- Chart Containers -->
         <div class="tab-content">
-            <div class="tab-pane fade show active chart-container" id="mtdChartContainer" role="tabpanel" aria-labelledby="mtd-tab">
-                <canvas id="mtdKillCountChart"></canvas>
+            <div class="chart-container">
+                <canvas id="damageFinalBlowsChart"></canvas>
             </div>
-            <div class="tab-pane fade chart-container" id="lmChartContainer" role="tabpanel" aria-labelledby="lm-tab">
-                <canvas id="lmKillCountChart"></canvas>
+
+            <!-- 2. Our Losses Combined Chart -->
+            <div class="chart-container">
+                <canvas id="combinedLossesChart"></canvas>
             </div>
-            <div class="tab-pane fade chart-container" id="ytdChartContainer" role="tabpanel" aria-labelledby="ytd-tab">
-                <canvas id="ytdKillCountChart"></canvas>
+
+            <!-- 3. Character Performance Chart -->
+            <div class="chart-container">
+                <canvas id="characterPerformanceChart"></canvas>
+            </div>
+
+            <!-- 4. Our Ships Used Chart -->
+            <div class="chart-container">
+                <canvas id="ourShipsUsedChart"></canvas>
+            </div>
+
+            <!-- 5. Victims Sunburst Chart -->
+            <div class="chart-container">
+                <canvas id="victimsSunburstChart"></canvas>
+            </div>
+
+            <!-- 6. Kill Activity Over Time Chart -->
+            <div class="chart-container">
+                <canvas id="killActivityChart"></canvas>
+            </div>
+
+            <!-- 7. Kill Heatmap Chart -->
+            <div class="chart-container">
+                <canvas id="killHeatmapChart"></canvas>
+            </div>
+
+            <!-- 8. Kill-to-Loss Ratio Chart -->
+            <div class="chart-container">
+                <canvas id="killLossRatioChart"></canvas>
+            </div>
+
+            <!-- 9. Top Ships Killed Chart -->
+            <div class="chart-container">
+                <canvas id="topShipsKilledChart"></canvas>
+            </div>
+
+            <!-- 10. Value Over Time Chart -->
+            <div class="chart-container">
+                <canvas id="valueOverTimeChart"></canvas>
             </div>
         </div>
     </div>
@@ -70,9 +110,50 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Pass data from Go to JavaScript -->
     <script>
-        window.mtdKillCountData = {{.MTDKillCountData}};
-        window.lmKillCountData = {{.LastMKillCountData}};
-        window.ytdKillCountData = {{.YTDKillCountData}};
+        // Damage Done and Final Blows Data
+        window.mtdCharacterDamageData = {{ .MTDCharacterDamageData }};
+        window.ytdCharacterDamageData = {{ .YTDCharacterDamageData }};
+        window.lastMCharacterDamageData = {{ .LastMCharacterDamageData }};
+
+        // Our Losses Combined Data
+        window.mtdOurLossesValueData = {{ .MTDOurLossesValueData }};
+        window.ytdOurLossesValueData = {{ .YTDOurLossesValueData }};
+        window.lastMOurLossesValueData = {{ .LastMOurLossesValueData }};
+
+        // Character Performance Data
+        window.mtdCharacterPerformanceData = {{ .MTDCharacterPerformanceData }};
+        window.ytdCharacterPerformanceData = {{ .YTDCharacterPerformanceData }};
+        window.lastMCharacterPerformanceData = {{ .LastMCharacterPerformanceData }};
+
+        // Our Ships Used Data
+        window.mtdOurShipsUsedData = {{ .MTDOurShipsUsedData }};
+        window.ytdOurShipsUsedData = {{ .YTDOurShipsUsedData }};
+        window.lastMOurShipsUsedData = {{ .LastMOurShipsUsedData }};
+
+        // Kill Activity Over Time Data
+        window.mtdKillActivityData = {{ .MTDKillActivityData }};
+        window.ytdKillActivityData = {{ .YTDKillActivityData }};
+        window.lastMKillActivityData = {{ .LastMKillActivityData }};
+
+        // Kill Heatmap Data
+        window.mtdKillHeatmapData = {{ .MTDKillHeatmapData }};
+        window.ytdKillHeatmapData = {{ .YTDKillHeatmapData }};
+        window.lastMKillHeatmapData = {{ .LastMKillHeatmapData }};
+
+        // Kill-to-Loss Ratio Data
+        window.mtdKillLossRatioData = {{ .MTDKillLossRatioData }};
+        window.ytdKillLossRatioData = {{ .YTDKillLossRatioData }};
+        window.lastMKillLossRatioData = {{ .LastMKillLossRatioData }};
+
+        // Top Ships Killed Data
+        window.mtdTopShipsKilledData = {{ .MTDTopShipsKilledData }};
+        window.ytdTopShipsKilledData = {{ .YTDTopShipsKilledData }};
+        window.lastMTopShipsKilledData = {{ .LastMTopShipsKilledData }};
+
+        // Value Over Time Data
+        window.mtdValueOverTimeData = {{ .MTDValueOverTimeData }};
+        window.ytdValueOverTimeData = {{ .YTDValueOverTimeData }};
+        window.lastMValueOverTimeData = {{ .LastMValueOverTimeData }};
     </script>
     <!-- Custom JS -->
     <script src="/static/js/tps.js"></script>
