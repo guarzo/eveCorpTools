@@ -1,6 +1,10 @@
-// chartConfigs/ourLossesCombinedChartConfig.js
-import { truncateLabel } from '../utils.js';
+// static/js/chartConfigs/ourLossesCombinedChartConfig.js
 
+import { truncateLabel, getCommonOptions } from '../utils.js';
+
+/**
+ * Configuration for the Our Losses Combined Chart
+ */
 const ourLossesCombinedChartConfig = {
     id: 'ourLossesCombinedChart',
     instance: null,
@@ -10,9 +14,7 @@ const ourLossesCombinedChartConfig = {
         lastMonth: 'lastMOurLossesValueData',
     },
     type: 'bar',
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
+    options: getCommonOptions('Our Losses Combined', {
         plugins: {
             legend: { display: true },
             tooltip: {
@@ -27,6 +29,16 @@ const ourLossesCombinedChartConfig = {
             },
         },
         scales: {
+            x: {
+                type: 'category',
+                ticks: {
+                    color: '#ffffff',
+                    maxRotation: 45,
+                    minRotation: 45,
+                    autoSkip: false,
+                },
+                grid: { display: false },
+            },
             y: {
                 type: 'linear',
                 position: 'left',
@@ -41,18 +53,10 @@ const ourLossesCombinedChartConfig = {
                 grid: { drawOnChartArea: false },
                 beginAtZero: true,
             },
-            x: {
-                ticks: {
-                    color: '#ffffff',
-                    maxRotation: 45,
-                    minRotation: 45,
-                    autoSkip: false,
-                },
-                grid: { display: false },
-            },
         },
-    },
+    }),
     processData: function (data) {
+        // Filter out any invalid data entries
         data = data.filter(item => item && item.CharacterName);
 
         const labels = data.map(item => item.CharacterName);

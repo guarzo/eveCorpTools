@@ -44,7 +44,7 @@ func (es *EsiService) GetKillMail(ctx context.Context, killMailID int, hash stri
 
 // GetCorporationInfo retrieves detailed information about a corporation.
 func (es *EsiService) GetCorporationInfo(ctx context.Context, corporationID int) (*model.Corporation, error) {
-	es.Logger.Infof("Fetching corporation ID: %d", corporationID)
+	// es.Logger.Infof("Fetching corporation ID: %d", corporationID)
 
 	// Fetch corporation details using EsiClient.
 	corp, err := es.EsiClient.GetCorporationInfo(ctx, corporationID)
@@ -78,7 +78,7 @@ func (es *EsiService) GetCharacterInfo(ctx context.Context, characterID int) (*m
 
 // GetAllianceInfo retrieves detailed information about an alliance.
 func (es *EsiService) GetAllianceInfo(ctx context.Context, allianceID int) (*model.Alliance, error) {
-	es.Logger.Infof("Fetching alliance ID: %d", allianceID)
+	// es.Logger.Infof("Fetching alliance ID: %d", allianceID)
 
 	// Fetch alliance details using EsiClient.
 	alliance, err := es.EsiClient.GetAllianceInfo(ctx, allianceID)
@@ -92,9 +92,13 @@ func (es *EsiService) GetAllianceInfo(ctx context.Context, allianceID int) (*mod
 
 // LoadTrackedCharacters loads all tracked characters from the killmails into ESIData.
 func (es *EsiService) LoadTrackedCharacters(ctx context.Context, killMails []model.DetailedKillMail, esiData *model.ESIData) error {
-	es.Logger.Info("Loading tracked characters into ESIData")
+	es.Logger.Infof("Loading tracked %d characters into ESIData", len(killMails))
 
-	for _, km := range killMails {
+	for i, km := range killMails {
+		if i%100 == 0 {
+			es.Logger.Infof("Loading characters from killmail %d", i)
+		}
+
 		// Add victim to ESI data if not already present
 		if km.Victim.CharacterID != 0 {
 			if _, exists := esiData.CharacterInfos[km.Victim.CharacterID]; !exists {

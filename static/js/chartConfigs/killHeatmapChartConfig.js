@@ -1,6 +1,10 @@
-// chartConfigs/killHeatmapChartConfig.js
-import { commonOptions } from '../utils.js';
+// static/js/chartConfigs/killHeatmapChartConfig.js
 
+import { getColor, getCommonOptions } from '../utils.js';
+
+/**
+ * Configuration for the Kill Heatmap Chart
+ */
 const killHeatmapChartConfig = {
     id: 'killHeatmapChart',
     instance: null,
@@ -10,8 +14,21 @@ const killHeatmapChartConfig = {
         lastMonth: 'lastMKillHeatmapData',
     },
     type: 'matrix',
-    options: {
-        ...commonOptions,
+    options: getCommonOptions('Kill Heatmap', {
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    label: function (context) {
+                        const x = context.raw.x;
+                        const y = context.raw.y;
+                        const value = context.raw.v;
+                        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                        return `Day: ${days[y]}, Hour: ${x}, Kills: ${value}`;
+                    },
+                },
+            },
+        },
         scales: {
             x: {
                 type: 'category',
@@ -26,25 +43,8 @@ const killHeatmapChartConfig = {
                 grid: { display: false },
             },
         },
-        plugins: {
-            ...commonOptions.plugins,
-            legend: { display: false },
-            tooltip: {
-                ...commonOptions.plugins.tooltip,
-                callbacks: {
-                    label: function (context) {
-                        const x = context.raw.x;
-                        const y = context.raw.y;
-                        const value = context.raw.v;
-                        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-                        return `Day: ${days[y]}, Hour: ${x}, Kills: ${value}`;
-                    },
-                },
-            },
-        },
-    },
+    }),
     processData: function (data) {
-        // ... processing logic remains the same ...
         const maxKills = Math.max(...data.flat());
         const heatmapData = [];
 
@@ -64,7 +64,7 @@ const killHeatmapChartConfig = {
             data: heatmapData,
             backgroundColor: function (ctx) {
                 const value = ctx.dataset.data[ctx.dataIndex].v;
-                const alpha = value / maxKills;
+                const alpha = maxKills ? value / maxKills : 0;
                 return `rgba(255, 77, 77, ${alpha})`;
             },
             width: ({ chart }) => (chart.chartArea || {}).width / 24 - 1,

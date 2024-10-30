@@ -1,6 +1,10 @@
-// chartConfigs/ourShipsUsedChartConfig.js
-import { truncateLabel, getColor, commonOptions } from '../utils.js';
+// static/js/chartConfigs/ourShipsUsedChartConfig.js
 
+import { truncateLabel, getColor, getCommonOptions } from '../utils.js';
+
+/**
+ * Configuration for the Our Ships Used Chart
+ */
 const ourShipsUsedChartConfig = {
     id: 'ourShipsUsedChart',
     instance: null,
@@ -10,15 +14,11 @@ const ourShipsUsedChartConfig = {
         lastMonth: 'lastMOurShipsUsedData',
     },
     type: 'bar',
-    options: {
-        ...commonOptions,
+    options: getCommonOptions('Our Ships Used', {
         indexAxis: 'y',
         plugins: {
-            ...commonOptions.plugins,
             tooltip: {
-                ...commonOptions.plugins.tooltip,
                 callbacks: {
-                    ...commonOptions.plugins.tooltip.callbacks,
                     label: function (context) {
                         const shipName = context.dataset.label;
                         const value = context.parsed.x;
@@ -29,22 +29,22 @@ const ourShipsUsedChartConfig = {
         },
         scales: {
             x: {
-                ...commonOptions.scales.x,
                 stacked: true,
+                ticks: { color: '#ffffff' },
+                grid: { display: false },
             },
             y: {
-                ...commonOptions.scales.y,
                 stacked: true,
                 ticks: {
-                    ...commonOptions.scales.y.ticks,
+                    color: '#ffffff',
                     autoSkip: false,
                 },
                 grid: { display: false },
             },
         },
-    },
+    }),
     processData: function (data) {
-        // ... processing logic remains the same ...
+        // Extract characters, ship names, and series data
         const characters = data.Characters || [];
         const shipNames = data.ShipNames || [];
         const seriesData = data.SeriesData || {};
@@ -52,6 +52,7 @@ const ourShipsUsedChartConfig = {
         const fullLabels = [...characters];
         const labels = characters.map(label => truncateLabel(label, 10));
 
+        // Create datasets for each ship type
         const datasets = shipNames.map((shipName, index) => ({
             label: shipName,
             data: seriesData[shipName] || [],

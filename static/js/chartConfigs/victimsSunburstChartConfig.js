@@ -1,6 +1,10 @@
-// chartConfigs/victimsSunburstChartConfig.js
-import { getColor, commonOptions } from '../utils.js';
+// static/js/chartConfigs/victimsSunburstChartConfig.js
 
+import { getColor, getCommonOptions, validateChartData } from '../utils.js';
+
+/**
+ * Configuration for the Victims Sunburst Chart
+ */
 const victimsSunburstChartConfig = {
     id: 'victimsSunburstChart',
     instance: null,
@@ -10,13 +14,10 @@ const victimsSunburstChartConfig = {
         lastMonth: 'lastMVictimsSunburstData',
     },
     type: 'sunburst',
-    options: {
-        ...commonOptions,
+    options: getCommonOptions('Victims Sunburst', {
         plugins: {
-            ...commonOptions.plugins,
             legend: { display: false },
             tooltip: {
-                ...commonOptions.plugins.tooltip,
                 callbacks: {
                     label: function (context) {
                         const label = context.raw.name || '';
@@ -26,17 +27,23 @@ const victimsSunburstChartConfig = {
                 },
             },
         },
-    },
+    }),
     processData: function (data) {
-        const datasets = [{
-            data: data,
-            backgroundColor: function (context) {
-                const index = context.dataIndex;
-                return getColor(index);
-            },
-        }];
+        const chartName = 'Victims Sunburst Chart';
+        if (!validateChartData(data, chartName)) {
+            return { datasets: [] };
+        }
 
-        return { datasets };
+        return {
+            datasets: [{
+                data: data,
+                backgroundColor: function (context) {
+                    const index = context.dataIndex;
+                    return getColor(index);
+                },
+                borderWidth: 1,
+            }],
+        };
     },
 };
 

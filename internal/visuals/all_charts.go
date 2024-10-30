@@ -6,15 +6,18 @@ import (
 	"html/template"
 	"os"
 	"path/filepath"
-	"sort"
 
 	"github.com/guarzo/zkillanalytics/internal/model"
 	"github.com/guarzo/zkillanalytics/internal/service"
 )
 
-var trackedCharacters []int
-var orchestrator *service.OrchestrateService
+// Global variables
+var (
+	trackedCharacters []int
+	orchestrator      *service.OrchestrateService
+)
 
+// TemplateData holds all the data passed to the template
 type TemplateData struct {
 	// Existing data
 	MTDKillCountData   template.JS
@@ -63,6 +66,7 @@ type TemplateData struct {
 	LastMValueOverTimeData template.JS
 }
 
+// RenderSnippets prepares the template data and renders the template to a file
 func RenderSnippets(orchestrateService *service.OrchestrateService, ytdChartData, lastMonthChartData, mtdChartData *model.ChartData, filePath string) error {
 	orchestrator = orchestrateService
 
@@ -75,7 +79,7 @@ func RenderSnippets(orchestrateService *service.OrchestrateService, ytdChartData
 	trackedCharacters = append(trackedCharacters, lastMTrackedCharacters...)
 	trackedCharacters = append(trackedCharacters, mtdTrackedCharacters...)
 
-	orchestrateService.Logger.Infof("there are %d tracked characters", len(trackedCharacters))
+	orchestrator.Logger.Infof("there are %d tracked characters", len(trackedCharacters))
 
 	data := TemplateData{}
 
@@ -100,6 +104,11 @@ func RenderSnippets(orchestrateService *service.OrchestrateService, ytdChartData
 	data.MTDOurShipsUsedData = prepareOurShipsUsedData(mtdChartData)
 	data.YTDOurShipsUsedData = prepareOurShipsUsedData(ytdChartData)
 	data.LastMOurShipsUsedData = prepareOurShipsUsedData(lastMonthChartData)
+
+	// 5. Victims Sunburst Chart
+	data.MTDVictimsSunburstData = prepareVictimsSunburstData(mtdChartData)
+	data.YTDVictimsSunburstData = prepareVictimsSunburstData(ytdChartData)
+	data.LastMVictimsSunburstData = prepareVictimsSunburstData(lastMonthChartData)
 
 	// 6. Kill Activity Over Time Chart
 	data.MTDKillActivityData = prepareKillActivityData(mtdChartData)
@@ -154,18 +163,19 @@ func RenderSnippets(orchestrateService *service.OrchestrateService, ytdChartData
 
 func prepareCharacterDamageData(chartData *model.ChartData) template.JS {
 	data := GetDamageAndFinalBlows(chartData)
-	jsonData, _ := json.Marshal(data)
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		orchestrator.Logger.Errorf("Error marshalling CharacterDamageData: %v", err)
+		return template.JS("[]") // Return empty array to prevent JS errors
+	}
 	return template.JS(jsonData)
 }
 
 func prepareOurLossesValueData(chartData *model.ChartData) template.JS {
 	data := GetOurLossesValue(chartData)
-	if len(data) == 0 {
-		fmt.Println("Warning: Our Losses Value Data is empty.")
-	}
 	jsonData, err := json.Marshal(data)
 	if err != nil {
-		fmt.Printf("Error marshalling OurLossesValueData: %v\n", err)
+		orchestrator.Logger.Errorf("Error marshalling OurLossesValueData: %v", err)
 		return template.JS("[]") // Return empty array to prevent JS errors
 	}
 	return template.JS(jsonData)
@@ -173,108 +183,98 @@ func prepareOurLossesValueData(chartData *model.ChartData) template.JS {
 
 func prepareCharacterPerformanceData(chartData *model.ChartData) template.JS {
 	data := GetCharacterPerformance(chartData)
-	jsonData, _ := json.Marshal(data)
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		orchestrator.Logger.Errorf("Error marshalling CharacterPerformanceData: %v", err)
+		return template.JS("[]")
+	}
 	return template.JS(jsonData)
 }
 
 func prepareOurShipsUsedData(chartData *model.ChartData) template.JS {
 	data := GetOurShipsUsed(chartData)
-	jsonData, _ := json.Marshal(data)
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		orchestrator.Logger.Errorf("Error marshalling OurShipsUsedData: %v", err)
+		return template.JS("[]")
+	}
+	return template.JS(jsonData)
+}
+
+func prepareVictimsSunburstData(chartData *model.ChartData) template.JS {
+	data := GetVictimsSunburst(chartData)
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		orchestrator.Logger.Errorf("Error marshalling VictimsSunburstData: %v", err)
+		return template.JS("[]")
+	}
 	return template.JS(jsonData)
 }
 
 func prepareKillActivityData(chartData *model.ChartData) template.JS {
 	data := GetKillActivityOverTime(chartData, "daily")
-	jsonData, _ := json.Marshal(data)
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		orchestrator.Logger.Errorf("Error marshalling KillActivityData: %v", err)
+		return template.JS("[]")
+	}
 	return template.JS(jsonData)
 }
 
 func prepareKillHeatmapData(chartData *model.ChartData) template.JS {
 	data := GetKillHeatmapData(chartData)
-	jsonData, _ := json.Marshal(data)
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		orchestrator.Logger.Errorf("Error marshalling KillHeatmapData: %v", err)
+		return template.JS("[]")
+	}
 	return template.JS(jsonData)
 }
 
 func prepareKillLossRatioData(chartData *model.ChartData) template.JS {
 	data := GetKillLossRatioData(chartData)
-	jsonData, _ := json.Marshal(data)
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		orchestrator.Logger.Errorf("Error marshalling KillLossRatioData: %v", err)
+		return template.JS("[]")
+	}
 	return template.JS(jsonData)
 }
 
 func prepareTopShipsKilledData(chartData *model.ChartData) template.JS {
 	data := GetTopShipsKilled(chartData)
-	jsonData, _ := json.Marshal(data)
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		orchestrator.Logger.Errorf("Error marshalling TopShipsKilledData: %v", err)
+		return template.JS("[]")
+	}
 	return template.JS(jsonData)
 }
 
 func prepareValueOverTimeData(chartData *model.ChartData) template.JS {
 	data := GetValueOverTimeData(chartData, "daily")
-	jsonData, _ := json.Marshal(data)
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		orchestrator.Logger.Errorf("Error marshalling ValueOverTimeData: %v", err)
+		return template.JS("[]")
+	}
 	return template.JS(jsonData)
 }
 
 func prepareKillCountData(chartData *model.ChartData) template.JS {
-	data, _ := PrepareKillCountChartData(chartData)
-	jsonData, _ := json.Marshal(data)
+	data, err := PrepareKillCountChartData(chartData)
+	if err != nil {
+		orchestrator.Logger.Errorf("Error preparing KillCountData: %v", err)
+		return template.JS("[]")
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		orchestrator.Logger.Errorf("Error marshalling KillCountData: %v", err)
+		return template.JS("[]")
+	}
 	return template.JS(jsonData)
 }
-
-// Implement the data preparation functions (similar to previous examples)
-// Due to space constraints, I'll include just one as an example
-
-// GetCharacterPerformance
-func GetCharacterPerformance(chartData *model.ChartData) []CharacterKillData {
-	characterStats := make(map[int]*CharacterKillData)
-
-	for _, km := range chartData.KillMails {
-		for _, attacker := range km.EsiKillMail.Attackers {
-			characterID := attacker.CharacterID
-			if characterID == 0 {
-				continue
-			}
-
-			if !isOurCharacter(characterID) {
-				continue
-			}
-
-			// Get character info
-			characterInfo := chartData.CharacterInfos[characterID]
-			//if characterInfo == nil {
-			//	continue
-			//}
-
-			data, exists := characterStats[characterID]
-			if !exists {
-				data = &CharacterKillData{
-					Name: characterInfo.Name,
-				}
-				characterStats[characterID] = data
-			}
-			data.KillCount++
-			data.Points += km.ZKB.Points
-
-			// Check for solo kill
-			if len(km.EsiKillMail.Attackers) == 1 {
-				data.SoloKills++
-			}
-		}
-	}
-
-	// Convert map to slice
-	var result []CharacterKillData
-	for _, data := range characterStats {
-		result = append(result, *data)
-	}
-
-	// Sort by kill count
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].KillCount > result[j].KillCount
-	})
-
-	return result
-}
-
-// Implement other data preparation functions similarly
 
 // isOurCharacter helper function
 func isOurCharacter(characterID int) bool {

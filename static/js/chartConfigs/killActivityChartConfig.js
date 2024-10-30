@@ -1,8 +1,10 @@
-// chartConfigs/killActivityChartConfig.js
-// import { commonOptions } from '../utils.js';
+// static/js/chartConfigs/killActivityChartConfig.js
 
-import {commonOptions} from "../utils.js";
+import { getCommonOptions } from '../utils.js';
 
+/**
+ * Configuration for the Kill Activity Over Time Chart
+ */
 const killActivityChartConfig = {
     id: 'killActivityChart',
     instance: null,
@@ -12,15 +14,12 @@ const killActivityChartConfig = {
         lastMonth: 'lastMKillActivityData',
     },
     type: 'line',
-    options: {
-        ...commonOptions,
+    options: getCommonOptions('Kill Activity Over Time', {
         plugins: {
-            ...commonOptions.plugins,
             legend: { display: false },
         },
         scales: {
             x: {
-                ...commonOptions.scales.x,
                 type: 'time',
                 time: {
                     unit: 'day',
@@ -34,7 +33,7 @@ const killActivityChartConfig = {
                 grid: { color: '#444' },
             },
         },
-    },
+    }),
     processData: function (data) {
         const labels = data.map(item => new Date(item.Time));
         const kills = data.map(item => item.Value);
@@ -52,42 +51,3 @@ const killActivityChartConfig = {
 };
 
 export default killActivityChartConfig;
-
-//
-// // chartConfigs/killActivityChartConfig.js
-// import { commonOptions } from '../utils.js';
-//
-// const killActivityChartConfig = {
-//     id: 'killActivityChart',
-//     instance: null,
-//     dataKeys: {
-//         mtd: 'mtdKillActivityData',
-//         ytd: 'ytdKillActivityData',
-//         lastMonth: 'lastMKillActivityData',
-//     },
-//     type: 'line',
-//     options: {
-//         ...commonOptions,
-//         plugins: {
-//             ...commonOptions.plugins,
-//             legend: { display: false },
-//         },
-//         scales: {
-//             x: {
-//                 ...commonOptions.scales.x,
-//                 type: 'time',
-//                 time: {
-//                     unit: 'day',
-//                 },
-//             },
-//             y: {
-//                 ...commonOptions.scales.y,
-//             },
-//         },
-//     },
-//     processData: function (data) {
-//         // ... same as before ...
-//     },
-// };
-//
-// export default killActivityChartConfig;

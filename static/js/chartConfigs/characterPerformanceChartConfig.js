@@ -1,6 +1,10 @@
-// chartConfigs/characterPerformanceChartConfig.js
-import { truncateLabel, commonOptions } from '../utils.js';
+// static/js/chartConfigs/characterPerformanceChartConfig.js
 
+import { truncateLabel, getCommonOptions } from '../utils.js';
+
+/**
+ * Configuration for the Character Performance Chart
+ */
 const characterPerformanceChartConfig = {
     id: 'characterPerformanceChart',
     instance: null,
@@ -10,45 +14,8 @@ const characterPerformanceChartConfig = {
         lastMonth: 'lastMCharacterPerformanceData',
     },
     type: 'bar',
-    options: {
-        ...commonOptions,
-        plugins: {
-            ...commonOptions.plugins,
-            legend: { display: true },
-            tooltip: {
-                ...commonOptions.plugins.tooltip,
-                mode: 'index',
-                intersect: false,
-            },
-        },
-        scales: {
-            ...commonOptions.scales,
-            y: {
-                ...commonOptions.scales.y,
-                type: 'linear',
-                position: 'left',
-            },
-            y1: {
-                type: 'linear',
-                position: 'right',
-                beginAtZero: true,
-                ticks: { color: '#ffffff' },
-                grid: { drawOnChartArea: false },
-            },
-            x: {
-                ...commonOptions.scales.x,
-                ticks: {
-                    ...commonOptions.scales.x.ticks,
-                    maxRotation: 45,
-                    minRotation: 45,
-                    autoSkip: false,
-                },
-                grid: { display: false },
-            },
-        },
-    },
+    options: getCommonOptions('Character Performance'),
     processData: function (data) {
-        // ... processing logic remains the same ...
         const labels = data.map(item => item.CharacterName || 'Unknown');
         const killCountData = data.map(item => item.KillCount || 0);
         const soloKillsData = data.map(item => item.SoloKills || 0);
