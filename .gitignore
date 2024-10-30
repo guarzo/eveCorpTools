@@ -1,4 +1,4 @@
-./data
+data/
 .mise.toml
 apikey.txt
 acaapi.yaml
@@ -26,7 +26,8 @@ acaapi.yaml
 ./zkill
 
 charts/
-internal/data/
+data/
+monthly/
 
 # Go workspace file
 go.work
