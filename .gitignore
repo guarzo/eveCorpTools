@@ -23,7 +23,7 @@ acaapi.yaml
 # vendor/
 
 # bimary
-zkill
+./zkill
 
 charts/
 internal/data/
