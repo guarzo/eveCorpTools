@@ -16,14 +16,14 @@ func GetVictimsSunburst(chartData *model.ChartData) []SunburstData {
 	//for _, km := range chartData.KillMails {
 	//	victim := km.EsiKillMail.Victim
 	//	corpID := victim.CorporationID
+	//	allianceID := victim.AllianceID
 	//
-	//
-	//	if persist.Contains(config.CorporationIDs, corpID)  {
+	//	if persist.Contains(config.CorporationIDs, corpID) || persist.Contains(config.AllianceIDs, allianceID) {
 	//		continue
 	//	}
 	//
 	//	// Get alliance data
-	//	allianceData, exists := chartData.AllianceInfos[allianceID]
+	//	allianceData, exists := allianceMap[allianceID]
 	//	if !exists {
 	//		allianceName := chartData.AllianceInfos[allianceID].Name
 	//		allianceData = &SunburstData{Name: allianceName}

@@ -1,14 +1,15 @@
 // static/js/tps.js
 
+
 // Import utility functions
-import { truncateLabel, getColor, getCommonOptions } from './utils.js';
+import { truncateLabel, getColor, getCommonOptions, noDataPlugin } from './utils.js';
+Chart.register(noDataPlugin);
 
 // Import chart configurations
 import damageFinalBlowsChartConfig from './chartConfigs/damageFinalBlowsChartConfig.js';
 import ourLossesCombinedChartConfig from './chartConfigs/ourLossesCombinedChartConfig.js';
 import characterPerformanceChartConfig from './chartConfigs/characterPerformanceChartConfig.js';
 import ourShipsUsedChartConfig from './chartConfigs/ourShipsUsedChartConfig.js';
-import victimsSunburstChartConfig from './chartConfigs/victimsSunburstChartConfig.js';
 import killActivityChartConfig from './chartConfigs/killActivityChartConfig.js';
 import killHeatmapChartConfig from './chartConfigs/killHeatmapChartConfig.js';
 import killLossRatioChartConfig from './chartConfigs/killLossRatioChartConfig.js';
@@ -21,7 +22,6 @@ const chartConfigs = [
     ourLossesCombinedChartConfig,
     characterPerformanceChartConfig,
     ourShipsUsedChartConfig,
-    victimsSunburstChartConfig,
     killActivityChartConfig,
     killHeatmapChartConfig,
     killLossRatioChartConfig,

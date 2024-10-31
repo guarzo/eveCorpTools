@@ -70,7 +70,7 @@ func LoadingHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("loading page redirect")
 
 	// Parse template
-	tmplPath := filepath.Join("static", "loading.tmpl")
+	tmplPath := filepath.Join("static", "tmpl", "loading.tmpl")
 	tmpl, err := template.ParseFiles(tmplPath)
 	if err != nil {
 		fmt.Printf("Error parsing template %s: %v\n", tmplPath, err)

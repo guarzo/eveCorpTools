@@ -1,0 +1,375 @@
+html, body {
+    background: #1e1e1e; /* Black background for better contrast */
+    color: #e0e0e0; /* Light text for better readability */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Modern font */
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.container {
+    flex: 1;
+    width: 90%;
+    margin: 20px auto;
+    padding: 20px;
+    box-sizing: border-box;
+    background: linear-gradient(to right, #004d4d, #00b3b3); /* Gradient background */
+    border-radius: 8px; /* Rounded corners */
+}
+
+header {
+    position: relative;
+    overflow: hidden;
+}
+
+header .container {
+    position: relative;
+    z-index: 1;
+}
+
+header::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: inherit;
+    z-index: -1;
+}
+
+
+.header h1 {
+    font-size: 32px;
+    color: #ffeb3b; /* Yellow color for the heading */
+}
+
+.button-container {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+button {
+    background-color: #00bcd4; /* Cyan */
+    border: none;
+    color: #121212;
+    padding: 12px 24px;
+    text-align: center;
+    font-size: 16px;
+    border-radius: 4px;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Add shadow */
+}
+
+button:hover {
+    background-color: #0097a7; /* Darker Cyan */
+    transform: translateY(-2px);
+}
+
+button:focus {
+    outline: 3px solid #ffeb3b; /* Yellow */
+}
+
+.charts {
+    display: flex;
+    flex-direction: column;
+    gap: 20px; /* Space between charts */
+}
+
+.chart-container {
+    background: #292929; /* Slightly lighter background for contrast */
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Subtle shadow for depth */
+}
+
+.chart-container h2 {
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #ffeb3b; /* Yellow color for subheadings */
+}
+
+#loadingSpinner {
+    color: white;
+    text-align: center;
+    padding: 20px;
+    font-size: 18px;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000; /* Ensure it appears above other content */
+}
+
+.footer {
+    text-align: center;
+    padding: 20px;
+}
+
+.footer img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Center text in p element */
+.center-text {
+    text-align: center;
+}
+
+/* Tabulator Custom Styles */
+.tabulator {
+    background-color: #1e1e1e; /* Dark background */
+    color: #e0e0e0; /* Light text */
+    border: 1px solid #333;
+}
+
+.tabulator .tabulator-header {
+    background-color: #00bcd4; /* Cyan background for headers */
+    color: #121212; /* Dark text for headers */
+}
+
+.tabulator .tabulator-row {
+    background-color: #333333; /* Lighter background color */
+    color: #e0e0e0; /* Light text */
+}
+
+.tabulator .tabulator-row:nth-child(even) {
+    background-color: #3b3b3b; /* Alternate lighter row color */
+}
+
+.tabulator .tabulator-row:hover {
+    background-color: #4a4a4a; /* Row hover color */
+    color: #fff; /* Ensure text is readable on hover */
+}
+
+.tabulator .tabulator-cell {
+    border-right: 1px solid #444; /* Cell border color */
+}
+
+.tabulator .tabulator-col-resize-handle {
+    background-color: #666; /* Gray resize handle */
+}
+
+.tabulator .tabulator-footer {
+    background-color: #004d4d; /* Teal background for footer */
+    color: #ffeb3b; /* Yellow text for footer */
+}
+
+#battle-reports-table {
+    flex-grow: 1;
+    margin-top: 10px;
+}
+
+.grid-container {
+    display: flex;
+    justify-content: space-between; /* Ensure the boxes are spread evenly */
+    gap: 20px; /* Space between the boxes */
+    margin-top: 20px; /* Add more space between the pilot names and the grid boxes */
+}
+
+.grid-box {
+    width: calc(50% - 10px); /* Half the width of the container, accounting for the gap */
+    min-height: 150px;
+    background-color: #292929; /* Slightly lighter background for contrast */
+    border: 2px dashed #e0e0e0;
+    border-radius: 4px;
+    padding: 10px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px; /* Add gap between the draggable boxes inside grid-box */
+}
+
+.draggable-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.draggable-box {
+    padding: 10px;
+    background-color: #00bcd4; /* Cyan background */
+    color: #121212; /* Dark text */
+    border-radius: 4px;
+    cursor: move;
+    user-select: none; /* Prevent text selection */
+    transition: transform 0.2s ease;
+    margin: 5px; /* Add margin to each draggable box */
+}
+
+.draggable-box:hover {
+    transform: scale(1.1);
+}
+
+.input-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.input-container label {
+    margin-right: 10px;
+}
+
+.button-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+#valuesContainer {
+    margin-top: 20px;
+    text-align: center;
+}
+
+#valuesContainer p {
+    margin: 5px 0;
+    font-size: 18px;
+    color: #ffeb3b; /* Yellow text */
+}
+
+.clipboard-icon {
+    cursor: pointer;
+    transition: transform 0.2s, color 0.2s;
+}
+
+.clipboard-icon.copied {
+    color: green;
+    transform: scale(1.5);
+}
+
+.detail-container {
+    margin-top: 20px;
+    text-align: left;
+    display: none; /* Initially hidden */
+    background-color: #292929; /* Match grid box background */
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    color: #e0e0e0; /* Light text color for better contrast */
+}
+.detail-container h2 {
+    text-align: center;
+    font-size: 24px;
+    color: #ffeb3b; /* Yellow color for subheadings */
+}
+.detail-container .field {
+    display: flex;
+    justify-content: space-between;
+    margin: 15px 0;
+    font-size: 18px;
+}
+.detail-container .field label {
+    font-weight: bold;
+    margin-right: 10px;
+    color: #e0e0e0; /* Light text */
+}
+.detail-container .field span {
+    flex: 1;
+    text-align: right;
+    color: #ffeb3b; /* Yellow text */
+}
+.detail-container .field a {
+    color: #007bff; /* Link color */
+    text-decoration: none;
+}
+.detail-container .field a:hover {
+    text-decoration: underline;
+}
+.split-details {
+    text-align: left;
+    margin-top: 20px;
+    font-size: 18px;
+}
+.split-details p {
+    margin: 5px 0;
+    color: #e0e0e0; /* Light text */
+}
+.button-container {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 20px;
+}
+.delete-button {
+    background-color: red;
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+}
+.delete-button:hover {
+    background-color: darkred;
+}
+.link-button {
+    background-color: #00bcd4; /* Cyan */
+    color: #121212; /* Dark text */
+    padding: 12px 24px;
+    text-align: center;
+    font-size: 16px;
+    border-radius: 4px;
+    text-decoration: none; /* Remove underline from link */
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Add shadow */
+    display: inline-block;
+}
+
+.link-button:hover {
+    background-color: #0097a7; /* Darker Cyan */
+    transform: translateY(-2px);
+}
+
+.link-button:focus {
+    outline: 3px solid #ffeb3b; /* Yellow */
+}
+
+.janice-link {
+    margin-left: 10px;
+}
+
+textarea#lootEntry {
+    vertical-align: middle;
+    resize: none;
+    overflow: hidden;
+    width: 80%; /* Adjust width to fit the container */
+}
+
+textarea#battleReport {
+    resize: none;
+    width: 50%; /* Center and make the battle report entry field larger */
+}
+
+.appraise-button {
+    margin-top: 10px;
+}
+
+.header button {
+    margin-bottom: 20px;
+}
+
+hr {
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.center-text {
+    text-align: center;
+}
