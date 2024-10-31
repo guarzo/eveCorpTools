@@ -1,12 +1,61 @@
 // static/js/utils.js
 
 /**
+ * Custom plugin to display 'No data available' message
+ */
+/**
+ * Custom plugin to display 'No data available' message
+ */
+export const noDataPlugin = {
+    id: 'noData',
+    afterDraw: function(chart) { // Changed from beforeDraw to afterDraw
+        // Determine if the chart has no data
+        const hasData = chart.data.datasets.some(dataset => {
+            return dataset.data && dataset.data.length > 0 && dataset.data.some(value => {
+                if (typeof value === 'object' && value !== null) {
+                    return Object.values(value).some(val => val !== null && val !== undefined && val !== '');
+                }
+                return value !== null && value !== undefined && value !== '';
+            });
+        });
+
+        if (!hasData) {
+            console.log("missing data ")
+            const { ctx, width, height } = chart;
+            ctx.save();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = '20px Montserrat, sans-serif';
+            ctx.fillStyle = '#ff4d4d'; // Customize as needed
+
+            // Calculate position below the title
+            const titleHeight = chart.options.plugins.title.display ? 40 : 0; // Approximate title height
+            const messageY = height / 2 + titleHeight / 2;
+
+            ctx.fillText('No data available', width / 2, messageY);
+            ctx.restore();
+        }
+    }
+};
+
+/**
+ * Generates common Chart.js options with the ability to add a title.
+ * @param {string} titleText - The text to display as the chart title.
+ * @param {Object} [additionalOptions] - Additional Chart.js options to merge.
+ * @returns {Object} - The Chart.js options object.
+ */
+// static/js/utils.js
+
+/**
  * Generates common Chart.js options with the ability to add a title.
  * @param {string} titleText - The text to display as the chart title.
  * @param {Object} [additionalOptions] - Additional Chart.js options to merge.
  * @returns {Object} - The Chart.js options object.
  */
 export function getCommonOptions(titleText, additionalOptions = {}) {
+    // Destructure plugins and scales from additionalOptions to merge separately
+    const { plugins: additionalPlugins = {}, scales: additionalScales = {}, ...restOptions } = additionalOptions;
+
     return {
         responsive: true,
         maintainAspectRatio: false,
@@ -28,7 +77,7 @@ export function getCommonOptions(titleText, additionalOptions = {}) {
                 font: {
                     size: 18,
                     family: 'Montserrat, sans-serif',
-                    weight: 'bold', // Changed from 'style' to 'weight'
+                    weight: 'bold', // Correct property for bold text
                 },
                 color: '#ffffff',
                 align: 'center',
@@ -37,10 +86,10 @@ export function getCommonOptions(titleText, additionalOptions = {}) {
                     bottom: 30,
                 },
                 // Allow overriding default title options
-                ...(additionalOptions.plugins && additionalOptions.plugins.title ? { ...additionalOptions.plugins.title } : {}),
+                ...(additionalPlugins.title || {}),
             },
-            // Merge any additional plugin options provided
-            ...(additionalOptions.plugins ? { ...additionalOptions.plugins } : {}),
+            // Merge any additional plugin options provided, excluding 'title'
+            ...additionalPlugins,
         },
         scales: {
             x: {
@@ -48,7 +97,7 @@ export function getCommonOptions(titleText, additionalOptions = {}) {
                 grid: { color: '#444' },
                 beginAtZero: true,
                 // Allow overriding default x-axis options
-                ...(additionalOptions.scales && additionalOptions.scales.x ? { ...additionalOptions.scales.x } : {}),
+                ...(additionalScales.x || {}),
             },
             y: {
                 ticks: {
@@ -57,13 +106,13 @@ export function getCommonOptions(titleText, additionalOptions = {}) {
                 },
                 grid: { display: false },
                 // Allow overriding default y-axis options
-                ...(additionalOptions.scales && additionalOptions.scales.y ? { ...additionalOptions.scales.y } : {}),
+                ...(additionalScales.y || {}),
             },
             // Merge any additional scales provided
-            ...(additionalOptions.scales ? { ...additionalOptions.scales } : {}),
+            ...additionalScales,
         },
-        // Merge any additional options provided
-        ...(additionalOptions ? { ...additionalOptions } : {}),
+        // Merge any additional options provided, excluding 'plugins' and 'scales'
+        ...restOptions,
     };
 }
 

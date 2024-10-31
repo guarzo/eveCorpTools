@@ -1,6 +1,6 @@
 // static/js/chartConfigs/valueOverTimeChartConfig.js
 
-import { getCommonOptions } from '../utils.js';
+import {getCommonOptions, validateChartData} from '../utils.js';
 
 /**
  * Configuration for the Value Over Time Chart
@@ -14,7 +14,7 @@ const valueOverTimeChartConfig = {
         lastMonth: 'lastMValueOverTimeData',
     },
     type: 'line',
-    options: getCommonOptions('Value Over Time', {
+    options: getCommonOptions('Isk Destoryed', {
         plugins: {
             legend: { display: false },
         },
@@ -35,11 +35,16 @@ const valueOverTimeChartConfig = {
         },
     }),
     processData: function (data) {
+        const chartName = 'Isk Destroyed';
+        if (!validateChartData(data, chartName)) {
+            // Return empty labels and datasets to trigger the noDataPlugin
+            return { labels: [], datasets: [] };
+        }
         const labels = data.map(item => new Date(item.Time));
         const values = data.map(item => item.Value || 0);
 
         const datasets = [{
-            label: 'ISK Value Destroyed Over Time',
+            label: 'Ship Isk Value',
             data: values,
             borderColor: 'rgba(54, 162, 235, 1)',
             backgroundColor: 'rgba(54, 162, 235, 0.5)',

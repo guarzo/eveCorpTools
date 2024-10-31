@@ -1,6 +1,6 @@
 // static/js/chartConfigs/killHeatmapChartConfig.js
 
-import { getColor, getCommonOptions } from '../utils.js';
+import {getColor, getCommonOptions, validateChartData} from '../utils.js';
 
 /**
  * Configuration for the Kill Heatmap Chart
@@ -45,6 +45,11 @@ const killHeatmapChartConfig = {
         },
     }),
     processData: function (data) {
+        const chartName = 'Kill Heatmap';
+        if (!validateChartData(data, chartName)) {
+            // Return empty labels and datasets to trigger the noDataPlugin
+            return { labels: [], datasets: [] };
+        }
         const maxKills = Math.max(...data.flat());
         const heatmapData = [];
 

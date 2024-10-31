@@ -1,6 +1,6 @@
 // static/js/chartConfigs/killLossRatioChartConfig.js
 
-import { truncateLabel, getCommonOptions } from '../utils.js';
+import { truncateLabel, getColor, getCommonOptions, validateChartData } from '../utils.js';
 
 /**
  * Configuration for the Kill-to-Loss Ratio Chart
@@ -20,10 +20,10 @@ const killLossRatioChartConfig = {
             tooltip: {
                 callbacks: {
                     label: function (context) {
-                        const data = context.chart.data.originalData[context.dataIndex];
-                        const kills = data.Kills || 0;
-                        const losses = data.Losses || 0;
-                        const ratio = context.parsed.y.toFixed(2);
+                        const dataPoint = context.raw; // Access the data point directly
+                        const kills = dataPoint.kills || 0;
+                        const losses = dataPoint.losses || 0;
+                        const ratio = dataPoint.y !== undefined ? dataPoint.y.toFixed(2) : '0.00';
                         return `Kills: ${kills}, Losses: ${losses}, Ratio: ${ratio}`;
                     },
                 },
@@ -39,28 +39,60 @@ const killLossRatioChartConfig = {
                     autoSkip: false,
                 },
                 grid: { display: false },
+                title: {
+                    display: true,
+                    text: 'Characters',
+                    color: '#ffffff',
+                    font: {
+                        size: 14,
+                        family: 'Montserrat, sans-serif',
+                        weight: 'bold',
+                    },
+                },
             },
             y: {
+                beginAtZero: true,
                 ticks: { color: '#ffffff' },
                 grid: { color: '#444' },
-                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: 'Ratio',
+                    color: '#ffffff',
+                    font: {
+                        size: 14,
+                        family: 'Montserrat, sans-serif',
+                        weight: 'bold',
+                    },
+                },
             },
         },
     }),
     processData: function (data) {
-        const labels = data.map(item => item.CharacterName || 'Unknown');
-        const ratios = data.map(item => item.Ratio || 0);
+        const chartName = 'Kill-to-Loss Ratio Chart';
+        if (!validateChartData(data, chartName)) {
+            // Return empty labels and datasets to trigger the noDataPlugin
+            return { labels: [], datasets: [] };
+        }
 
-        const fullLabels = [...labels];
+        const labels = data.map(item => item.CharacterName || 'Unknown');
         const truncatedLabels = labels.map(label => truncateLabel(label, 10));
+
+        const ratios = data.map(item => item.Ratio || 0);
 
         const datasets = [{
             label: 'Kill-to-Loss Ratio',
-            data: ratios,
+            data: data.map(item => ({
+                x: item.CharacterName || 'Unknown',
+                y: item.Ratio || 0,
+                kills: item.Kills || 0,
+                losses: item.Losses || 0
+            })),
             backgroundColor: 'rgba(75, 192, 192, 0.7)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1,
         }];
 
-        return { labels: truncatedLabels, datasets, fullLabels, originalData: data };
+        return { labels: truncatedLabels, datasets, fullLabels: labels };
     },
 };
 

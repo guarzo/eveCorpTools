@@ -1,6 +1,6 @@
 // static/js/chartConfigs/ourShipsUsedChartConfig.js
 
-import { truncateLabel, getColor, getCommonOptions } from '../utils.js';
+import {truncateLabel, getColor, getCommonOptions, validateChartData} from '../utils.js';
 
 /**
  * Configuration for the Our Ships Used Chart
@@ -44,7 +44,11 @@ const ourShipsUsedChartConfig = {
         },
     }),
     processData: function (data) {
-        // Extract characters, ship names, and series data
+        const chartName = 'Our Ships Used Chart';
+        if (!validateChartData(data, chartName)) {
+            // Return empty labels and datasets to trigger the noDataPlugin
+            return { labels: [], datasets: [] };
+        }
         const characters = data.Characters || [];
         const shipNames = data.ShipNames || [];
         const seriesData = data.SeriesData || {};
