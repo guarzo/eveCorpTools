@@ -4,27 +4,22 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/go-echarts/go-echarts/v2/charts"
-	"github.com/go-echarts/go-echarts/v2/opts"
-
-	"github.com/guarzo/zkillanalytics/internal/persist"
-
 	"github.com/guarzo/zkillanalytics/internal/model"
+	"github.com/guarzo/zkillanalytics/internal/persist"
 )
 
-// ShipKillData holds the data for ship kill counts
 type ShipKillData struct {
-	ShipTypeID int
-	KillCount  int
-	Name       string
+	ShipTypeID int    `json:"ShipTypeID"`
+	KillCount  int    `json:"KillCount"`
+	Name       string `json:"Name"`
 }
 
-func GetTopShipsKilled(chartData *model.ChartData) *charts.Bar {
+func GetTopShipsKilledData(chartData *model.ChartData) []ShipKillData {
 	// Initialize a map to count killmails by ship type
 	shipKillCounts := make(map[int]ShipKillData)
 
 	if trackedCharacters == nil || len(trackedCharacters) == 0 {
-		fmt.Print(fmt.Sprintf("No tracked characters found, fetching from %d killmails", len(chartData.KillMails)))
+		fmt.Printf("No tracked characters found, fetching from %d killmails", len(chartData.KillMails))
 		trackedCharacters = orchestrator.GetTrackedCharactersFromKillMails(chartData.KillMails, &chartData.ESIData)
 	}
 
@@ -63,28 +58,10 @@ func GetTopShipsKilled(chartData *model.ChartData) *charts.Bar {
 		return sortedData[i].KillCount > sortedData[j].KillCount
 	})
 
-	// Limit to the top 10 ships
+	// Limit to the top 20 ships
 	if len(sortedData) > 20 {
 		sortedData = sortedData[:20]
 	}
 
-	// Prepare data for the chart
-	var shipNames []string
-	var counts []opts.BarData
-	for i, data := range sortedData {
-		truncatedName := truncateString(data.Name, 15) // Truncate the name to a maximum of 15 characters
-		shipNames = append(shipNames, truncatedName)
-		counts = append(counts, opts.BarData{
-			Value: data.KillCount,
-			ItemStyle: &opts.ItemStyle{
-				Color: colors[i%len(colors)], // Assign a color from the list
-			},
-		})
-	}
-
-	// Create a new bar chart instance
-	bar := newBarChart("Top Ships Killed", false)
-	bar.SetXAxis(shipNames).
-		AddSeries("Killmails", counts)
-	return bar
+	return sortedData
 }

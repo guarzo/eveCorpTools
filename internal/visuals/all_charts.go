@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/guarzo/zkillanalytics/internal/model"
 	"github.com/guarzo/zkillanalytics/internal/service"
 )
@@ -15,6 +17,7 @@ import (
 var (
 	trackedCharacters []int
 	orchestrator      *service.OrchestrateService
+	logger            *logrus.Logger
 )
 
 // TemplateData holds all the data passed to the template
@@ -69,6 +72,7 @@ type TemplateData struct {
 // RenderSnippets prepares the template data and renders the template to a file
 func RenderSnippets(orchestrateService *service.OrchestrateService, ytdChartData, lastMonthChartData, mtdChartData *model.ChartData, filePath string) error {
 	orchestrator = orchestrateService
+	logger = orchestrator.Logger
 
 	// Fetch tracked characters from OrchestrateService
 	ytdTrackedCharacters := orchestrateService.GetTrackedCharactersFromKillMails(ytdChartData.KillMails, &ytdChartData.ESIData)
@@ -163,6 +167,7 @@ func RenderSnippets(orchestrateService *service.OrchestrateService, ytdChartData
 
 func prepareCharacterDamageData(chartData *model.ChartData) template.JS {
 	data := GetDamageAndFinalBlows(chartData)
+	logger.Infof("Character Damage and Final Blows %v", data)
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		orchestrator.Logger.Errorf("Error marshalling CharacterDamageData: %v", err)
@@ -173,6 +178,8 @@ func prepareCharacterDamageData(chartData *model.ChartData) template.JS {
 
 func prepareOurLossesValueData(chartData *model.ChartData) template.JS {
 	data := GetOurLossesValue(chartData)
+	logger.Infof("Our Losses %v", data)
+
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		orchestrator.Logger.Errorf("Error marshalling OurLossesValueData: %v", err)
@@ -183,6 +190,8 @@ func prepareOurLossesValueData(chartData *model.ChartData) template.JS {
 
 func prepareCharacterPerformanceData(chartData *model.ChartData) template.JS {
 	data := GetCharacterPerformance(chartData)
+	logger.Infof("Character Performance %v", data)
+
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		orchestrator.Logger.Errorf("Error marshalling CharacterPerformanceData: %v", err)
@@ -193,6 +202,8 @@ func prepareCharacterPerformanceData(chartData *model.ChartData) template.JS {
 
 func prepareOurShipsUsedData(chartData *model.ChartData) template.JS {
 	data := GetOurShipsUsed(chartData)
+	logger.Infof("Our Ships Used %v", data)
+
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		orchestrator.Logger.Errorf("Error marshalling OurShipsUsedData: %v", err)
@@ -203,6 +214,8 @@ func prepareOurShipsUsedData(chartData *model.ChartData) template.JS {
 
 func prepareVictimsSunburstData(chartData *model.ChartData) template.JS {
 	data := GetVictimsSunburst(chartData)
+	logger.Infof("Victim Sunburst %v", data)
+
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		orchestrator.Logger.Errorf("Error marshalling VictimsSunburstData: %v", err)
@@ -213,6 +226,8 @@ func prepareVictimsSunburstData(chartData *model.ChartData) template.JS {
 
 func prepareKillActivityData(chartData *model.ChartData) template.JS {
 	data := GetKillActivityOverTime(chartData, "daily")
+	logger.Infof("Kill Activity %v", data)
+
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		orchestrator.Logger.Errorf("Error marshalling KillActivityData: %v", err)
@@ -223,6 +238,8 @@ func prepareKillActivityData(chartData *model.ChartData) template.JS {
 
 func prepareKillHeatmapData(chartData *model.ChartData) template.JS {
 	data := GetKillHeatmapData(chartData)
+	logger.Infof("Kill HeatMap %v", data)
+
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		orchestrator.Logger.Errorf("Error marshalling KillHeatmapData: %v", err)
@@ -233,6 +250,8 @@ func prepareKillHeatmapData(chartData *model.ChartData) template.JS {
 
 func prepareKillLossRatioData(chartData *model.ChartData) template.JS {
 	data := GetKillLossRatioData(chartData)
+	logger.Infof("Kill Loss Ratio %v", data)
+
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		orchestrator.Logger.Errorf("Error marshalling KillLossRatioData: %v", err)
@@ -242,7 +261,9 @@ func prepareKillLossRatioData(chartData *model.ChartData) template.JS {
 }
 
 func prepareTopShipsKilledData(chartData *model.ChartData) template.JS {
-	data := GetTopShipsKilled(chartData)
+	data := GetTopShipsKilledData(chartData)
+	logger.Infof("Top Ships KIlled %v", data)
+
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		orchestrator.Logger.Errorf("Error marshalling TopShipsKilledData: %v", err)
@@ -253,6 +274,8 @@ func prepareTopShipsKilledData(chartData *model.ChartData) template.JS {
 
 func prepareValueOverTimeData(chartData *model.ChartData) template.JS {
 	data := GetValueOverTimeData(chartData, "daily")
+	logger.Infof("Value over time %v", data)
+
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		orchestrator.Logger.Errorf("Error marshalling ValueOverTimeData: %v", err)
@@ -263,6 +286,8 @@ func prepareValueOverTimeData(chartData *model.ChartData) template.JS {
 
 func prepareKillCountData(chartData *model.ChartData) template.JS {
 	data, err := PrepareKillCountChartData(chartData)
+	logger.Infof("Kill Count %v", data)
+
 	if err != nil {
 		orchestrator.Logger.Errorf("Error preparing KillCountData: %v", err)
 		return template.JS("[]")
@@ -274,14 +299,4 @@ func prepareKillCountData(chartData *model.ChartData) template.JS {
 		return template.JS("[]")
 	}
 	return template.JS(jsonData)
-}
-
-// isOurCharacter helper function
-func isOurCharacter(characterID int) bool {
-	for _, id := range trackedCharacters {
-		if id == characterID {
-			return true
-		}
-	}
-	return false
 }

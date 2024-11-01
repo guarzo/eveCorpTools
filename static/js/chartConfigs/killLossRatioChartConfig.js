@@ -21,8 +21,8 @@ const killLossRatioChartConfig = {
                 callbacks: {
                     label: function (context) {
                         const dataPoint = context.raw; // Access the data point directly
-                        const kills = dataPoint.kills || 0;
-                        const losses = dataPoint.losses || 0;
+                        const kills = dataPoint.Kills || 0;
+                        const losses = dataPoint.Losses || 0;
                         const ratio = dataPoint.y !== undefined ? dataPoint.y.toFixed(2) : '0.00';
                         return `Kills: ${kills}, Losses: ${losses}, Ratio: ${ratio}`;
                     },
@@ -74,18 +74,31 @@ const killLossRatioChartConfig = {
             return { labels: [], datasets: [] };
         }
 
-        const labels = data.map(item => item.CharacterName || 'Unknown');
-        const truncatedLabels = labels.map(label => truncateLabel(label, 10));
+        // Separate persistent characters and top ratios
+        const persistentCharacters = data.filter(item => isPersistentCharacter(item.CharacterName));
+        const topRatios = data.filter(item => !isPersistentCharacter(item.CharacterName))
+            .sort((a, b) => (b.Ratio || 0) - (a.Ratio || 0))
+            .slice(0, 10); // Top 10 by ratio
 
-        const ratios = data.map(item => item.Ratio || 0);
+        // Combine persistent and top ratios
+        const combinedData = [...persistentCharacters, ...topRatios];
+
+        // Truncate if necessary
+        const maxDisplay = 20;
+        const limitedData = combinedData.slice(0, maxDisplay);
+
+        const labels = limitedData.map(item => item.CharacterName || 'Unknown');
+        const truncatedLabels = labels.map(label => truncateLabel(label, 15));
+
+        const ratios = limitedData.map(item => item.Ratio || 0);
 
         const datasets = [{
             label: 'Kill-to-Loss Ratio',
-            data: data.map(item => ({
+            data: limitedData.map(item => ({
                 x: item.CharacterName || 'Unknown',
                 y: item.Ratio || 0,
-                kills: item.Kills || 0,
-                losses: item.Losses || 0
+                Kills: item.Kills || 0,
+                Losses: item.Losses || 0,
             })),
             backgroundColor: 'rgba(75, 192, 192, 0.7)',
             borderColor: 'rgba(75, 192, 192, 1)',
@@ -95,5 +108,13 @@ const killLossRatioChartConfig = {
         return { labels: truncatedLabels, datasets, fullLabels: labels };
     },
 };
+
+// Helper function to determine if a character is persistent
+function isPersistentCharacter(characterName) {
+    // Define your logic to determine persistent characters
+    // For example, based on a list of character names
+    const persistentList = ['Alice', 'Bob', 'Charlie']; // Example list
+    return persistentList.includes(characterName);
+}
 
 export default killLossRatioChartConfig;

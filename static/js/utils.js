@@ -1,11 +1,5 @@
 // static/js/utils.js
 
-/**
- * Custom plugin to display 'No data available' message
- */
-/**
- * Custom plugin to display 'No data available' message
- */
 export const noDataPlugin = {
     id: 'noData',
     afterDraw: function(chart) { // Changed from beforeDraw to afterDraw
@@ -20,7 +14,12 @@ export const noDataPlugin = {
         });
 
         if (!hasData) {
-            console.log("missing data ")
+            // Retrieve the chart title
+            const chartTitle = chart.options.plugins.title && chart.options.plugins.title.text ? chart.options.plugins.title.text : 'Unnamed Chart';
+
+            // Log the chart title and data
+            console.log(`No data for chart "${chartTitle}". Chart data:`, chart.data);
+
             const { ctx, width, height } = chart;
             ctx.save();
             ctx.textAlign = 'center';
@@ -29,55 +28,41 @@ export const noDataPlugin = {
             ctx.fillStyle = '#ff4d4d'; // Customize as needed
 
             // Calculate position below the title
-            const titleHeight = chart.options.plugins.title.display ? 40 : 0; // Approximate title height
+            const titleHeight = chart.options.plugins.title && chart.options.plugins.title.display ? 40 : 0; // Approximate title height
             const messageY = height / 2 + titleHeight / 2;
 
             ctx.fillText('No data available', width / 2, messageY);
             ctx.restore();
+        } else {
+            const chartTitle = chart.options.plugins.title && chart.options.plugins.title.text ? chart.options.plugins.title.text : 'Unnamed Chart';
+
+            console.log(`Data for chart "${chartTitle}". Chart data:`, chart.data);
         }
     }
 };
 
 /**
- * Generates common Chart.js options with the ability to add a title.
- * @param {string} titleText - The text to display as the chart title.
- * @param {Object} [additionalOptions] - Additional Chart.js options to merge.
- * @returns {Object} - The Chart.js options object.
- */
-// static/js/utils.js
-
-/**
- * Generates common Chart.js options with the ability to add a title.
- * @param {string} titleText - The text to display as the chart title.
- * @param {Object} [additionalOptions] - Additional Chart.js options to merge.
- * @returns {Object} - The Chart.js options object.
+ * Generates common options for Chart.js charts.
+ * @param {string} titleText - The title of the chart.
+ * @param {Object} additionalOptions - Additional Chart.js options to merge.
+ * @returns {Object} - The combined chart options.
  */
 export function getCommonOptions(titleText, additionalOptions = {}) {
     // Destructure plugins and scales from additionalOptions to merge separately
-    const { plugins: additionalPlugins = {}, scales: additionalScales = {}, ...restOptions } = additionalOptions;
+    const { plugins: additionalPlugins = {}, scales: additionalScales = {}, datasets: additionalDatasets = {}, ...restOptions } = additionalOptions;
 
     return {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-            legend: { display: true },
-            tooltip: {
-                callbacks: {
-                    title: function (context) {
-                        const index = context[0].dataIndex;
-                        return context[0].chart.data.fullLabels
-                            ? context[0].chart.data.fullLabels[index]
-                            : context[0].chart.data.labels[index];
-                    },
-                },
-            },
+            legend: { display: true, position: 'top', labels: { color: '#ffffff' } },
             title: {
                 display: true,
                 text: titleText,
                 font: {
                     size: 18,
                     family: 'Montserrat, sans-serif',
-                    weight: 'bold', // Correct property for bold text
+                    weight: 'bold',
                 },
                 color: '#ffffff',
                 align: 'center',
@@ -85,48 +70,100 @@ export function getCommonOptions(titleText, additionalOptions = {}) {
                     top: 10,
                     bottom: 30,
                 },
-                // Allow overriding default title options
-                ...(additionalPlugins.title || {}),
+                ...additionalPlugins.title,
             },
-            // Merge any additional plugin options provided, excluding 'title'
+            tooltip: {
+                mode: 'index',
+                intersect: false,
+                ...additionalPlugins.tooltip,
+            },
+            // Merge any other plugins here
             ...additionalPlugins,
         },
         scales: {
             x: {
-                ticks: { color: '#ffffff' },
-                grid: { color: '#444' },
-                beginAtZero: true,
-                // Allow overriding default x-axis options
-                ...(additionalScales.x || {}),
-            },
-            y: {
+                type: 'category',
                 ticks: {
                     color: '#ffffff',
+                    maxRotation: 45,
+                    minRotation: 45,
                     autoSkip: false,
+                    font: {
+                        size: 10, // Reduced font size for better fit
+                    },
                 },
                 grid: { display: false },
-                // Allow overriding default y-axis options
-                ...(additionalScales.y || {}),
+                title: {
+                    display: true,
+                    text: 'Characters',
+                    color: '#ffffff',
+                    font: {
+                        size: 14,
+                        family: 'Montserrat, sans-serif',
+                        weight: 'bold',
+                    },
+                },
+                stacked: false, // Set to true if you want stacked bars
+                ...additionalScales.x,
             },
-            // Merge any additional scales provided
+            y: {
+                beginAtZero: true,
+                ticks: { color: '#ffffff' },
+                grid: { color: '#444' },
+                title: {
+                    display: true,
+                    text: 'Count',
+                    color: '#ffffff',
+                    font: {
+                        size: 14,
+                        family: 'Montserrat, sans-serif',
+                        weight: 'bold',
+                    },
+                },
+                stacked: false, // Set to true if you want stacked bars
+                ...additionalScales.y,
+            },
             ...additionalScales,
         },
-        // Merge any additional options provided, excluding 'plugins' and 'scales'
+        layout: {
+            padding: {
+                left: 10,
+                right: 10,
+                top: 10,
+                bottom: 10,
+            },
+            ...restOptions.layout,
+        },
+        interaction: {
+            mode: 'index',
+            intersect: false,
+            ...additionalOptions.interaction,
+        },
+        // Merge dataset-specific options if needed
+        datasets: {
+            bar: {
+                barPercentage: 0.5, // Adjust bar width (0 to 1)
+                categoryPercentage: 0.5, // Adjust spacing between categories (0 to 1)
+                ...additionalDatasets.bar,
+            },
+            ...additionalDatasets,
+        },
         ...restOptions,
     };
 }
 
+
 /**
  * Truncates a label to a specified length and appends an ellipsis if necessary.
  * @param {string} label - The label to truncate.
- * @param {number} length - The maximum length of the truncated label.
+ * @param {number} maxLength - The maximum length of the truncated label.
  * @returns {string} - The truncated label.
  */
-export function truncateLabel(label, length) {
-    if (!label || typeof label !== 'string') {
-        return '';
+export function truncateLabel(label, maxLength) {
+    if (label.length > maxLength) {
+        return label.substring(0, maxLength - 3) + '...';
     }
-    return label.length > length ? label.substring(0, length) + '...' : label;
+    return label;
 }
 
 /**

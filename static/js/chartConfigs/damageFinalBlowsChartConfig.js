@@ -1,58 +1,26 @@
 // static/js/chartConfigs/damageFinalBlowsChartConfig.js
 
-import { truncateLabel, getColor, getCommonOptions, validateChartData } from '../utils.js';
+import { truncateLabel, getCommonOptions, validateChartData } from '../utils.js';
 
 /**
  * Configuration for the Damage Done and Final Blows Chart
  */
 const damageFinalBlowsChartConfig = {
     id: 'damageFinalBlowsChart',
-    instance: null,
+    instance: {},
     dataKeys: {
-        mtd: 'mtdCharacterDamageData',
-        ytd: 'ytdCharacterDamageData',
-        lastMonth: 'lastMCharacterDamageData',
+        mtd: { dataVar: 'mtdCharacterDamageData', canvasId: 'damageFinalBlowsChart_mtd' },
+        ytd: { dataVar: 'ytdCharacterDamageData', canvasId: 'damageFinalBlowsChart_ytd' },
+        lastMonth: { dataVar: 'lastMCharacterDamageData', canvasId: 'damageFinalBlowsChart_lastM' },
     },
-    type: 'bar', // Grouped bar chart
-    options: getCommonOptions('Damage Done and Final Blows', {
-        plugins: {
-            legend: { display: true, position: 'top', labels: { color: '#ffffff' } },
-            tooltip: {
-                callbacks: {
-                    label: function (context) {
-                        const label = context.dataset.label || '';
-                        const value = context.parsed.y !== undefined ? context.parsed.y : context.parsed.x;
-                        return `${label}: ${value}`;
-                    },
-                },
-            },
-        },
+    type: 'bar', // Base type for mixed charts
+    options: getCommonOptions('Top Damage Done and Final Blows', {
+        // No need to redefine plugins here as they're handled in getCommonOptions
         scales: {
-            x: {
-                type: 'category',
-                ticks: {
-                    color: '#ffffff',
-                    maxRotation: 45,
-                    minRotation: 45,
-                    autoSkip: false,
-                },
-                grid: { display: false },
-            },
-            y: {
-                beginAtZero: true,
-                ticks: { color: '#ffffff' },
-                grid: { color: '#444' },
-                title: {
-                    display: true,
-                    text: 'Count',
-                    color: '#ffffff',
-                    font: {
-                        size: 14,
-                        family: 'Montserrat, sans-serif',
-                        weight: 'bold',
-                    },
-                },
-            },
+            // No additional scale options needed here
+        },
+        datasets: {
+            // No additional dataset options needed here
         },
     }),
     processData: function (data) {
@@ -62,28 +30,40 @@ const damageFinalBlowsChartConfig = {
             return { labels: [], datasets: [] };
         }
 
-        // Extract labels and data
-        const labels = data.map(item => item.Name || 'Unknown');
-        const truncatedLabels = labels.map(label => truncateLabel(label, 10));
+        // Sort data by DamageDone descending
+        const sortedData = [...data].sort((a, b) => (b.DamageDone || 0) - (a.DamageDone || 0));
 
-        const damageData = data.map(item => item.DamageDone || 0);
-        const finalBlowsData = data.map(item => item.FinalBlows || 0);
+        // Limit to top 20 characters
+        const topN = 20;
+        const limitedData = sortedData.slice(0, topN);
 
-        // Define datasets
+        const labels = limitedData.map(item => item.Name || 'Unknown');
+        const truncatedLabels = labels.map(label => truncateLabel(label, 15)); // Truncate labels to 15 characters
+
+        const damageData = limitedData.map(item => item.DamageDone || 0);
+        const finalBlowsData = limitedData.map(item => item.FinalBlows || 0);
+
         const datasets = [
             {
                 label: 'Damage Done',
+                type: 'bar', // Explicitly set type as bar
                 data: damageData,
                 backgroundColor: 'rgba(255, 77, 77, 0.7)',
                 borderColor: 'rgba(255, 77, 77, 1)',
                 borderWidth: 1,
+                yAxisID: 'y', // Assign to primary y-axis
             },
             {
                 label: 'Final Blows',
+                type: 'line', // Set type as line
                 data: finalBlowsData,
                 backgroundColor: 'rgba(54, 162, 235, 0.7)',
                 borderColor: 'rgba(54, 162, 235, 1)',
-                borderWidth: 1,
+                borderWidth: 2,
+                fill: false,
+                yAxisID: 'y1', // Assign to secondary y-axis
+                tension: 0.1, // Smoothness of the line
+                pointRadius: 4, // Size of points on the line
             },
         ];
 

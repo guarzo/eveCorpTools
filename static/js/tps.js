@@ -1,6 +1,5 @@
 // static/js/tps.js
 
-
 // Import utility functions
 import { truncateLabel, getColor, getCommonOptions, noDataPlugin } from './utils.js';
 Chart.register(noDataPlugin);
@@ -74,9 +73,10 @@ function init() {
      * @param {Object} config - The chart configuration object.
      * @param {HTMLCanvasElement} ctxElem - The canvas element for the chart.
      * @param {Object} data - The processed data for the chart.
+     * @param {string} timeFrame - The current time frame (mtd, ytd, lastMonth).
      * @returns {Chart} - The initialized Chart.js instance.
      */
-    function createChart(config, ctxElem, data) {
+    function createChart(config, ctxElem, data, timeFrame) {
         const { labels, datasets, fullLabels } = data;
 
         return new Chart(ctxElem.getContext('2d'), {
@@ -94,17 +94,20 @@ function init() {
      * Updates an existing chart instance with new data.
      * @param {Object} config - The chart configuration object.
      * @param {Object} data - The new data for the chart.
+     * @param {string} timeFrame - The current time frame (mtd, ytd, lastMonth).
      */
-    function updateChartInstance(config, data) {
+    function updateChartInstance(config, data, timeFrame) {
         const { labels, datasets, fullLabels } = data;
-        const chart = config.instance;
+        const chart = config.instance[timeFrame];
 
-        chart.data.labels = labels;
-        chart.data.datasets = datasets;
-        if (fullLabels) {
-            chart.data.fullLabels = fullLabels;
+        if (chart) {
+            chart.data.labels = labels;
+            chart.data.datasets = datasets;
+            if (fullLabels) {
+                chart.data.fullLabels = fullLabels;
+            }
+            chart.update();
         }
-        chart.update();
     }
 
     /**
@@ -113,16 +116,18 @@ function init() {
      */
     function updateChart(config) {
         const dataKey = config.dataKeys[currentTimeFrame];
-        let data = window[dataKey];
+        let data = window[dataKey.dataVar];
+
+        console.log(`Updating chart ${config.id} for ${currentTimeFrame}:`, data);
 
         if (!data || (Array.isArray(data) && data.length === 0)) {
             console.warn(`Data unavailable for chart ${config.id} in ${currentTimeFrame}.`);
-            if (config.instance) {
-                config.instance.destroy();
-                config.instance = null;
+            if (config.instance && config.instance[currentTimeFrame]) {
+                config.instance[currentTimeFrame].destroy();
+                config.instance[currentTimeFrame] = null;
             }
             // Optionally, display a placeholder or message
-            const ctxElem = document.getElementById(config.id);
+            const ctxElem = document.getElementById(dataKey.canvasId);
             if (ctxElem) {
                 ctxElem.parentElement.innerHTML = `<p class="text-center">No data available for this chart.</p>`;
             }
@@ -141,13 +146,17 @@ function init() {
             return;
         }
 
-        const ctxElem = document.getElementById(config.id);
-        if (!ctxElem) return;
+        const ctxElem = document.getElementById(dataKey.canvasId);
+        if (!ctxElem) {
+            console.error(`Canvas element with ID '${dataKey.canvasId}' not found.`);
+            return;
+        }
 
-        if (config.instance) {
-            updateChartInstance(config, processedData);
+        if (config.instance && config.instance[currentTimeFrame]) {
+            updateChartInstance(config, processedData, currentTimeFrame);
         } else {
-            config.instance = createChart(config, ctxElem, processedData);
+            config.instance = config.instance || {};
+            config.instance[currentTimeFrame] = createChart(config, ctxElem, processedData, currentTimeFrame);
         }
     }
 

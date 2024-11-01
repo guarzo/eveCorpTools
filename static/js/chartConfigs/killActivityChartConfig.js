@@ -18,6 +18,8 @@ const killActivityChartConfig = {
         plugins: {
             legend: { display: true, position: 'top', labels: { color: '#ffffff' } },
             tooltip: {
+                mode: 'index',
+                intersect: false,
                 callbacks: {
                     label: function (context) {
                         const label = context.dataset.label || '';
@@ -31,8 +33,8 @@ const killActivityChartConfig = {
             x: {
                 type: 'time',
                 time: {
-                    unit: 'day',
-                    tooltipFormat: 'MMM D, YYYY', // Customize tooltip date format
+                    unit: 'day', // Adjust based on 'interval' (hourly, daily, weekly)
+                    tooltipFormat: 'MMM d, yyyy', // Customize tooltip date format
                 },
                 ticks: { color: '#ffffff' },
                 grid: { color: '#444' },
@@ -71,7 +73,7 @@ const killActivityChartConfig = {
             return { labels: [], datasets: [] };
         }
 
-        // Assuming 'Time' is a date string and 'Kills' is the number of kills
+        // Extract labels and data
         const labels = data.map(item => new Date(item.Time));
         const kills = data.map(item => item.Kills || 0);
 

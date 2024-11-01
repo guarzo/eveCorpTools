@@ -81,8 +81,9 @@ header .lead {
     padding: 20px;
     border-radius: 8px;
     margin-bottom: 20px;
-    height: 400px; /* Set a fixed height (adjust as needed) */
+    height: 500px; /* Set a fixed height (adjust as needed) */
     box-sizing: border-box; /* Ensure padding doesn't affect the height */
+    width: 100%;
 }
 
 .chart-container canvas {

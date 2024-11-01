@@ -9,9 +9,9 @@ import (
 
 // Data structure to hold character data
 type CharacterData struct {
-	Name       string
-	FinalBlows int
-	DamageDone int
+	Name       string `json:"Name"`
+	FinalBlows int    `json:"FinalBlows"`
+	DamageDone int    `json:"DamageDone"`
 }
 
 func GetDamageAndFinalBlows(chartData *model.ChartData) []CharacterData {
@@ -25,15 +25,12 @@ func GetDamageAndFinalBlows(chartData *model.ChartData) []CharacterData {
 			}
 
 			// Check if the character is one of ours
-			if config.DisplayCharacter(attacker.CharacterID, attacker.CorporationID, attacker.AllianceID) {
+			if !config.DisplayCharacter(attacker.CharacterID, attacker.CorporationID, attacker.AllianceID) {
 				continue
 			}
 
 			// Get character info
 			characterInfo := chartData.CharacterInfos[characterID]
-			//if characterInfo == nil {
-			//	continue
-			//}
 
 			// Initialize character data if not exists
 			data, exists := characterStats[characterID]
@@ -42,6 +39,7 @@ func GetDamageAndFinalBlows(chartData *model.ChartData) []CharacterData {
 					Name: characterInfo.Name,
 				}
 				characterStats[characterID] = data
+				logger.Infof("Character %s included", characterInfo.Name)
 			}
 
 			// Accumulate damage done
@@ -60,10 +58,15 @@ func GetDamageAndFinalBlows(chartData *model.ChartData) []CharacterData {
 		result = append(result, *data)
 	}
 
-	// Sort by damage done or final blows if desired
+	// Sort by damage done descending
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].DamageDone > result[j].DamageDone
 	})
+
+	// Limit to top 20 characters (if desired)
+	if len(result) > 20 {
+		result = result[:20]
+	}
 
 	return result
 }

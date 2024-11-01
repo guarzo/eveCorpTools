@@ -3,6 +3,7 @@ package visuals
 import (
 	"sort"
 
+	"github.com/guarzo/zkillanalytics/internal/config"
 	"github.com/guarzo/zkillanalytics/internal/model"
 )
 
@@ -22,24 +23,26 @@ func GetOurShipsUsed(chartData *model.ChartData) OurShipsUsedData {
 	// Process the data
 	for _, km := range chartData.KillMails {
 		for _, attacker := range km.EsiKillMail.Attackers {
-			if isOurCharacter(attacker.CharacterID) {
-				characterInfo := chartData.CharacterInfos[attacker.CharacterID]
-				characterName := characterInfo.Name
 
-				// Assume you have a function to get ship type name by ID
-				shipName := orchestrator.LookupType(attacker.ShipTypeID)
-
-				if shipName == "" || shipName == "Capsule" || shipName == "Unknown" {
-					continue
-				}
-
-				if _, exists := characterShipCounts[characterName]; !exists {
-					characterShipCounts[characterName] = make(map[string]int)
-				}
-
-				characterShipCounts[characterName][shipName]++
-				shipNameSet[shipName] = struct{}{}
+			if !config.DisplayCharacter(attacker.CharacterID, attacker.CorporationID, attacker.AllianceID) {
+				continue
 			}
+			characterInfo := chartData.CharacterInfos[attacker.CharacterID]
+			characterName := characterInfo.Name
+
+			// Assume you have a function to get ship type name by ID
+			shipName := orchestrator.LookupType(attacker.ShipTypeID)
+
+			if shipName == "" || shipName == "Capsule" || shipName == "Unknown" {
+				continue
+			}
+
+			if _, exists := characterShipCounts[characterName]; !exists {
+				characterShipCounts[characterName] = make(map[string]int)
+			}
+
+			characterShipCounts[characterName][shipName]++
+			shipNameSet[shipName] = struct{}{}
 		}
 	}
 

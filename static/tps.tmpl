@@ -15,6 +15,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Date Adapter for Chart.js (Version 3) -->
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
+    <!-- Word Cloud Chart Plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-wordcloud@1.0.0/dist/chartjs-chart-wordcloud.min.js"></script>
     <!-- Sunburst Chart Plugin -->
     <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-sunburst@1.0.0"></script>
     <!-- Matrix Chart Plugin -->
@@ -33,74 +35,126 @@
         </div>
     </header>
 
-
     <main>
-    <div class="container">
-        <!-- Tabs for Navigation -->
-        <ul class="nav nav-tabs mt-4" id="chartTab" role="tablist">
-            <li class="nav-item">
-                <a class="nav-link active" id="mtd-tab" data-bs-toggle="tab" href="#mtdChartContainer" role="tab">MTD</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" id="lm-tab" data-bs-toggle="tab" href="#lmChartContainer" role="tab">Last Month</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" id="ytd-tab" data-bs-toggle="tab" href="#ytdChartContainer" role="tab">YTD</a>
-            </li>
-        </ul>
+        <div class="container">
+            <!-- Tabs for Navigation -->
+            <ul class="nav nav-tabs mt-4" id="chartTab" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" id="mtd-tab" data-bs-toggle="tab" href="#mtdChartContainer" role="tab">MTD</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="lm-tab" data-bs-toggle="tab" href="#lmChartContainer" role="tab">Last Month</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="ytd-tab" data-bs-toggle="tab" href="#ytdChartContainer" role="tab">YTD</a>
+                </li>
+            </ul>
 
-        <!-- Chart Containers -->
-        <div class="tab-content">
-            <div class="chart-container">
-                <canvas id="damageFinalBlowsChart"></canvas>
-            </div>
+            <!-- Chart Containers -->
+            <div class="tab-content">
+                <!-- MTD Charts -->
+                <div class="tab-pane fade show active" id="mtdChartContainer" role="tabpanel">
+                    <div class="chart-container my-4">
+                        <canvas id="damageFinalBlowsChart_mtd"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="combinedLossesChart_mtd"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="characterPerformanceChart_mtd"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="ourShipsUsedChart_mtd"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="victimsSunburstChart_mtd"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="killActivityChart_mtd"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="killHeatmapChart_mtd"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="killLossRatioChart_mtd"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="topShipsKilledChart_mtd"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="valueOverTimeChart_mtd"></canvas>
+                    </div>
+                </div>
 
-            <!-- 2. Our Losses Combined Chart -->
-            <div class="chart-container">
-                <canvas id="combinedLossesChart"></canvas>
-            </div>
+                <!-- Last Month Charts -->
+                <div class="tab-pane fade" id="lmChartContainer" role="tabpanel">
+                    <div class="chart-container my-4">
+                        <canvas id="damageFinalBlowsChart_lastM"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="combinedLossesChart_lastM"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="characterPerformanceChart_lastM"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="ourShipsUsedChart_lastM"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="victimsSunburstChart_lastM"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="killActivityChart_lastM"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="killHeatmapChart_lastM"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="killLossRatioChart_lastM"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="topShipsKilledChart_lastM"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="valueOverTimeChart_lastM"></canvas>
+                    </div>
+                </div>
 
-            <!-- 3. Character Performance Chart -->
-            <div class="chart-container">
-                <canvas id="characterPerformanceChart"></canvas>
-            </div>
-
-            <!-- 4. Our Ships Used Chart -->
-            <div class="chart-container">
-                <canvas id="ourShipsUsedChart"></canvas>
-            </div>
-
-            <!-- 5. Victims Sunburst Chart -->
-            <div class="chart-container">
-                <canvas id="victimsSunburstChart"></canvas>
-            </div>
-
-            <!-- 6. Kill Activity Over Time Chart -->
-            <div class="chart-container">
-                <canvas id="killActivityChart"></canvas>
-            </div>
-
-            <!-- 7. Kill Heatmap Chart -->
-            <div class="chart-container">
-                <canvas id="killHeatmapChart"></canvas>
-            </div>
-
-            <!-- 8. Kill-to-Loss Ratio Chart -->
-            <div class="chart-container">
-                <canvas id="killLossRatioChart"></canvas>
-            </div>
-
-            <!-- 9. Top Ships Killed Chart -->
-            <div class="chart-container">
-                <canvas id="topShipsKilledChart"></canvas>
-            </div>
-
-            <!-- 10. Value Over Time Chart -->
-            <div class="chart-container">
-                <canvas id="valueOverTimeChart"></canvas>
+                <!-- YTD Charts -->
+                <div class="tab-pane fade" id="ytdChartContainer" role="tabpanel">
+                    <div class="chart-container my-4">
+                        <canvas id="damageFinalBlowsChart_ytd"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="combinedLossesChart_ytd"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="characterPerformanceChart_ytd"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="ourShipsUsedChart_ytd"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="victimsSunburstChart_ytd"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="killActivityChart_ytd"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="killHeatmapChart_ytd"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="killLossRatioChart_ytd"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="topShipsKilledChart_ytd"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="valueOverTimeChart_ytd"></canvas>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
     </main>
 
     <!-- Footer -->
@@ -166,6 +220,6 @@
         window.lastMValueOverTimeData = {{ .LastMValueOverTimeData }};
     </script>
     <!-- Custom JS -->
-    <script type="module" src="static/js/tps.js"></script>
+    <script type="module" src="/static/js/tps.js"></script>
 </body>
 </html>

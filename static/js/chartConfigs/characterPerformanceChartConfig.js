@@ -1,10 +1,6 @@
 // static/js/chartConfigs/characterPerformanceChartConfig.js
-
 import { truncateLabel, getColor, getCommonOptions, validateChartData } from '../utils.js';
 
-/**
- * Configuration for the Character Performance Chart
- */
 const characterPerformanceChartConfig = {
     id: 'characterPerformanceChart',
     instance: null,
@@ -13,43 +9,29 @@ const characterPerformanceChartConfig = {
         ytd: 'ytdCharacterPerformanceData',
         lastMonth: 'lastMCharacterPerformanceData',
     },
-    type: 'bar',
+    type: 'bar', // or any other suitable type
     options: getCommonOptions('Character Performance', {
-        indexAxis: 'y', // Switch to horizontal bar chart
         plugins: {
-            legend: { display: true, position: 'top', labels: { color: '#ffffff' } },
+            legend: { display: false },
             tooltip: {
                 callbacks: {
                     label: function (context) {
-                        const label = context.dataset.label || '';
-                        const value = context.parsed.y !== undefined ? context.parsed.y : context.parsed.x;
-                        return `${label}: ${value}`;
+                        const dataPoint = context.raw; // Access the data point directly
+                        const kills = dataPoint.Kills || 0;
+                        const soloKills = dataPoint.SoloKills || 0;
+                        const points = dataPoint.Points || 0;
+                        return `Kills: ${kills}, Solo Kills: ${soloKills}, Points: ${points}`;
                     },
                 },
             },
         },
         scales: {
             x: {
-                type: 'linear',
-                ticks: { color: '#ffffff' },
-                grid: { color: '#444' },
-                beginAtZero: true,
-                title: {
-                    display: true,
-                    text: 'Count',
-                    color: '#ffffff',
-                    font: {
-                        size: 14,
-                        family: 'Montserrat, sans-serif',
-                        weight: 'bold',
-                    },
-                },
-            },
-            y: {
                 type: 'category',
-                labels: [], // Labels are set dynamically in processData
                 ticks: {
                     color: '#ffffff',
+                    maxRotation: 45,
+                    minRotation: 45,
                     autoSkip: false,
                 },
                 grid: { display: false },
@@ -64,44 +46,64 @@ const characterPerformanceChartConfig = {
                     },
                 },
             },
+            y: {
+                beginAtZero: true,
+                ticks: { color: '#ffffff' },
+                grid: { color: '#444' },
+                title: {
+                    display: true,
+                    text: 'Performance Metrics',
+                    color: '#ffffff',
+                    font: {
+                        size: 14,
+                        family: 'Montserrat, sans-serif',
+                        weight: 'bold',
+                    },
+                },
+            },
         },
     }),
     processData: function (data) {
-        const chartName = 'Character Performance';
+        const chartName = 'Character Performance Chart';
         if (!validateChartData(data, chartName)) {
             // Return empty labels and datasets to trigger the noDataPlugin
             return { labels: [], datasets: [] };
         }
 
-        // Extract labels and data
-        const labels = data.map(item => item.CharacterName || 'Unknown');
-        const truncatedLabels = labels.map(label => truncateLabel(label, 10));
+        // Sort data by Kills descending
+        const sortedData = [...data].sort((a, b) => (b.Kills || 0) - (a.Kills || 0));
 
-        const killCountData = data.map(item => item.KillCount || 0);
-        const soloKillsData = data.map(item => item.SoloKills || 0);
-        const pointsData = data.map(item => item.Points || 0);
+        // Limit to top 10 characters
+        const topN = 10;
+        const limitedData = sortedData.slice(0, topN);
 
-        // Define datasets
+        const labels = limitedData.map(item => item.CharacterName || 'Unknown');
+        const truncatedLabels = labels.map(label => truncateLabel(label, 15));
+
+        const kills = limitedData.map(item => item.Kills || 0);
+        const soloKills = limitedData.map(item => item.SoloKills || 0);
+        const points = limitedData.map(item => item.Points || 0);
+
         const datasets = [
             {
-                label: 'Kill Count',
-                data: killCountData,
-                backgroundColor: 'rgba(255, 77, 77, 0.7)',
-                borderColor: 'rgba(255, 77, 77, 1)',
+                label: 'Kills',
+                data: kills,
+                backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                borderColor: 'rgba(75, 192, 192, 1)',
                 borderWidth: 1,
             },
             {
                 label: 'Solo Kills',
-                data: soloKillsData,
-                backgroundColor: 'rgba(54, 162, 235, 0.7)',
-                borderColor: 'rgba(54, 162, 235, 1)',
+                data: soloKills,
+                backgroundColor: 'rgba(153, 102, 255, 0.7)',
+                borderColor: 'rgba(153, 102, 255, 1)',
                 borderWidth: 1,
             },
             {
                 label: 'Points',
-                data: pointsData,
-                backgroundColor: 'rgba(255, 206, 86, 0.7)',
-                borderColor: 'rgba(255, 206, 86, 1)',
+                data: points,
+                backgroundColor: 'rgba(255, 159, 64, 0.7)',
+                borderColor: 'rgba(255, 159, 64, 1)',
                 borderWidth: 1,
             },
         ];

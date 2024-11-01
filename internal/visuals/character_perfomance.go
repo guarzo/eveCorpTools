@@ -3,6 +3,7 @@ package visuals
 import (
 	"sort"
 
+	"github.com/guarzo/zkillanalytics/internal/config"
 	"github.com/guarzo/zkillanalytics/internal/model"
 )
 
@@ -16,7 +17,7 @@ func GetCharacterPerformance(chartData *model.ChartData) []CharacterKillData {
 				continue
 			}
 
-			if !isOurCharacter(characterID) {
+			if !config.DisplayCharacter(characterID, attacker.CorporationID, attacker.AllianceID) {
 				continue
 			}
 

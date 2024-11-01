@@ -1,19 +1,15 @@
 // static/js/chartConfigs/combinedLossesChartConfig.js
-
 import { truncateLabel, getColor, getCommonOptions, validateChartData } from '../utils.js';
 
-/**
- * Configuration for the Combined Losses Chart
- */
 const combinedLossesChartConfig = {
     id: 'combinedLossesChart',
     instance: null,
     dataKeys: {
-        mtd: 'mtdCombinedLossesData',
-        ytd: 'ytdCombinedLossesData',
-        lastMonth: 'lastMCombinedLossesData',
+        mtd: 'mtdOurLossesValueData',
+        ytd: 'ytdOurLossesValueData',
+        lastMonth: 'lastMOurLossesValueData',
     },
-    type: 'bar', // Adjust the chart type if needed (e.g., 'pie', 'bar')
+    type: 'bar', // Change to 'pie' or 'doughnut' if preferred
     options: getCommonOptions('Combined Losses', {
         plugins: {
             legend: { display: true, position: 'top', labels: { color: '#ffffff' } },
@@ -21,11 +17,11 @@ const combinedLossesChartConfig = {
                 callbacks: {
                     label: function (context) {
                         const dataPoint = context.raw; // Access the data point directly
-                        const lossesValue = dataPoint.lossesValue || 0;
-                        const lossesCount = dataPoint.lossesCount || 0;
-                        const shipType = dataPoint.shipType || 'Unknown';
-                        const shipCount = dataPoint.shipCount || 0;
-                        return `Value: ${lossesValue}, Count: ${lossesCount}, Ship: ${shipType} (${shipCount})`;
+                        const lossesValue = dataPoint.LossesValue || 0;
+                        const lossesCount = dataPoint.LossesCount || 0;
+                        const shipType = dataPoint.ShipType || 'Unknown';
+                        const shipCount = dataPoint.ShipCount || 0;
+                        return `Value: ${lossesValue.toLocaleString()}, Count: ${lossesCount}, Ship: ${shipType} (${shipCount})`;
                     },
                 },
             },
@@ -40,6 +36,16 @@ const combinedLossesChartConfig = {
                     autoSkip: false,
                 },
                 grid: { display: false },
+                title: {
+                    display: true,
+                    text: 'Characters',
+                    color: '#ffffff',
+                    font: {
+                        size: 14,
+                        family: 'Montserrat, sans-serif',
+                        weight: 'bold',
+                    },
+                },
             },
             y: {
                 beginAtZero: true,
@@ -47,7 +53,7 @@ const combinedLossesChartConfig = {
                 grid: { color: '#444' },
                 title: {
                     display: true,
-                    text: 'Losses',
+                    text: 'Losses Value',
                     color: '#ffffff',
                     font: {
                         size: 14,
@@ -65,16 +71,25 @@ const combinedLossesChartConfig = {
             return { labels: [], datasets: [] };
         }
 
-        // Extract labels and data
-        const labels = data.map(item => item.CharacterName || 'Unknown');
-        const truncatedLabels = labels.map(label => truncateLabel(label, 10));
+        // Ensure data has required fields
+        // Expected fields: CharacterName, LossesValue, LossesCount, ShipType, ShipCount
+        // If the backend doesn't provide all, adjust accordingly
 
-        const lossesValue = data.map(item => item.LossesValue || 0);
-        const lossesCount = data.map(item => item.LossesCount || 0);
-        const shipTypes = data.map(item => item.ShipType || 'Unknown');
-        const shipCounts = data.map(item => item.ShipCount || 0);
+        // Sort data by LossesValue descending
+        const sortedData = [...data].sort((a, b) => (b.LossesValue || 0) - (a.LossesValue || 0));
 
-        // Define datasets
+        // Limit to top 10 characters
+        const topN = 10;
+        const limitedData = sortedData.slice(0, topN);
+
+        const labels = limitedData.map(item => item.CharacterName || 'Unknown');
+        const truncatedLabels = labels.map(label => truncateLabel(label, 15));
+
+        const lossesValue = limitedData.map(item => item.LossesValue || 0);
+        const lossesCount = limitedData.map(item => item.LossesCount || 0);
+        const shipTypes = limitedData.map(item => item.ShipType || 'Unknown');
+        const shipCounts = limitedData.map(item => item.ShipCount || 0);
+
         const datasets = [
             {
                 label: 'Losses Value',
@@ -90,7 +105,6 @@ const combinedLossesChartConfig = {
                 borderColor: 'rgba(54, 162, 235, 1)',
                 borderWidth: 1,
             },
-            // Optionally, add a dataset for Ship Counts or use stacked bars
         ];
 
         return { labels: truncatedLabels, datasets, fullLabels: labels };
