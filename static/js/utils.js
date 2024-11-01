@@ -33,10 +33,6 @@ export const noDataPlugin = {
 
             ctx.fillText('No data available', width / 2, messageY);
             ctx.restore();
-        } else {
-            const chartTitle = chart.options.plugins.title && chart.options.plugins.title.text ? chart.options.plugins.title.text : 'Unnamed Chart';
-
-            console.log(`Data for chart "${chartTitle}". Chart data:`, chart.data);
         }
     }
 };
@@ -103,9 +99,6 @@ export function validateOurShipsUsedData(data, chartName) {
  * @param {Object} additionalOptions - Additional Chart.js options to merge.
  * @returns {Object} - The combined chart options.
  */
-
-// static/js/utils.js
-
 export function getCommonOptions(titleText, additionalOptions = {}) {
     const {
         plugins: additionalPlugins = {},
@@ -113,6 +106,9 @@ export function getCommonOptions(titleText, additionalOptions = {}) {
         datasets: additionalDatasets = {},
         ...restOptions
     } = additionalOptions;
+
+    // Determine if datalabels should be enabled
+    const includeDatalabels = additionalPlugins.datalabels !== false;
 
     return {
         responsive: true,
@@ -164,23 +160,26 @@ export function getCommonOptions(titleText, additionalOptions = {}) {
                 },
                 ...additionalPlugins.tooltip, // Merge any additional tooltip options
             },
-            datalabels: {
-                color: '#ffffff',
-                anchor: 'end',
-                align: 'right',
-                formatter: (value, context) => {
-                    const dataset = context.dataset;
-                    const index = context.dataIndex;
-                    const total = dataset.percentage ? dataset.percentage[index] : 1;
-                    const percentage = ((value / total) * 100).toFixed(1);
-                    return `${value} (${percentage}%)`;
-                },
-                font: {
-                    size: 10,
-                    weight: 'bold',
-                },
-                ...additionalPlugins.datalabels, // Merge any additional datalabels options
-            },
+            // Conditionally include datalabels
+            ...(includeDatalabels ? {
+                datalabels: {
+                    color: '#ffffff',
+                    anchor: 'end',
+                    align: 'right',
+                    formatter: (value, context) => {
+                        const dataset = context.dataset;
+                        const index = context.dataIndex;
+                        const total = dataset.percentage ? dataset.percentage[index] : 1;
+                        const percentage = ((value / total) * 100).toFixed(1);
+                        return `${value} (${percentage}%)`;
+                    },
+                    font: {
+                        size: 10,
+                        weight: 'bold',
+                    },
+                    ...additionalPlugins.datalabels, // Merge any additional datalabels options
+                }
+            } : {}),
             // Merge any other plugins here without duplicating the 'plugins' property
             ...additionalPlugins,
         },
@@ -226,6 +225,7 @@ export function getCommonOptions(titleText, additionalOptions = {}) {
         ...restOptions, // Merge any other remaining options
     };
 }
+
 
 const predefinedColors = [
     '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',

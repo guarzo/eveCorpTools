@@ -3,8 +3,7 @@
 // Import utility functions
 import { truncateLabel, getColor, getCommonOptions, noDataPlugin } from './utils.js';
 Chart.register(noDataPlugin);
-Chart.register(WordCloud);
-Chart.register(ChartDataLabels);
+
 
 // Import chart configurations
 import damageFinalBlowsChartConfig from './chartConfigs/1_damageFinalBlowsChartConfig.js';
@@ -14,7 +13,7 @@ import ourShipsUsedChartConfig from './chartConfigs/4_ourShipsUsedChartConfig.js
 import killActivityChartConfig from './chartConfigs/killActivityChartConfig.js';
 import killHeatmapChartConfig from './chartConfigs/killHeatmapChartConfig.js';
 import killLossRatioChartConfig from './chartConfigs/killLossRatioChartConfig.js';
-import topShipsKilledChartConfig from './chartConfigs/8_topShipsKilledChartConfig.js';
+import topShipsKilledWordCloud from './chartConfigs/8_topShipsKilledWordCloud.js';
 import valueOverTimeChartConfig from './chartConfigs/valueOverTimeChartConfig.js';
 
 // Array of all chart configurations
@@ -26,7 +25,7 @@ const chartConfigs = [
     killActivityChartConfig,
     killHeatmapChartConfig,
     killLossRatioChartConfig,
-    topShipsKilledChartConfig,
+    topShipsKilledWordCloud,
     valueOverTimeChartConfig,
 ];
 
@@ -81,6 +80,10 @@ function init() {
     function createChart(config, ctxElem, data, timeFrame) {
         const { labels, datasets, fullLabels } = data;
 
+        // Debugging: Log the chart type and data being used
+        console.log(`Creating chart: Type=${config.type}, CanvasID=${config.dataKeys[timeFrame].canvasId}`);
+        console.log('Chart Data:', data);
+
         return new Chart(ctxElem.getContext('2d'), {
             type: config.type,
             data: {
@@ -91,6 +94,7 @@ function init() {
             options: config.options,
         });
     }
+
 
     /**
      * Updates an existing chart instance with new data.

@@ -12,16 +12,17 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto&family=Montserrat:wght@700&display=swap" rel="stylesheet">
     <!-- Chart.js Library -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Date Adapter for Chart.js (Version 3) -->
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <!-- Word Cloud Chart Plugin -->
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-wordcloud@1.0.0/dist/chartjs-chart-wordcloud.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-wordcloud@4.4.3/build/index.umd.min.js"></script>
+    <!-- Date Adapter for Chart.js (Version 3) -->
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@4.1.0/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+
     <!-- Sunburst Chart Plugin -->
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-sunburst@1.0.0"></script>
     <!-- Matrix Chart Plugin -->
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@1.0.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@2.0.1/dist/chartjs-chart-matrix.min.js"></script>
     <!-- Favicon -->
     <link rel="icon" href="/static/images/favicon.ico" type="image/x-icon">
     <!-- Animate.css -->
@@ -80,7 +81,7 @@
                         <canvas id="killLossRatioChart_mtd"></canvas>
                     </div>
                     <div class="chart-container my-4">
-                        <canvas id="topShipsKilledChart_mtd"></canvas>
+                        <canvas id="topShipsKilledWordCloud_mtd"></canvas>
                     </div>
                     <div class="chart-container my-4">
                         <canvas id="valueOverTimeChart_mtd"></canvas>
@@ -114,7 +115,7 @@
                         <canvas id="killLossRatioChart_lastM"></canvas>
                     </div>
                     <div class="chart-container my-4">
-                        <canvas id="topShipsKilledChart_lastM"></canvas>
+                        <canvas id="topShipsKilledWordCloud_lastM"></canvas>
                     </div>
                     <div class="chart-container my-4">
                         <canvas id="valueOverTimeChart_lastM"></canvas>
@@ -148,7 +149,7 @@
                         <canvas id="killLossRatioChart_ytd"></canvas>
                     </div>
                     <div class="chart-container my-4">
-                        <canvas id="topShipsKilledChart_ytd"></canvas>
+                        <canvas id="topShipsKilledWordCloud_ytd"></canvas>
                     </div>
                     <div class="chart-container my-4">
                         <canvas id="valueOverTimeChart_ytd"></canvas>
@@ -220,6 +221,12 @@
         window.ytdValueOverTimeData = {{ .YTDValueOverTimeData }};
         window.lastMValueOverTimeData = {{ .LastMValueOverTimeData }};
     </script>
+    <script>
+        console.log('MTD Top Ships Killed Data:', window.mtdTopShipsKilledData);
+        console.log('YTD Top Ships Killed Data:', window.ytdTopShipsKilledData);
+        console.log('Last Month Top Ships Killed Data:', window.lastMTopShipsKilledData);
+    </script>
+
     <!-- Custom JS -->
     <script type="module" src="/static/js/tps.js"></script>
 </body>
