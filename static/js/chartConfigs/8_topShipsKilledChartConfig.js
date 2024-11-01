@@ -7,23 +7,48 @@ import { getCommonOptions, validateChartDataArray } from '../utils.js';
  */
 const topShipsKilledWordCloudConfig = {
     id: 'topShipsKilledWordCloud',
-    instance: null,
+    instance: {}, // Initialize as an object to handle multiple timeframes
     dataKeys: {
-        mtd: 'mtdTopShipsKilledData',
-        ytd: 'ytdTopShipsKilledData',
-        lastMonth: 'lastMTopShipsKilledData',
+        mtd: { dataVar: 'mtdTopShipsKilledData', canvasId: 'topShipsKilledWordCloud_mtd' },
+        ytd: { dataVar: 'ytdTopShipsKilledData', canvasId: 'topShipsKilledWordCloud_ytd' },
+        lastMonth: { dataVar: 'lastMTopShipsKilledData', canvasId: 'topShipsKilledWordCloud_lastM' },
     },
     type: 'wordCloud', // Using wordCloud chart type from chartjs-chart-wordcloud
+    dataType: 'array', // Specify that this chart expects array data
     options: getCommonOptions('Top Ships Killed Word Cloud', {
         plugins: {
             legend: { display: false },
             tooltip: {
                 callbacks: {
                     label: function (context) {
-                        const shipName = context.label || 'Unknown';
-                        const killCount = context.parsed || 0;
+                        const shipName = context.raw.text || 'Unknown';
+                        const killCount = context.raw.weight || 0;
                         return `${shipName}: ${killCount} Killmails`;
                     },
+                },
+                // Optional: Adjust tooltip display settings if needed
+                mode: 'nearest',
+                intersect: true,
+            },
+            datalabels: {
+                color: '#ffffff',
+                anchor: 'center',
+                align: 'center',
+                formatter: (value, context) => {
+                    const shipName = context.raw.text || 'Unknown';
+                    const killCount = context.raw.weight || 0;
+                    // Calculate percentage relative to the total kill count in the word cloud
+                    const totalKillCount = context.chart.data.datasets[0].data.reduce((sum, item) => sum + (item.weight || 0), 0);
+                    const percentage = totalKillCount > 0 ? ((killCount / totalKillCount) * 100).toFixed(1) : '0.0';
+                    return `${killCount}\n(${percentage}%)`;
+                },
+                font: {
+                    size: function(context) {
+                        const weight = context.raw.weight || 1;
+                        // Adjust font size based on kill count
+                        return Math.min(40, 10 + weight * 2); // Example scaling
+                    },
+                    weight: 'bold',
                 },
             },
         },

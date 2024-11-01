@@ -3,6 +3,8 @@
 // Import utility functions
 import { truncateLabel, getColor, getCommonOptions, noDataPlugin } from './utils.js';
 Chart.register(noDataPlugin);
+Chart.register(WordCloud);
+Chart.register(ChartDataLabels);
 
 // Import chart configurations
 import damageFinalBlowsChartConfig from './chartConfigs/1_damageFinalBlowsChartConfig.js';
@@ -12,7 +14,7 @@ import ourShipsUsedChartConfig from './chartConfigs/4_ourShipsUsedChartConfig.js
 import killActivityChartConfig from './chartConfigs/killActivityChartConfig.js';
 import killHeatmapChartConfig from './chartConfigs/killHeatmapChartConfig.js';
 import killLossRatioChartConfig from './chartConfigs/killLossRatioChartConfig.js';
-import topShipsKilledChartConfig from './chartConfigs/topShipsKilledChartConfig.js';
+import topShipsKilledChartConfig from './chartConfigs/8_topShipsKilledChartConfig.js';
 import valueOverTimeChartConfig from './chartConfigs/valueOverTimeChartConfig.js';
 
 // Array of all chart configurations
