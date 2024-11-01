@@ -42,20 +42,96 @@ export const noDataPlugin = {
 };
 
 /**
+ * Truncates a label to a specified maximum length, adding ellipsis if necessary.
+ * @param {string} label - The original label.
+ * @param {number} maxLength - The maximum allowed length.
+ * @returns {string} - The truncated label.
+ */
+export function truncateLabel(label, maxLength) {
+    if (label.length > maxLength) {
+        return label.substring(0, maxLength - 3) + '...';
+    }
+    return label;
+}
+
+/**
+ * Validates chart data to ensure it meets required criteria.
+ * @param {Array} data - The data array to validate.
+ * @param {string} chartName - The name of the chart for logging purposes.
+ * @returns {boolean} - Returns true if data is valid, false otherwise.
+ */
+export function validateChartDataArray(data, chartName) {
+    if (!Array.isArray(data) || data.length === 0) {
+        console.warn(`No data available for chart "${chartName}".`);
+        return false;
+    }
+    return true;
+}
+
+export function validateOurShipsUsedData(data, chartName) {
+    if (typeof data !== 'object' || data === null) {
+        console.warn(`Invalid data format for chart "${chartName}". Expected an object.`);
+        return false;
+    }
+
+    const requiredKeys = ['Characters', 'ShipNames', 'SeriesData'];
+    const hasAllKeys = requiredKeys.every(key => key in data);
+    if (!hasAllKeys) {
+        console.warn(`Incomplete data for chart "${chartName}". Missing keys: ${requiredKeys.filter(key => !(key in data)).join(', ')}`);
+        return false;
+    }
+
+    if (!Array.isArray(data.Characters) || data.Characters.length === 0) {
+        console.warn(`No characters data available for chart "${chartName}".`);
+        return false;
+    }
+    if (!Array.isArray(data.ShipNames) || data.ShipNames.length === 0) {
+        console.warn(`No ship names data available for chart "${chartName}".`);
+        return false;
+    }
+    if (typeof data.SeriesData !== 'object' || Object.keys(data.SeriesData).length === 0) {
+        console.warn(`No series data available for chart "${chartName}".`);
+        return false;
+    }
+
+    return true;
+}
+
+/**
  * Generates common options for Chart.js charts.
  * @param {string} titleText - The title of the chart.
  * @param {Object} additionalOptions - Additional Chart.js options to merge.
  * @returns {Object} - The combined chart options.
  */
+
+// static/js/utils.js
+
 export function getCommonOptions(titleText, additionalOptions = {}) {
-    // Destructure plugins and scales from additionalOptions to merge separately
-    const { plugins: additionalPlugins = {}, scales: additionalScales = {}, datasets: additionalDatasets = {}, ...restOptions } = additionalOptions;
+    const {
+        plugins: additionalPlugins = {},
+        scales: additionalScales = {},
+        datasets: additionalDatasets = {},
+        ...restOptions
+    } = additionalOptions;
 
     return {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-            legend: { display: true, position: 'top', labels: { color: '#ffffff' } },
+            noData: {
+                text: 'No data available for this chart',
+                color: '#ffffff',
+                font: {
+                    size: 20,
+                    family: 'Montserrat, sans-serif',
+                    weight: 'bold',
+                },
+            },
+            legend: {
+                display: true,
+                position: 'top',
+                labels: { color: '#ffffff', font: { size: 12 } }
+            },
             title: {
                 display: true,
                 text: titleText,
@@ -70,60 +146,60 @@ export function getCommonOptions(titleText, additionalOptions = {}) {
                     top: 10,
                     bottom: 30,
                 },
-                ...additionalPlugins.title,
+                ...additionalPlugins.title, // Merge any additional title options
             },
             tooltip: {
                 mode: 'index',
                 intersect: false,
-                ...additionalPlugins.tooltip,
+                callbacks: {
+                    label: function (context) {
+                        const dataset = context.dataset;
+                        const shipName = dataset.label || '';
+                        const value = context.parsed.x !== undefined ? context.parsed.x : context.parsed.y;
+                        const index = context.dataIndex;
+                        const total = dataset.percentage ? dataset.percentage[index] : 1;
+                        const percentage = ((value / total) * 100).toFixed(2);
+                        return `${shipName}: ${value} (${percentage}%)`;
+                    },
+                },
+                ...additionalPlugins.tooltip, // Merge any additional tooltip options
             },
-            // Merge any other plugins here
+            datalabels: {
+                color: '#ffffff',
+                anchor: 'end',
+                align: 'right',
+                formatter: (value, context) => {
+                    const dataset = context.dataset;
+                    const index = context.dataIndex;
+                    const total = dataset.percentage ? dataset.percentage[index] : 1;
+                    const percentage = ((value / total) * 100).toFixed(1);
+                    return `${value} (${percentage}%)`;
+                },
+                font: {
+                    size: 10,
+                    weight: 'bold',
+                },
+                ...additionalPlugins.datalabels, // Merge any additional datalabels options
+            },
+            // Merge any other plugins here without duplicating the 'plugins' property
             ...additionalPlugins,
         },
         scales: {
             x: {
-                type: 'category',
-                ticks: {
-                    color: '#ffffff',
-                    maxRotation: 45,
-                    minRotation: 45,
-                    autoSkip: false,
-                    font: {
-                        size: 10, // Reduced font size for better fit
-                    },
-                },
+                stacked: true,
+                ticks: { color: '#ffffff' },
                 grid: { display: false },
-                title: {
-                    display: true,
-                    text: 'Characters',
-                    color: '#ffffff',
-                    font: {
-                        size: 14,
-                        family: 'Montserrat, sans-serif',
-                        weight: 'bold',
-                    },
-                },
-                stacked: false, // Set to true if you want stacked bars
-                ...additionalScales.x,
+                ...additionalScales.x, // Merge any additional x-axis options
             },
             y: {
-                beginAtZero: true,
-                ticks: { color: '#ffffff' },
-                grid: { color: '#444' },
-                title: {
-                    display: true,
-                    text: 'Count',
+                stacked: true,
+                ticks: {
                     color: '#ffffff',
-                    font: {
-                        size: 14,
-                        family: 'Montserrat, sans-serif',
-                        weight: 'bold',
-                    },
+                    autoSkip: false,
                 },
-                stacked: false, // Set to true if you want stacked bars
-                ...additionalScales.y,
+                grid: { display: false },
+                ...additionalScales.y, // Merge any additional y-axis options
             },
-            ...additionalScales,
         },
         layout: {
             padding: {
@@ -132,39 +208,48 @@ export function getCommonOptions(titleText, additionalOptions = {}) {
                 top: 10,
                 bottom: 10,
             },
-            ...restOptions.layout,
+            ...restOptions.layout, // Merge any additional layout options
         },
         interaction: {
             mode: 'index',
             intersect: false,
-            ...additionalOptions.interaction,
+            ...additionalOptions.interaction, // Merge any additional interaction options
         },
-        // Merge dataset-specific options if needed
         datasets: {
             bar: {
-                barPercentage: 0.5, // Adjust bar width (0 to 1)
-                categoryPercentage: 0.5, // Adjust spacing between categories (0 to 1)
-                ...additionalDatasets.bar,
+                barPercentage: 0.6, // Adjusted for better visibility
+                categoryPercentage: 0.7,
+                ...additionalDatasets.bar, // Merge any additional bar dataset options
             },
-            ...additionalDatasets,
+            ...additionalDatasets, // Merge any additional datasets
         },
-        ...restOptions,
+        ...restOptions, // Merge any other remaining options
     };
 }
 
+const predefinedColors = [
+    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+    '#9966FF', '#FF9F40', '#E7E9ED', '#76D7C4',
+    '#C0392B', '#8E44AD', '#2ECC71', '#1ABC9C',
+    '#3498DB', '#F1C40F', '#E67E22', '#95A5A6',
+];
+
+const shipColorMap = {};
 
 /**
- * Truncates a label to a specified length and appends an ellipsis if necessary.
- * @param {string} label - The label to truncate.
- * @param {number} maxLength - The maximum length of the truncated label.
- * @returns {string} - The truncated label.
+ * Assigns and retrieves a color for a given ship name.
+ * @param {string} shipName - The name of the ship.
+ * @returns {string} - The HEX color code.
  */
-export function truncateLabel(label, maxLength) {
-    if (label.length > maxLength) {
-        return label.substring(0, maxLength - 3) + '...';
+export function getShipColor(shipName) {
+    if (shipColorMap[shipName]) {
+        return shipColorMap[shipName];
     }
-    return label;
+    const color = predefinedColors[Object.keys(shipColorMap).length % predefinedColors.length];
+    shipColorMap[shipName] = color;
+    return color;
 }
+
 
 /**
  * Returns a color from a predefined palette based on the index.
@@ -181,25 +266,3 @@ export function getColor(index) {
     return colors[index % colors.length];
 }
 
-/**
- * Validates the chart data to ensure it meets the required format.
- * @param {Array} data - The data to validate.
- * @param {string} chartName - The name of the chart (for logging purposes).
- * @returns {boolean} - Returns true if data is valid, false otherwise.
- */
-export function validateChartData(data, chartName) {
-    if (!Array.isArray(data)) {
-        console.warn(`${chartName}: Data should be an array.`);
-        return false;
-    }
-
-    if (data.length === 0) {
-        console.warn(`${chartName}: Data array is empty.`);
-        return false;
-    }
-
-    // Additional validation logic can be added here based on chart requirements
-    // For example, checking for required fields in each data object
-
-    return true;
-}

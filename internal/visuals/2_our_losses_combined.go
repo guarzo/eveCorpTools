@@ -5,7 +5,6 @@ import (
 
 	"github.com/guarzo/zkillanalytics/internal/config"
 	"github.com/guarzo/zkillanalytics/internal/model"
-	"github.com/guarzo/zkillanalytics/internal/service"
 )
 
 type LossesData struct {
@@ -17,7 +16,7 @@ type LossesData struct {
 }
 
 // Function to process and combine data
-func GetCombinedLossesData(chartData *model.ChartData, os *service.OrchestrateService) []LossesData {
+func GetCombinedLossData(chartData *model.ChartData) []LossesData {
 	characterDataMap := make(map[string]*LossesData)
 	shipLossesMap := make(map[string]int)
 
@@ -31,7 +30,7 @@ func GetCombinedLossesData(chartData *model.ChartData, os *service.OrchestrateSe
 			}
 
 			characterName := characterInfo.Name
-			shipName := os.LookupType(victim.ShipTypeID)
+			shipName := orchestrator.LookupType(victim.ShipTypeID)
 
 			// Update character data
 			data, exists := characterDataMap[characterName]

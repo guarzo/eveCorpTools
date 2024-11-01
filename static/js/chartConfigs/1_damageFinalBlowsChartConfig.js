@@ -1,6 +1,6 @@
-// static/js/chartConfigs/damageFinalBlowsChartConfig.js
+// static/js/chartConfigs/1_damageFinalBlowsChartConfig.js
 
-import { truncateLabel, getCommonOptions, validateChartData } from '../utils.js';
+import { truncateLabel, getCommonOptions, validateChartDataArray } from '../utils.js';
 
 /**
  * Configuration for the Damage Done and Final Blows Chart
@@ -25,7 +25,7 @@ const damageFinalBlowsChartConfig = {
     }),
     processData: function (data) {
         const chartName = 'Damage Done and Final Blows';
-        if (!validateChartData(data, chartName)) {
+        if (!validateChartDataArray(data, chartName)) {
             // Return empty labels and datasets to trigger the noDataPlugin
             return { labels: [], datasets: [] };
         }

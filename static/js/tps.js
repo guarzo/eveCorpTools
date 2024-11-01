@@ -5,10 +5,10 @@ import { truncateLabel, getColor, getCommonOptions, noDataPlugin } from './utils
 Chart.register(noDataPlugin);
 
 // Import chart configurations
-import damageFinalBlowsChartConfig from './chartConfigs/damageFinalBlowsChartConfig.js';
-import ourLossesCombinedChartConfig from './chartConfigs/ourLossesCombinedChartConfig.js';
-import characterPerformanceChartConfig from './chartConfigs/characterPerformanceChartConfig.js';
-import ourShipsUsedChartConfig from './chartConfigs/ourShipsUsedChartConfig.js';
+import damageFinalBlowsChartConfig from './chartConfigs/1_damageFinalBlowsChartConfig.js';
+import ourLossesCombinedChartConfig from './chartConfigs/2_ourLossesCombinedChartConfig.js';
+import characterPerformanceChartConfig from './chartConfigs/3_characterPerformanceChartConfig.js';
+import ourShipsUsedChartConfig from './chartConfigs/4_ourShipsUsedChartConfig.js';
 import killActivityChartConfig from './chartConfigs/killActivityChartConfig.js';
 import killHeatmapChartConfig from './chartConfigs/killHeatmapChartConfig.js';
 import killLossRatioChartConfig from './chartConfigs/killLossRatioChartConfig.js';
@@ -120,7 +120,7 @@ function init() {
 
         console.log(`Updating chart ${config.id} for ${currentTimeFrame}:`, data);
 
-        if (!data || (Array.isArray(data) && data.length === 0)) {
+        if (!data || (config.dataType === 'array' && data.length === 0) || (config.dataType === 'object' && Object.keys(data).length === 0)) {
             console.warn(`Data unavailable for chart ${config.id} in ${currentTimeFrame}.`);
             if (config.instance && config.instance[currentTimeFrame]) {
                 config.instance[currentTimeFrame].destroy();
@@ -134,11 +134,15 @@ function init() {
             return;
         }
 
-        if (!Array.isArray(data)) {
+        // Conditionally wrap data if chart expects an array
+        if (config.dataType === 'array' && !Array.isArray(data)) {
             data = [data];
         }
 
-        data = data.filter(item => item);
+        // Only filter if data is an array
+        if (Array.isArray(data)) {
+            data = data.filter(item => item);
+        }
 
         const processedData = config.processData(data);
         if (!processedData) {
@@ -159,6 +163,7 @@ function init() {
             config.instance[currentTimeFrame] = createChart(config, ctxElem, processedData, currentTimeFrame);
         }
     }
+
 
     /**
      * Updates all charts on the page.

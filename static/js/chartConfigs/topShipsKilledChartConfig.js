@@ -1,6 +1,6 @@
 // static/js/chartConfigs/topShipsKilledWordCloudConfig.js
 
-import { getCommonOptions, validateChartData } from '../utils.js';
+import { getCommonOptions, validateChartDataArray } from '../utils.js';
 
 /**
  * Configuration for the Top Ships Killed Word Cloud
@@ -40,7 +40,7 @@ const topShipsKilledWordCloudConfig = {
     }),
     processData: function (data) {
         const chartName = 'Top Ships Killed Word Cloud';
-        if (!validateChartData(data, chartName)) {
+        if (!validateChartDataArray(data, chartName)) {
             // Return empty data to trigger the noDataPlugin
             return { labels: [], datasets: [] };
         }

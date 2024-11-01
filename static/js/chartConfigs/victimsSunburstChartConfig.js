@@ -1,6 +1,6 @@
 // static/js/chartConfigs/victimsSunburstChartConfig.js
 
-import { getColor, getCommonOptions, validateChartData } from '../utils.js';
+import { getColor, getCommonOptions, validateChartDataArray } from '../utils.js';
 
 /**
  * Configuration for the Victims Sunburst Chart
@@ -30,7 +30,7 @@ const victimsSunburstChartConfig = {
     }),
     processData: function (data) {
         const chartName = 'Victims Sunburst Chart';
-        if (!validateChartData(data, chartName)) {
+        if (!validateChartDataArray(data, chartName)) {
             return { datasets: [] };
         }
 

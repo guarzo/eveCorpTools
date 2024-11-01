@@ -1,6 +1,6 @@
 // static/js/chartConfigs/killLossRatioChartConfig.js
 
-import { truncateLabel, getColor, getCommonOptions, validateChartData } from '../utils.js';
+import { truncateLabel, getColor, getCommonOptions, validateChartDataArray } from '../utils.js';
 
 /**
  * Configuration for the Kill-to-Loss Ratio Chart
@@ -69,7 +69,7 @@ const killLossRatioChartConfig = {
     }),
     processData: function (data) {
         const chartName = 'Kill-to-Loss Ratio Chart';
-        if (!validateChartData(data, chartName)) {
+        if (!validateChartDataArray(data, chartName)) {
             // Return empty labels and datasets to trigger the noDataPlugin
             return { labels: [], datasets: [] };
         }

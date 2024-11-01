@@ -111,3 +111,8 @@ footer .container {
     flex-direction: column;
     align-items: center;
 }
+
+/* Optional: Adjust tooltip styling for better readability */
+.chartjs-render-monitor {
+    cursor: pointer;
+}

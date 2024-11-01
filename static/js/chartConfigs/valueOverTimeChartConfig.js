@@ -1,6 +1,6 @@
 // static/js/chartConfigs/valueOverTimeChartConfig.js
 
-import {getCommonOptions, validateChartData} from '../utils.js';
+import {getCommonOptions, validateChartDataArray} from '../utils.js';
 
 /**
  * Configuration for the Value Over Time Chart
@@ -36,7 +36,7 @@ const valueOverTimeChartConfig = {
     }),
     processData: function (data) {
         const chartName = 'Isk Destroyed';
-        if (!validateChartData(data, chartName)) {
+        if (!validateChartDataArray(data, chartName)) {
             // Return empty labels and datasets to trigger the noDataPlugin
             return { labels: [], datasets: [] };
         }

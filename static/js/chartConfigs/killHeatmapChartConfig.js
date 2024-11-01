@@ -1,6 +1,6 @@
 // static/js/chartConfigs/killsHeatmapChartConfig.js
 
-import { getCommonOptions, validateChartData } from '../utils.js';
+import { getCommonOptions, validateChartDataArray } from '../utils.js';
 
 /**
  * Configuration for the Kills Heatmap Chart
@@ -87,7 +87,7 @@ const killsHeatmapChartConfig = {
     }),
     processData: function (data) {
         const chartName = 'Kills Heatmap';
-        if (!validateChartData(data, chartName)) {
+        if (!validateChartDataArray(data, chartName)) {
             // Return empty data to trigger the noDataPlugin
             return { labels: [], datasets: [] };
         }

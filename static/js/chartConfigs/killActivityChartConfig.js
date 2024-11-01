@@ -1,6 +1,6 @@
 // static/js/chartConfigs/killActivityChartConfig.js
 
-import { getCommonOptions, validateChartData } from '../utils.js';
+import { getCommonOptions, validateChartDataArray } from '../utils.js';
 
 /**
  * Configuration for the Kill Activity Over Time Chart
@@ -68,7 +68,7 @@ const killActivityChartConfig = {
     }),
     processData: function (data) {
         const chartName = 'Kill Activity Over Time Chart';
-        if (!validateChartData(data, chartName)) {
+        if (!validateChartDataArray(data, chartName)) {
             // Return empty labels and datasets to trigger the noDataPlugin
             return { labels: [], datasets: [] };
         }

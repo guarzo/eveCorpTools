@@ -95,9 +95,9 @@ func RenderSnippets(orchestrateService *service.OrchestrateService, ytdChartData
 	data.LastMCharacterDamageData = prepareCharacterDamageData(lastMonthChartData)
 
 	// 2. Our Losses Combined Chart
-	data.MTDOurLossesValueData = prepareOurLossesValueData(mtdChartData)
-	data.YTDOurLossesValueData = prepareOurLossesValueData(ytdChartData)
-	data.LastMOurLossesValueData = prepareOurLossesValueData(lastMonthChartData)
+	data.MTDOurLossesValueData = prepareCombinedLossData(mtdChartData)
+	data.YTDOurLossesValueData = prepareCombinedLossData(ytdChartData)
+	data.LastMOurLossesValueData = prepareCombinedLossData(lastMonthChartData)
 
 	// 3. Character Performance Chart
 	data.MTDCharacterPerformanceData = prepareCharacterPerformanceData(mtdChartData)
@@ -176,8 +176,8 @@ func prepareCharacterDamageData(chartData *model.ChartData) template.JS {
 	return template.JS(jsonData)
 }
 
-func prepareOurLossesValueData(chartData *model.ChartData) template.JS {
-	data := GetOurLossesValue(chartData)
+func prepareCombinedLossData(chartData *model.ChartData) template.JS {
+	data := GetCombinedLossData(chartData)
 	logger.Infof("Our Losses %v", data)
 
 	jsonData, err := json.Marshal(data)

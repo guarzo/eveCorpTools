@@ -1,27 +1,28 @@
 // static/js/chartConfigs/combinedLossesChartConfig.js
-import { truncateLabel, getColor, getCommonOptions, validateChartData } from '../utils.js';
+import { truncateLabel, getCommonOptions, validateChartDataArray } from '../utils.js';
 
 const combinedLossesChartConfig = {
     id: 'combinedLossesChart',
-    instance: null,
+    instance: {}, // Changed from null to an object to hold instances per timeframe
     dataKeys: {
-        mtd: 'mtdOurLossesValueData',
-        ytd: 'ytdOurLossesValueData',
-        lastMonth: 'lastMOurLossesValueData',
+        mtd: { dataVar: 'mtdOurLossesValueData', canvasId: 'combinedLossesChart_mtd' },
+        ytd: { dataVar: 'ytdOurLossesValueData', canvasId: 'combinedLossesChart_ytd' },
+        lastMonth: { dataVar: 'lastMOurLossesValueData', canvasId: 'combinedLossesChart_lastM' },
     },
-    type: 'bar', // Change to 'pie' or 'doughnut' if preferred
+    type: 'bar', // Base type for mixed charts
     options: getCommonOptions('Combined Losses', {
         plugins: {
-            legend: { display: true, position: 'top', labels: { color: '#ffffff' } },
+            legend: {
+                display: true,
+                position: 'top',
+                labels: { color: '#ffffff', font: { size: 12 } }
+            },
             tooltip: {
                 callbacks: {
                     label: function (context) {
-                        const dataPoint = context.raw; // Access the data point directly
-                        const lossesValue = dataPoint.LossesValue || 0;
-                        const lossesCount = dataPoint.LossesCount || 0;
-                        const shipType = dataPoint.ShipType || 'Unknown';
-                        const shipCount = dataPoint.ShipCount || 0;
-                        return `Value: ${lossesValue.toLocaleString()}, Count: ${lossesCount}, Ship: ${shipType} (${shipCount})`;
+                        const label = context.dataset.label || '';
+                        const value = context.parsed.y !== undefined ? context.parsed.y : context.parsed.x;
+                        return `${label}: ${value}`;
                     },
                 },
             },
@@ -34,6 +35,9 @@ const combinedLossesChartConfig = {
                     maxRotation: 45,
                     minRotation: 45,
                     autoSkip: false,
+                    font: {
+                        size: 10, // Reduced font size for better fit
+                    },
                 },
                 grid: { display: false },
                 title: {
@@ -46,8 +50,9 @@ const combinedLossesChartConfig = {
                         weight: 'bold',
                     },
                 },
+                stacked: false,
             },
-            y: {
+            y: { // Primary y-axis for Losses Value
                 beginAtZero: true,
                 ticks: { color: '#ffffff' },
                 grid: { color: '#444' },
@@ -61,19 +66,55 @@ const combinedLossesChartConfig = {
                         weight: 'bold',
                     },
                 },
+                position: 'left',
+                stacked: false,
+            },
+            y1: { // Secondary y-axis for Losses Count
+                beginAtZero: true,
+                ticks: { color: '#ffffff' },
+                grid: { display: false }, // Hide grid lines for secondary y-axis
+                title: {
+                    display: true,
+                    text: 'Losses Count',
+                    color: '#ffffff',
+                    font: {
+                        size: 14,
+                        family: 'Montserrat, sans-serif',
+                        weight: 'bold',
+                    },
+                },
+                position: 'right',
+                stacked: false,
+            },
+        },
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: {
+            padding: {
+                left: 10,
+                right: 10,
+                top: 10,
+                bottom: 10,
+            },
+        },
+        interaction: {
+            mode: 'index',
+            intersect: false,
+        },
+        // Removed duplicated 'plugins' property
+        datasets: {
+            bar: {
+                barPercentage: 0.6, // Adjusted for better visibility
+                categoryPercentage: 0.7,
             },
         },
     }),
     processData: function (data) {
         const chartName = 'Combined Losses Chart';
-        if (!validateChartData(data, chartName)) {
+        if (!validateChartDataArray(data, chartName)) {
             // Return empty labels and datasets to trigger the noDataPlugin
             return { labels: [], datasets: [] };
         }
-
-        // Ensure data has required fields
-        // Expected fields: CharacterName, LossesValue, LossesCount, ShipType, ShipCount
-        // If the backend doesn't provide all, adjust accordingly
 
         // Sort data by LossesValue descending
         const sortedData = [...data].sort((a, b) => (b.LossesValue || 0) - (a.LossesValue || 0));
@@ -83,7 +124,7 @@ const combinedLossesChartConfig = {
         const limitedData = sortedData.slice(0, topN);
 
         const labels = limitedData.map(item => item.CharacterName || 'Unknown');
-        const truncatedLabels = labels.map(label => truncateLabel(label, 15));
+        const truncatedLabels = labels.map(label => truncateLabel(label, 15)); // Truncate labels to 15 characters
 
         const lossesValue = limitedData.map(item => item.LossesValue || 0);
         const lossesCount = limitedData.map(item => item.LossesCount || 0);
@@ -93,17 +134,24 @@ const combinedLossesChartConfig = {
         const datasets = [
             {
                 label: 'Losses Value',
+                type: 'bar', // Explicitly set type as bar
                 data: lossesValue,
                 backgroundColor: 'rgba(255, 99, 132, 0.7)',
                 borderColor: 'rgba(255, 99, 132, 1)',
                 borderWidth: 1,
+                yAxisID: 'y', // Assign to primary y-axis
             },
             {
                 label: 'Losses Count',
+                type: 'line', // Set type as line
                 data: lossesCount,
                 backgroundColor: 'rgba(54, 162, 235, 0.7)',
                 borderColor: 'rgba(54, 162, 235, 1)',
-                borderWidth: 1,
+                borderWidth: 2,
+                fill: false,
+                yAxisID: 'y1', // Assign to secondary y-axis
+                tension: 0.1, // Smoothness of the line
+                pointRadius: 4, // Size of points on the line
             },
         ];
 
