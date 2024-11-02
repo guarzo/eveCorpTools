@@ -7,6 +7,26 @@ import (
 	"github.com/guarzo/zkillanalytics/internal/model"
 )
 
+// CharacterKillData holds the data for character kill counts
+type CharacterKillData struct {
+	CharacterID int
+	KillCount   int
+	Name        string
+	Points      int
+	SoloKills   int
+}
+
+type ChartJSData struct {
+	Labels   []string         `json:"labels"`
+	Datasets []ChartJSDataset `json:"datasets"`
+}
+
+type ChartJSDataset struct {
+	Label           string   `json:"label"`
+	Data            []int    `json:"data"`
+	BackgroundColor []string `json:"backgroundColor"`
+}
+
 func GetCharacterPerformance(chartData *model.ChartData) []CharacterKillData {
 	characterStats := make(map[int]*CharacterKillData)
 

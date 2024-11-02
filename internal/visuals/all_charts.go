@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"os"
 	"path/filepath"
+	"reflect"
 
 	"github.com/sirupsen/logrus"
 
@@ -22,59 +23,134 @@ var (
 
 // TemplateData holds all the data passed to the template
 type TemplateData struct {
-	// Existing data
-	MTDKillCountData   template.JS
-	YTDKillCountData   template.JS
-	LastMKillCountData template.JS
-
 	// Chart data for MTD, YTD, Last Month
-	MTDCharacterDamageData   template.JS
-	YTDCharacterDamageData   template.JS
-	LastMCharacterDamageData template.JS
-
-	MTDOurLossesValueData   template.JS
-	YTDOurLossesValueData   template.JS
-	LastMOurLossesValueData template.JS
-
+	MTDCharacterDamageData        template.JS
+	YTDCharacterDamageData        template.JS
+	LastMCharacterDamageData      template.JS
+	MTDOurLossesValueData         template.JS
+	YTDOurLossesValueData         template.JS
+	LastMOurLossesValueData       template.JS
 	MTDCharacterPerformanceData   template.JS
 	YTDCharacterPerformanceData   template.JS
 	LastMCharacterPerformanceData template.JS
+	MTDOurShipsUsedData           template.JS
+	YTDOurShipsUsedData           template.JS
+	LastMOurShipsUsedData         template.JS
+	MTDKillActivityData           template.JS
+	YTDKillActivityData           template.JS
+	LastMKillActivityData         template.JS
+	MTDKillHeatmapData            template.JS
+	YTDKillHeatmapData            template.JS
+	LastMKillHeatmapData          template.JS
+	MTDKillLossRatioData          template.JS
+	YTDKillLossRatioData          template.JS
+	LastMKillLossRatioData        template.JS
+	MTDTopShipsKilledData         template.JS
+	YTDTopShipsKilledData         template.JS
+	LastMTopShipsKilledData       template.JS
+	MTDVictimsByCorpData          template.JS
+	YTDVictimsByCorpData          template.JS
+	LastMVictimsByCorpData        template.JS
+	MTDValueOverTimeData          template.JS
+	YTDValueOverTimeData          template.JS
+	LastMValueOverTimeData        template.JS
+	MTDAverageFleetSizeData       template.JS
+	YTDAverageFleetSizeData       template.JS
+	LastMAverageFleetSizeData     template.JS
+}
 
-	MTDOurShipsUsedData   template.JS
-	YTDOurShipsUsedData   template.JS
-	LastMOurShipsUsedData template.JS
+// Chart represents a single chart with its data preparation function and field prefix
+type Chart struct {
+	FieldPrefix string
+	PrepareFunc func(*model.ChartData) interface{}
+	Description string
+}
 
-	MTDVictimsSunburstData   template.JS
-	YTDVictimsSunburstData   template.JS
-	LastMVictimsSunburstData template.JS
+// Define all charts with their corresponding preparation functions and field prefixes
+var chartDefinitions = []Chart{
+	{
+		FieldPrefix: "CharacterDamageData",
+		PrepareFunc: func(cd *model.ChartData) interface{} {
+			return GetDamageAndFinalBlows(cd)
+		},
+		Description: "Character Damage and Final Blows",
+	},
+	{
+		FieldPrefix: "OurLossesValueData",
+		PrepareFunc: func(cd *model.ChartData) interface{} {
+			return GetCombinedLossData(cd)
+		},
+		Description: "Our Losses",
+	},
+	{
+		FieldPrefix: "CharacterPerformanceData",
+		PrepareFunc: func(cd *model.ChartData) interface{} {
+			return GetCharacterPerformance(cd)
+		},
+		Description: "Character Performance",
+	},
+	{
+		FieldPrefix: "OurShipsUsedData",
+		PrepareFunc: func(cd *model.ChartData) interface{} {
+			return GetOurShipsUsed(cd)
+		},
+		Description: "Our Ships Used",
+	},
+	{
+		FieldPrefix: "KillActivityData",
+		PrepareFunc: func(cd *model.ChartData) interface{} {
+			return GetKillActivityOverTime(cd, "daily")
+		},
+		Description: "Kill Activity",
+	},
+	{
+		FieldPrefix: "KillHeatmapData",
+		PrepareFunc: func(cd *model.ChartData) interface{} {
+			return GetKillHeatmapData(cd)
+		},
+		Description: "Kill HeatMap",
+	},
+	{
+		FieldPrefix: "KillLossRatioData",
+		PrepareFunc: func(cd *model.ChartData) interface{} {
+			return GetKillLossRatioData(cd)
+		},
+		Description: "Kill Loss Ratio",
+	},
+	{
+		FieldPrefix: "TopShipsKilledData",
+		PrepareFunc: func(cd *model.ChartData) interface{} {
+			return GetTopShipsKilledData(cd)
+		},
+		Description: "Top Ships Killed",
+	},
+	{
+		FieldPrefix: "VictimsByCorpData",
+		PrepareFunc: func(cd *model.ChartData) interface{} {
+			return GetVictimsByCorp(cd)
+		},
+		Description: "Victims by Corp",
+	},
+	{
+		FieldPrefix: "ValueOverTimeData",
+		PrepareFunc: func(cd *model.ChartData) interface{} {
+			return GetValueOverTimeData(cd, "daily")
+		},
+		Description: "Value Over Time",
+	},
+	{
+		FieldPrefix: "AverageFleetSizeData",
+		PrepareFunc: func(cd *model.ChartData) interface{} {
+			return GetAverageFleetSizeOverTime(cd, "daily")
+		},
+		Description: "Average Fleet Size Over Time",
+	},
+}
 
-	MTDKillActivityData   template.JS
-	YTDKillActivityData   template.JS
-	LastMKillActivityData template.JS
-
-	MTDKillHeatmapData   template.JS
-	YTDKillHeatmapData   template.JS
-	LastMKillHeatmapData template.JS
-
-	MTDKillLossRatioData   template.JS
-	YTDKillLossRatioData   template.JS
-	LastMKillLossRatioData template.JS
-
-	MTDTopShipsKilledData   template.JS
-	YTDTopShipsKilledData   template.JS
-	LastMTopShipsKilledData template.JS
-
-	MTDVictimsByCorpData   template.JS
-	YTDVictimsByCorpData   template.JS
-	LastMVictimsByCorpData template.JS
-
-	MTDValueOverTimeData   template.JS
-	YTDValueOverTimeData   template.JS
-	LastMValueOverTimeData template.JS
-
-	MTDAverageFleetSizeData   template.JS
-	YTDAverageFleetSizeData   template.JS
-	LastMAverageFleetSizeData template.JS
+// TimeFrame represents the different time frames for the charts
+type TimeFrame struct {
+	Prefix string
+	Data   *model.ChartData
 }
 
 // RenderSnippets prepares the template data and renders the template to a file
@@ -95,60 +171,39 @@ func RenderSnippets(orchestrateService *service.OrchestrateService, ytdChartData
 
 	data := TemplateData{}
 
-	// Prepare data for each chart and each time frame
+	// Define time frames
+	timeFrames := []TimeFrame{
+		{"MTD", mtdChartData},
+		{"YTD", ytdChartData},
+		{"LastM", lastMonthChartData},
+	}
 
-	// 1. Damage Done and Final Blows
-	data.MTDCharacterDamageData = prepareCharacterDamageData(mtdChartData)
-	data.YTDCharacterDamageData = prepareCharacterDamageData(ytdChartData)
-	data.LastMCharacterDamageData = prepareCharacterDamageData(lastMonthChartData)
+	// Use reflection to dynamically set fields in TemplateData
+	v := reflect.ValueOf(&data).Elem()
 
-	// 2. Our Losses Combined Chart
-	data.MTDOurLossesValueData = prepareCombinedLossData(mtdChartData)
-	data.YTDOurLossesValueData = prepareCombinedLossData(ytdChartData)
-	data.LastMOurLossesValueData = prepareCombinedLossData(lastMonthChartData)
+	for _, chart := range chartDefinitions {
+		for _, tf := range timeFrames {
+			// Construct the field name, e.g., "MTDCharacterDamageData"
+			fieldName := fmt.Sprintf("%s%s", tf.Prefix, chart.FieldPrefix)
+			preparedData, err := prepareData(tf.Data, chart.PrepareFunc, chart.Description)
+			if err != nil {
+				orchestrator.Logger.Errorf("Error preparing data for %s: %v", chart.Description, err)
+				preparedData = template.JS("[]") // Fallback to empty array
+			}
 
-	// 3. Character Performance Chart
-	data.MTDCharacterPerformanceData = prepareCharacterPerformanceData(mtdChartData)
-	data.YTDCharacterPerformanceData = prepareCharacterPerformanceData(ytdChartData)
-	data.LastMCharacterPerformanceData = prepareCharacterPerformanceData(lastMonthChartData)
-
-	// 4. Our Ships Used Chart
-	data.MTDOurShipsUsedData = prepareOurShipsUsedData(mtdChartData)
-	data.YTDOurShipsUsedData = prepareOurShipsUsedData(ytdChartData)
-	data.LastMOurShipsUsedData = prepareOurShipsUsedData(lastMonthChartData)
-
-	// 5. Kill Activity Over Time Chart
-	data.MTDKillActivityData = prepareKillActivityData(mtdChartData)
-	data.YTDKillActivityData = prepareKillActivityData(ytdChartData)
-	data.LastMKillActivityData = prepareKillActivityData(lastMonthChartData)
-
-	// 6. Kill Heatmap Chart
-	data.MTDKillHeatmapData = prepareKillHeatmapData(mtdChartData)
-	data.YTDKillHeatmapData = prepareKillHeatmapData(ytdChartData)
-	data.LastMKillHeatmapData = prepareKillHeatmapData(lastMonthChartData)
-
-	// 7. Kill-to-Loss Ratio Chart
-	data.MTDKillLossRatioData = prepareKillLossRatioData(mtdChartData)
-	data.YTDKillLossRatioData = prepareKillLossRatioData(ytdChartData)
-	data.LastMKillLossRatioData = prepareKillLossRatioData(lastMonthChartData)
-
-	// 8. Top Ships Killed Chart
-	data.MTDTopShipsKilledData = prepareTopShipsKilledData(mtdChartData)
-	data.YTDTopShipsKilledData = prepareTopShipsKilledData(ytdChartData)
-	data.LastMTopShipsKilledData = prepareTopShipsKilledData(lastMonthChartData)
-
-	// 9. Victims by Corp Chart
-	data.MTDVictimsByCorpData = prepareVictimsByCorp(mtdChartData)
-	data.YTDVictimsByCorpData = prepareVictimsByCorp(ytdChartData)
-	data.LastMVictimsByCorpData = prepareVictimsByCorp(lastMonthChartData)
-
-	// 10. Value Over Time Chart
-	data.MTDAverageFleetSizeData = prepareAverageFleetSizeData(mtdChartData)
-	data.YTDAverageFleetSizeData = prepareAverageFleetSizeData(ytdChartData)
-	data.LastMAverageFleetSizeData = prepareAverageFleetSizeData(lastMonthChartData)
+			// Set the field using reflection
+			field := v.FieldByName(fieldName)
+			if field.IsValid() && field.CanSet() {
+				field.Set(reflect.ValueOf(preparedData))
+			} else {
+				orchestrator.Logger.Errorf("Invalid field name: %s", fieldName)
+				return fmt.Errorf("invalid field name: %s", fieldName)
+			}
+		}
+	}
 
 	// Render the template
-	tmpl, err := template.New("tps.tmpl").ParseFiles(filepath.Join("static", "tps.tmpl"))
+	tmpl, err := template.New("tps.tmpl").ParseFiles(filepath.Join("static", "tmpl", "tps.tmpl"))
 	if err != nil {
 		return fmt.Errorf("failed to parse template: %w", err)
 	}
@@ -166,143 +221,14 @@ func RenderSnippets(orchestrateService *service.OrchestrateService, ytdChartData
 	return nil
 }
 
-// Helper functions to prepare data and marshal to JSON
-
-func prepareCharacterDamageData(chartData *model.ChartData) template.JS {
-	data := GetDamageAndFinalBlows(chartData)
-	logger.Infof("Character Damage and Final Blows %v", data)
+// Generic helper function to prepare data
+func prepareData(chartData *model.ChartData, getDataFunc func(*model.ChartData) interface{}, description string) (template.JS, error) {
+	data := getDataFunc(chartData)
+	logger.Infof("%s: %v", description, data)
 	jsonData, err := json.Marshal(data)
 	if err != nil {
-		orchestrator.Logger.Errorf("Error marshalling CharacterDamageData: %v", err)
-		return template.JS("[]") // Return empty array to prevent JS errors
+		orchestrator.Logger.Errorf("Error marshalling %s: %v", description, err)
+		return "[]", err
 	}
-	return template.JS(jsonData)
-}
-
-func prepareCombinedLossData(chartData *model.ChartData) template.JS {
-	data := GetCombinedLossData(chartData)
-	logger.Infof("Our Losses %v", data)
-
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		orchestrator.Logger.Errorf("Error marshalling OurLossesValueData: %v", err)
-		return template.JS("[]") // Return empty array to prevent JS errors
-	}
-	return template.JS(jsonData)
-}
-
-func prepareCharacterPerformanceData(chartData *model.ChartData) template.JS {
-	data := GetCharacterPerformance(chartData)
-	logger.Infof("Character Performance %v", data)
-
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		orchestrator.Logger.Errorf("Error marshalling CharacterPerformanceData: %v", err)
-		return template.JS("[]")
-	}
-	return template.JS(jsonData)
-}
-
-func prepareOurShipsUsedData(chartData *model.ChartData) template.JS {
-	data := GetOurShipsUsed(chartData)
-	logger.Infof("Our Ships Used %v", data)
-
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		orchestrator.Logger.Errorf("Error marshalling OurShipsUsedData: %v", err)
-		return template.JS("[]")
-	}
-	return template.JS(jsonData)
-}
-
-func prepareKillActivityData(chartData *model.ChartData) template.JS {
-	data := GetKillActivityOverTime(chartData, "daily")
-	logger.Infof("Kill Activity %v", data)
-
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		orchestrator.Logger.Errorf("Error marshalling KillActivityData: %v", err)
-		return template.JS("[]")
-	}
-	return template.JS(jsonData)
-}
-
-func prepareKillHeatmapData(chartData *model.ChartData) template.JS {
-	data := GetKillHeatmapData(chartData)
-	logger.Infof("Kill HeatMap %v", data)
-
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		orchestrator.Logger.Errorf("Error marshalling KillHeatmapData: %v", err)
-		return template.JS("[]")
-	}
-	return template.JS(jsonData)
-}
-
-func prepareKillLossRatioData(chartData *model.ChartData) template.JS {
-	data := GetKillLossRatioData(chartData)
-	logger.Infof("Kill Loss Ratio %v", data)
-
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		orchestrator.Logger.Errorf("Error marshalling KillLossRatioData: %v", err)
-		return template.JS("[]")
-	}
-	return template.JS(jsonData)
-}
-
-func prepareTopShipsKilledData(chartData *model.ChartData) template.JS {
-	data := GetTopShipsKilledData(chartData)
-	logger.Infof("Top Ships KIlled %v", data)
-
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		orchestrator.Logger.Errorf("Error marshalling TopShipsKilledData: %v", err)
-		return template.JS("[]")
-	}
-	return template.JS(jsonData)
-}
-
-func prepareVictimsByCorp(chartData *model.ChartData) template.JS {
-	data := GetVictimsByCorp(chartData)
-	logger.Infof("Victims by corp %v", data)
-
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		orchestrator.Logger.Errorf("Error marshalling VictimsByCorpData: %v", err)
-		return "[]"
-	}
-	return template.JS(jsonData)
-}
-
-func prepareAverageFleetSizeData(chartData *model.ChartData) template.JS {
-	data := GetAverageFleetSizeOverTime(chartData, "daily")
-	logger.Infof("Average FleetSize over time %v", data)
-
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		orchestrator.Logger.Errorf("Error marshalling AverageFleetSizeOverTimeData: %v", err)
-		return template.JS("[]")
-	}
-	return template.JS(jsonData)
-}
-
-// CharacterKillData holds the data for character kill counts
-type CharacterKillData struct {
-	CharacterID int
-	KillCount   int
-	Name        string
-	Points      int
-	SoloKills   int
-}
-
-type ChartJSData struct {
-	Labels   []string         `json:"labels"`
-	Datasets []ChartJSDataset `json:"datasets"`
-}
-
-type ChartJSDataset struct {
-	Label           string   `json:"label"`
-	Data            []int    `json:"data"`
-	BackgroundColor []string `json:"backgroundColor"`
+	return template.JS(jsonData), nil
 }
