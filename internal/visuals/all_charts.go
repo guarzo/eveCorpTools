@@ -64,9 +64,17 @@ type TemplateData struct {
 	YTDTopShipsKilledData   template.JS
 	LastMTopShipsKilledData template.JS
 
+	MTDVictimsByCorpData   template.JS
+	YTDVictimsByCorpData   template.JS
+	LastMVictimsByCorpData template.JS
+
 	MTDValueOverTimeData   template.JS
 	YTDValueOverTimeData   template.JS
 	LastMValueOverTimeData template.JS
+
+	MTDAverageFleetSizeData   template.JS
+	YTDAverageFleetSizeData   template.JS
+	LastMAverageFleetSizeData template.JS
 }
 
 // RenderSnippets prepares the template data and renders the template to a file
@@ -109,40 +117,35 @@ func RenderSnippets(orchestrateService *service.OrchestrateService, ytdChartData
 	data.YTDOurShipsUsedData = prepareOurShipsUsedData(ytdChartData)
 	data.LastMOurShipsUsedData = prepareOurShipsUsedData(lastMonthChartData)
 
-	// 5. Victims Sunburst Chart
-	data.MTDVictimsSunburstData = prepareVictimsSunburstData(mtdChartData)
-	data.YTDVictimsSunburstData = prepareVictimsSunburstData(ytdChartData)
-	data.LastMVictimsSunburstData = prepareVictimsSunburstData(lastMonthChartData)
-
-	// 6. Kill Activity Over Time Chart
+	// 5. Kill Activity Over Time Chart
 	data.MTDKillActivityData = prepareKillActivityData(mtdChartData)
 	data.YTDKillActivityData = prepareKillActivityData(ytdChartData)
 	data.LastMKillActivityData = prepareKillActivityData(lastMonthChartData)
 
-	// 7. Kill Heatmap Chart
+	// 6. Kill Heatmap Chart
 	data.MTDKillHeatmapData = prepareKillHeatmapData(mtdChartData)
 	data.YTDKillHeatmapData = prepareKillHeatmapData(ytdChartData)
 	data.LastMKillHeatmapData = prepareKillHeatmapData(lastMonthChartData)
 
-	// 8. Kill-to-Loss Ratio Chart
+	// 7. Kill-to-Loss Ratio Chart
 	data.MTDKillLossRatioData = prepareKillLossRatioData(mtdChartData)
 	data.YTDKillLossRatioData = prepareKillLossRatioData(ytdChartData)
 	data.LastMKillLossRatioData = prepareKillLossRatioData(lastMonthChartData)
 
-	// 9. Top Ships Killed Chart
+	// 8. Top Ships Killed Chart
 	data.MTDTopShipsKilledData = prepareTopShipsKilledData(mtdChartData)
 	data.YTDTopShipsKilledData = prepareTopShipsKilledData(ytdChartData)
 	data.LastMTopShipsKilledData = prepareTopShipsKilledData(lastMonthChartData)
 
-	// 10. Value Over Time Chart
-	data.MTDValueOverTimeData = prepareValueOverTimeData(mtdChartData)
-	data.YTDValueOverTimeData = prepareValueOverTimeData(ytdChartData)
-	data.LastMValueOverTimeData = prepareValueOverTimeData(lastMonthChartData)
+	// 9. Victims by Corp Chart
+	data.MTDVictimsByCorpData = prepareVictimsByCorp(mtdChartData)
+	data.YTDVictimsByCorpData = prepareVictimsByCorp(ytdChartData)
+	data.LastMVictimsByCorpData = prepareVictimsByCorp(lastMonthChartData)
 
-	// Prepare existing Kill Count Data
-	data.MTDKillCountData = prepareKillCountData(mtdChartData)
-	data.YTDKillCountData = prepareKillCountData(ytdChartData)
-	data.LastMKillCountData = prepareKillCountData(lastMonthChartData)
+	// 10. Value Over Time Chart
+	data.MTDAverageFleetSizeData = prepareAverageFleetSizeData(mtdChartData)
+	data.YTDAverageFleetSizeData = prepareAverageFleetSizeData(ytdChartData)
+	data.LastMAverageFleetSizeData = prepareAverageFleetSizeData(lastMonthChartData)
 
 	// Render the template
 	tmpl, err := template.New("tps.tmpl").ParseFiles(filepath.Join("static", "tps.tmpl"))
@@ -212,18 +215,6 @@ func prepareOurShipsUsedData(chartData *model.ChartData) template.JS {
 	return template.JS(jsonData)
 }
 
-func prepareVictimsSunburstData(chartData *model.ChartData) template.JS {
-	data := GetVictimsSunburst(chartData)
-	logger.Infof("Victim Sunburst %v", data)
-
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		orchestrator.Logger.Errorf("Error marshalling VictimsSunburstData: %v", err)
-		return template.JS("[]")
-	}
-	return template.JS(jsonData)
-}
-
 func prepareKillActivityData(chartData *model.ChartData) template.JS {
 	data := GetKillActivityOverTime(chartData, "daily")
 	logger.Infof("Kill Activity %v", data)
@@ -272,31 +263,46 @@ func prepareTopShipsKilledData(chartData *model.ChartData) template.JS {
 	return template.JS(jsonData)
 }
 
-func prepareValueOverTimeData(chartData *model.ChartData) template.JS {
-	data := GetValueOverTimeData(chartData, "daily")
-	logger.Infof("Value over time %v", data)
+func prepareVictimsByCorp(chartData *model.ChartData) template.JS {
+	data := GetVictimsByCorp(chartData)
+	logger.Infof("Victims by corp %v", data)
 
 	jsonData, err := json.Marshal(data)
 	if err != nil {
-		orchestrator.Logger.Errorf("Error marshalling ValueOverTimeData: %v", err)
+		orchestrator.Logger.Errorf("Error marshalling VictimsByCorpData: %v", err)
+		return "[]"
+	}
+	return template.JS(jsonData)
+}
+
+func prepareAverageFleetSizeData(chartData *model.ChartData) template.JS {
+	data := GetAverageFleetSizeOverTime(chartData, "daily")
+	logger.Infof("Average FleetSize over time %v", data)
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		orchestrator.Logger.Errorf("Error marshalling AverageFleetSizeOverTimeData: %v", err)
 		return template.JS("[]")
 	}
 	return template.JS(jsonData)
 }
 
-func prepareKillCountData(chartData *model.ChartData) template.JS {
-	data, err := PrepareKillCountChartData(chartData)
-	logger.Infof("Kill Count %v", data)
+// CharacterKillData holds the data for character kill counts
+type CharacterKillData struct {
+	CharacterID int
+	KillCount   int
+	Name        string
+	Points      int
+	SoloKills   int
+}
 
-	if err != nil {
-		orchestrator.Logger.Errorf("Error preparing KillCountData: %v", err)
-		return template.JS("[]")
-	}
+type ChartJSData struct {
+	Labels   []string         `json:"labels"`
+	Datasets []ChartJSDataset `json:"datasets"`
+}
 
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		orchestrator.Logger.Errorf("Error marshalling KillCountData: %v", err)
-		return template.JS("[]")
-	}
-	return template.JS(jsonData)
+type ChartJSDataset struct {
+	Label           string   `json:"label"`
+	Data            []int    `json:"data"`
+	BackgroundColor []string `json:"backgroundColor"`
 }

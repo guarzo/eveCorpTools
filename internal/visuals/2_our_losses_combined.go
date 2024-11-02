@@ -15,7 +15,6 @@ type LossesData struct {
 	ShipCount     int
 }
 
-// Function to process and combine data
 func GetCombinedLossData(chartData *model.ChartData) []LossesData {
 	characterDataMap := make(map[string]*LossesData)
 	shipLossesMap := make(map[string]int)

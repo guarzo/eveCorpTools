@@ -1,4 +1,4 @@
-package visuals
+package unused
 
 import (
 	"sort"
@@ -8,13 +8,14 @@ import (
 
 	"github.com/guarzo/zkillanalytics/internal/config"
 	"github.com/guarzo/zkillanalytics/internal/model"
+	"github.com/guarzo/zkillanalytics/internal/visuals"
 )
 
-func GetPointsPerCharacter(chartData *model.ChartData) *charts.Bar {
-	// Initialize a map to count points by each attacking character
-	characterPoints := make(map[string]int)
+func GetSoloKills(chartData *model.ChartData) *charts.Bar {
+	// Initialize a map to count final blows by each attacking character
+	characterKills := make(map[string]int)
 
-	// Populate the characterPoints map using attackers from detailed killmails
+	// Populate the characterFinalBlows map using attackers from detailed killmails
 	for _, km := range chartData.KillMails {
 		for _, attacker := range km.EsiKillMail.Attackers {
 			characterInfo, exists := chartData.CharacterInfos[attacker.CharacterID]
@@ -25,17 +26,20 @@ func GetPointsPerCharacter(chartData *model.ChartData) *charts.Bar {
 			characterName := characterInfo.Name
 
 			if config.DisplayCharacter(attacker.CharacterID, attacker.CorporationID, attacker.AllianceID) {
-				characterPoints[characterName] += km.ZKB.Points
+				// Only increment the kill count if the kill was a solo kill
+				if km.ZKB.Solo {
+					characterKills[characterName]++
+				}
 			}
 		}
 	}
 
-	// Convert the map to a slice of CharacterKillData and sort by points
-	var characterData []CharacterKillData
-	for character, points := range characterPoints {
-		characterData = append(characterData, CharacterKillData{
+	// Convert the map to a slice of CharacterKillData and sort by final blow count
+	var characterData []visuals.CharacterKillData
+	for character, solos := range characterKills {
+		characterData = append(characterData, visuals.CharacterKillData{
 			Name:      character,
-			KillCount: points,
+			KillCount: solos,
 		})
 	}
 	sort.Slice(characterData, func(i, j int) bool {
@@ -53,14 +57,14 @@ func GetPointsPerCharacter(chartData *model.ChartData) *charts.Bar {
 	for i, data := range characterData {
 		counts = append(counts, opts.BarData{Value: data.KillCount,
 			ItemStyle: &opts.ItemStyle{
-				Color: colors[i%len(colors)],
+				Color: visuals.colors[i%len(visuals.colors)],
 			},
 		})
 	}
 
 	// Create a new bar chart instance
-	bar := newBarChart("Points", false)
+	bar := visuals.newBarChart("Solo Kills", false)
 	bar.SetXAxis(sortedCharacters).
-		AddSeries("Points", counts)
+		AddSeries("Solo Kills", counts)
 	return bar
 }

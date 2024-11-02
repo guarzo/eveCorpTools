@@ -7,7 +7,7 @@ import { truncateLabel, getShipColor, getCommonOptions, validateOurShipsUsedData
  */
 const ourShipsUsedChartConfig = {
     id: 'ourShipsUsedChart',
-    instance: {}, // Correctly initialize as an object
+    instance: {}, // Initialize as an object to store chart instances per timeframe
     dataKeys: {
         mtd: { dataVar: 'mtdOurShipsUsedData', canvasId: 'ourShipsUsedChart_mtd' },
         ytd: { dataVar: 'ytdOurShipsUsedData', canvasId: 'ourShipsUsedChart_ytd' },
@@ -23,16 +23,9 @@ const ourShipsUsedChartConfig = {
                 intersect: true, // Show tooltip only when directly hovering over a segment
                 callbacks: {
                     label: function (context) {
-                        const value = context.parsed.x; // For horizontal bar chart
-                        if (value > 0) { // Only show ships with count > 0
-                            const shipName = context.dataset.label;
-                            const index = context.dataIndex;
-                            const total = context.chart.config.data.datasets.reduce((sum, dataset) => sum + (dataset.data[index] || 0), 0);
-                            const percentage = total > 0 ? ((value / total) * 100).toFixed(2) : '0.00';
-                            return `${shipName}: ${value} (${percentage}%)`;
-                        } else {
-                            return null; // Exclude ships with count <= 0 from tooltip
-                        }
+                        const value = context.parsed.x !== undefined ? context.parsed.x : context.parsed.y;
+                        const shipName = context.dataset.label || '';
+                        return `${shipName}: ${value} Kills`;
                     },
                 },
             },
@@ -40,12 +33,7 @@ const ourShipsUsedChartConfig = {
                 color: '#ffffff',
                 anchor: 'end',
                 align: 'right',
-                formatter: (value, context) => {
-                    const index = context.dataIndex;
-                    const total = context.chart.config.data.datasets.reduce((sum, dataset) => sum + (dataset.data[index] || 0), 0);
-                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
-                    return `${value} (${percentage}%)`;
-                },
+                formatter: (value) => `${value}`,
                 font: {
                     size: 10,
                     weight: 'bold',
@@ -57,6 +45,16 @@ const ourShipsUsedChartConfig = {
                 stacked: true,
                 ticks: { color: '#ffffff' },
                 grid: { display: false },
+                title: {
+                    display: true,
+                    text: 'Kills',
+                    color: '#ffffff',
+                    font: {
+                        size: 14,
+                        family: 'Montserrat, sans-serif',
+                        weight: 'bold',
+                    },
+                },
             },
             y: {
                 stacked: true,
@@ -65,8 +63,20 @@ const ourShipsUsedChartConfig = {
                     autoSkip: false,
                 },
                 grid: { display: false },
+                title: {
+                    display: true,
+                    text: 'Characters',
+                    color: '#ffffff',
+                    font: {
+                        size: 14,
+                        family: 'Montserrat, sans-serif',
+                        weight: 'bold',
+                    },
+                },
             },
         },
+        responsive: true,
+        maintainAspectRatio: false, // Allow the chart to adjust its height
     }),
     processData: function (data) {
         const chartName = 'Our Ships Used Chart';
@@ -79,16 +89,20 @@ const ourShipsUsedChartConfig = {
         const shipNames = data.ShipNames || [];
         const seriesData = data.SeriesData || {};
 
+        // Constants to define the maximum number of ships and characters to display
+        const MAX_SHIPS = 10; // Adjust based on requirements
+        const MAX_CHARACTERS = 15; // Adjust based on requirements
+
         // Calculate total usage for each ship
         const shipUsage = shipNames.map(shipName => {
             const total = seriesData[shipName]?.reduce((a, b) => a + b, 0) || 0;
             return { shipName, total };
         });
 
-        // Sort ships by total usage descending and limit to top 10
+        // Sort ships by total usage descending and limit to top MAX_SHIPS
         const topShips = shipUsage
             .sort((a, b) => b.total - a.total)
-            .slice(0, 10)
+            .slice(0, MAX_SHIPS)
             .map(ship => ship.shipName);
 
         // Update shipNames to topShips
@@ -100,12 +114,31 @@ const ourShipsUsedChartConfig = {
             limitedSeriesData[shipName] = seriesData[shipName] || [];
         });
 
-        const labels = characters.map(label => truncateLabel(label, 10));
+        // Calculate total usage per character across all limited ships
+        const characterUsage = characters.map((char, index) => {
+            let total = 0;
+            limitedShipNames.forEach(ship => {
+                total += seriesData[ship]?.[index] || 0;
+            });
+            return { character: char, total };
+        });
 
-        // Create datasets for each limited ship type
-        const datasets = limitedShipNames.map((shipName) => ({
+        // Sort characters by total usage descending and limit to top MAX_CHARACTERS
+        const topCharacters = characterUsage
+            .sort((a, b) => b.total - a.total)
+            .slice(0, MAX_CHARACTERS)
+            .map(item => item.character);
+
+        // Find the indices of topCharacters in the original characters array
+        const topCharacterIndices = topCharacters.map(char => characters.indexOf(char)).filter(index => index !== -1);
+
+        // Prepare labels: truncate and limit to topCharacters
+        const labels = topCharacters.map(label => truncateLabel(label, 10));
+
+        // Create datasets for each limited ship type, only for topCharacters
+        const datasets = limitedShipNames.map(shipName => ({
             label: shipName,
-            data: limitedSeriesData[shipName] || [],
+            data: topCharacterIndices.map(index => seriesData[shipName]?.[index] || 0),
             backgroundColor: getShipColor(shipName),
             borderColor: '#ffffff',
             borderWidth: 1,

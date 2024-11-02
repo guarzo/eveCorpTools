@@ -2,19 +2,26 @@
 
 // Import utility functions
 import { truncateLabel, getColor, getCommonOptions, noDataPlugin } from './utils.js';
-Chart.register(noDataPlugin);
+import { initTopShipsKilledWordCloud } from './chartConfigs/8_topShipsKilledWordCloudConfig.js';
+// Reference the global Chart.js object
+const Chart = window.Chart;
 
+// Register necessary plugins
+Chart.register(noDataPlugin);
+// If you are using other plugins like datalabels, register them as well
+// import ChartDataLabels from 'chartjs-plugin-datalabels';
+// Chart.register(ChartDataLabels);
 
 // Import chart configurations
 import damageFinalBlowsChartConfig from './chartConfigs/1_damageFinalBlowsChartConfig.js';
 import ourLossesCombinedChartConfig from './chartConfigs/2_ourLossesCombinedChartConfig.js';
 import characterPerformanceChartConfig from './chartConfigs/3_characterPerformanceChartConfig.js';
 import ourShipsUsedChartConfig from './chartConfigs/4_ourShipsUsedChartConfig.js';
-import killActivityChartConfig from './chartConfigs/killActivityChartConfig.js';
-import killHeatmapChartConfig from './chartConfigs/killHeatmapChartConfig.js';
-import killLossRatioChartConfig from './chartConfigs/killLossRatioChartConfig.js';
-import topShipsKilledWordCloud from './chartConfigs/8_topShipsKilledWordCloud.js';
-import valueOverTimeChartConfig from './chartConfigs/valueOverTimeChartConfig.js';
+import killActivityChartConfig from './chartConfigs/5_killActivityChartConfig.js';
+import killHeatmapChartConfig from './chartConfigs/6_killsHeatmapChartConfig.js';
+import killLossRatioChartConfig from './chartConfigs/7_killLossRatioChartConfig.js';
+import victimsByCorpChartConfig from "./chartConfigs/9_victimsByCorpChartConfig.js";
+import averageFleetSizeChartConfig from "./chartConfigs/10_fleetSizeChartMap.js";
 
 // Array of all chart configurations
 const chartConfigs = [
@@ -25,8 +32,8 @@ const chartConfigs = [
     killActivityChartConfig,
     killHeatmapChartConfig,
     killLossRatioChartConfig,
-    topShipsKilledWordCloud,
-    valueOverTimeChartConfig,
+    victimsByCorpChartConfig,
+    averageFleetSizeChartConfig,
 ];
 
 /**
@@ -78,23 +85,28 @@ function init() {
      * @returns {Chart} - The initialized Chart.js instance.
      */
     function createChart(config, ctxElem, data, timeFrame) {
-        const { labels, datasets, fullLabels } = data;
+        const { labels, datasets } = data;
 
-        // Debugging: Log the chart type and data being used
-        console.log(`Creating chart: Type=${config.type}, CanvasID=${config.dataKeys[timeFrame].canvasId}`);
-        console.log('Chart Data:', data);
+        // Add backgroundColor and borderColor only if not a Word Cloud
+        if (config.type !== 'wordCloud') {
+            datasets.forEach(dataset => {
+                dataset.backgroundColor = getColor(dataset.label);
+                dataset.borderColor = getColor(dataset.label);
+            });
+        }
 
-        return new Chart(ctxElem.getContext('2d'), {
+        const chartInstance = new Chart(ctxElem.getContext('2d'), {
             type: config.type,
             data: {
                 labels: labels,
                 datasets: datasets,
-                fullLabels: fullLabels,
             },
             options: config.options,
         });
-    }
 
+        console.log('Chart Instance:', chartInstance);
+        return chartInstance;
+    }
 
     /**
      * Updates an existing chart instance with new data.
@@ -103,15 +115,11 @@ function init() {
      * @param {string} timeFrame - The current time frame (mtd, ytd, lastMonth).
      */
     function updateChartInstance(config, data, timeFrame) {
-        const { labels, datasets, fullLabels } = data;
+        const { datasets } = data;
         const chart = config.instance[timeFrame];
 
         if (chart) {
-            chart.data.labels = labels;
             chart.data.datasets = datasets;
-            if (fullLabels) {
-                chart.data.fullLabels = fullLabels;
-            }
             chart.update();
         }
     }
@@ -126,7 +134,11 @@ function init() {
 
         console.log(`Updating chart ${config.id} for ${currentTimeFrame}:`, data);
 
-        if (!data || (config.dataType === 'array' && data.length === 0) || (config.dataType === 'object' && Object.keys(data).length === 0)) {
+        if (
+            !data ||
+            (config.dataType === 'array' && data.length === 0) ||
+            (config.dataType === 'object' && Object.keys(data).length === 0)
+        ) {
             console.warn(`Data unavailable for chart ${config.id} in ${currentTimeFrame}.`);
             if (config.instance && config.instance[currentTimeFrame]) {
                 config.instance[currentTimeFrame].destroy();
@@ -138,16 +150,6 @@ function init() {
                 ctxElem.parentElement.innerHTML = `<p class="text-center">No data available for this chart.</p>`;
             }
             return;
-        }
-
-        // Conditionally wrap data if chart expects an array
-        if (config.dataType === 'array' && !Array.isArray(data)) {
-            data = [data];
-        }
-
-        // Only filter if data is an array
-        if (Array.isArray(data)) {
-            data = data.filter(item => item);
         }
 
         const processedData = config.processData(data);
@@ -163,11 +165,48 @@ function init() {
         }
 
         if (config.instance && config.instance[currentTimeFrame]) {
+            // Update existing chart instance
             updateChartInstance(config, processedData, currentTimeFrame);
         } else {
+            // Create a new chart instance
             config.instance = config.instance || {};
-            config.instance[currentTimeFrame] = createChart(config, ctxElem, processedData, currentTimeFrame);
+            // Clone the options to avoid mutating the original configuration
+            const chartOptions = JSON.parse(JSON.stringify(config.options));
+
+            // If there's a custom noDataMessage, set it in the options
+            if (processedData.noDataMessage) {
+                if (!chartOptions.plugins.noData) {
+                    chartOptions.plugins.noData = {};
+                }
+                chartOptions.plugins.noData.message = processedData.noDataMessage;
+            }
+
+            config.instance[currentTimeFrame] = new Chart(ctxElem.getContext('2d'), {
+                type: config.type,
+                data: {
+                    labels: processedData.labels,
+                    datasets: processedData.datasets,
+                },
+                options: chartOptions,
+            });
+
+            console.log(`Chart Instance for ${config.id} (${currentTimeFrame}):`, config.instance[currentTimeFrame]);
         }
+    }
+
+    function createWordCloudChart(config, ctxElem, data, timeFrame) {
+        const { datasets } = data;
+
+        const chartInstance = new Chart(ctxElem.getContext('2d'), {
+            type: config.type,
+            data: {
+                datasets: datasets,
+            },
+            options: config.options,
+        });
+
+        console.log('Word Cloud Chart Instance:', chartInstance);
+        return chartInstance;
     }
 
 
@@ -182,6 +221,9 @@ function init() {
 
     // Initial chart rendering
     updateAllCharts();
+
+    // Initialize the Word Cloud chart separately
+    initTopShipsKilledWordCloud();
 }
 
 // Check if the DOM is already loaded

@@ -1,15 +1,16 @@
-package visuals
+package unused
 
 import (
 	"bytes"
 	"fmt"
+	"html/template"
+	"log"
+	"os"
+
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/components"
 	"github.com/go-echarts/go-echarts/v2/opts"
 	"github.com/go-echarts/go-echarts/v2/render"
-	"html/template"
-	"log"
-	"os"
 )
 
 var colors = []string{"red", "blue", "green", "yellow", "purple", "cyan", "magenta", "lime", "black", "navy", "aqua", "maroon", "olive", "silver", "gray", "fuchsia", "white", "coral", "salmon"}

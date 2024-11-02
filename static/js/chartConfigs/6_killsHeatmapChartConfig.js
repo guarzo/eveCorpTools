@@ -7,13 +7,14 @@ import { getCommonOptions, validateChartDataArray } from '../utils.js';
  */
 const killsHeatmapChartConfig = {
     id: 'killsHeatmapChart',
-    instance: null,
+    instance: {}, // Initialize as an object to store chart instances per timeframe
     dataKeys: {
-        mtd: 'mtdKillHeatmapData',
-        ytd: 'ytdKillHeatmapData',
-        lastMonth: 'lastMKillHeatmapData',
+        mtd: { dataVar: 'mtdKillHeatmapData', canvasId: 'killsHeatmapChart_mtd' },
+        ytd: { dataVar: 'ytdKillHeatmapData', canvasId: 'killsHeatmapChart_ytd' },
+        lastMonth: { dataVar: 'lastMKillHeatmapData', canvasId: 'killsHeatmapChart_lastM' },
     },
     type: 'matrix', // Using matrix chart type from chartjs-chart-matrix
+    dataType: 'array', // Specify that this chart expects array data
     options: getCommonOptions('Kills Heatmap', {
         plugins: {
             legend: { display: false },
@@ -27,6 +28,9 @@ const killsHeatmapChartConfig = {
                         return `Day: ${yLabel}, Hour: ${xLabel}, Kills: ${value}`;
                     },
                 },
+            },
+            datalabels: {
+                display: false, // Typically not needed for heatmaps
             },
         },
         scales: {
@@ -89,7 +93,7 @@ const killsHeatmapChartConfig = {
         const chartName = 'Kills Heatmap';
         if (!validateChartDataArray(data, chartName)) {
             // Return empty data to trigger the noDataPlugin
-            return { labels: [], datasets: [] };
+            return { labels: [], datasets: [], noDataMessage: 'No data available for this chart.' };
         }
 
         // Prepare matrix data
@@ -105,6 +109,8 @@ const killsHeatmapChartConfig = {
             '21', '22', '23'
         ];
 
+        let maxKills = 0; // To determine scaling for backgroundColor
+
         for (let day = 0; day < 7; day++) {
             for (let hour = 0; hour < 24; hour++) {
                 const kills = data[day][hour] || 0;
@@ -113,7 +119,25 @@ const killsHeatmapChartConfig = {
                     y: yLabels[day],
                     v: kills,
                 });
+                if (kills > maxKills) {
+                    maxKills = kills;
+                }
             }
+        }
+
+        // Check if there are at least 7 days of data (i.e., at least 7 kill counts)
+        // Alternatively, you might want to check for the number of days with any kills
+        let daysWithData = 0;
+        for (let day = 0; day < 7; day++) {
+            const totalKillsPerDay = data[day].reduce((a, b) => a + b, 0);
+            if (totalKillsPerDay > 0) {
+                daysWithData++;
+            }
+        }
+
+        if (daysWithData < 3) {
+            console.warn(`Not enough data points (${daysWithData} days) for ${chartName}.`);
+            return { labels: [], datasets: [], noDataMessage: 'Not enough data to display the chart.' };
         }
 
         const dataset = {
@@ -123,8 +147,8 @@ const killsHeatmapChartConfig = {
             yLabels: yLabels,
             backgroundColor: function (context) {
                 const value = context.dataset.data[context.dataIndex].v;
-                // Define a color scale (e.g., higher kills = darker color)
-                const alpha = value > 0 ? Math.min(value / 100, 1) : 0; // Adjust scaling based on data
+                // Define a color scale based on the maximum kill count
+                const alpha = maxKills > 0 ? Math.min(value / maxKills, 1) : 0;
                 return `rgba(255, 99, 132, ${alpha})`;
             },
         };

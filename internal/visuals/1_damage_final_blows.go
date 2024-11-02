@@ -7,7 +7,6 @@ import (
 	"github.com/guarzo/zkillanalytics/internal/model"
 )
 
-// Data structure to hold character data
 type CharacterData struct {
 	Name       string `json:"Name"`
 	FinalBlows int    `json:"FinalBlows"`

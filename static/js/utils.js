@@ -31,7 +31,14 @@ export const noDataPlugin = {
             const titleHeight = chart.options.plugins.title && chart.options.plugins.title.display ? 40 : 0; // Approximate title height
             const messageY = height / 2 + titleHeight / 2;
 
-            ctx.fillText('No data available', width / 2, messageY);
+            // Determine the message to display
+            let message = 'No data available for this chart.';
+            if (chart.config.options.plugins.noData && chart.config.options.plugins.noData.message) {
+                message = chart.config.options.plugins.noData.message;
+            }
+
+
+            ctx.fillText(message, width / 2, messageY);
             ctx.restore();
         }
     }

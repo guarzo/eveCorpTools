@@ -3,10 +3,7 @@
 <head>
     <title>Zoolanders TPS Reports</title>
     <!-- Bootstrap CSS -->
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-    >
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <!-- Custom CSS -->
     <link rel="stylesheet" type="text/css" href="/static/css/tps.css">
     <!-- Google Fonts -->
@@ -19,8 +16,6 @@
     <script src="https://cdn.jsdelivr.net/npm/date-fns@4.1.0/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-
-    <!-- Sunburst Chart Plugin -->
     <!-- Matrix Chart Plugin -->
     <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@2.0.1/dist/chartjs-chart-matrix.min.js"></script>
     <!-- Favicon -->
@@ -69,22 +64,22 @@
                         <canvas id="ourShipsUsedChart_mtd"></canvas>
                     </div>
                     <div class="chart-container my-4">
-                        <canvas id="victimsSunburstChart_mtd"></canvas>
-                    </div>
-                    <div class="chart-container my-4">
                         <canvas id="killActivityChart_mtd"></canvas>
                     </div>
                     <div class="chart-container my-4">
-                        <canvas id="killHeatmapChart_mtd"></canvas>
+                        <canvas id="killsHeatmapChart_mtd"></canvas>
                     </div>
                     <div class="chart-container my-4">
                         <canvas id="killLossRatioChart_mtd"></canvas>
                     </div>
-                    <div class="chart-container my-4">
+                    <div class="chart-container my-4 wordcloud-container">
                         <canvas id="topShipsKilledWordCloud_mtd"></canvas>
                     </div>
                     <div class="chart-container my-4">
-                        <canvas id="valueOverTimeChart_mtd"></canvas>
+                        <canvas id="victimsByCorpChart_mtd"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="averageFleetSizeChart_mtd"></canvas>
                     </div>
                 </div>
 
@@ -103,22 +98,22 @@
                         <canvas id="ourShipsUsedChart_lastM"></canvas>
                     </div>
                     <div class="chart-container my-4">
-                        <canvas id="victimsSunburstChart_lastM"></canvas>
-                    </div>
-                    <div class="chart-container my-4">
                         <canvas id="killActivityChart_lastM"></canvas>
                     </div>
                     <div class="chart-container my-4">
-                        <canvas id="killHeatmapChart_lastM"></canvas>
+                        <canvas id="killsHeatmapChart_lastM"></canvas>
                     </div>
                     <div class="chart-container my-4">
                         <canvas id="killLossRatioChart_lastM"></canvas>
                     </div>
-                    <div class="chart-container my-4">
+                    <div class="chart-container my-4 wordcloud-container">
                         <canvas id="topShipsKilledWordCloud_lastM"></canvas>
                     </div>
                     <div class="chart-container my-4">
-                        <canvas id="valueOverTimeChart_lastM"></canvas>
+                        <canvas id="victimsByCorpChart_lastM"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="averageFleetSizeChart_lastM"></canvas>
                     </div>
                 </div>
 
@@ -137,22 +132,22 @@
                         <canvas id="ourShipsUsedChart_ytd"></canvas>
                     </div>
                     <div class="chart-container my-4">
-                        <canvas id="victimsSunburstChart_ytd"></canvas>
-                    </div>
-                    <div class="chart-container my-4">
                         <canvas id="killActivityChart_ytd"></canvas>
                     </div>
                     <div class="chart-container my-4">
-                        <canvas id="killHeatmapChart_ytd"></canvas>
+                        <canvas id="killsHeatmapChart_ytd"></canvas>
                     </div>
                     <div class="chart-container my-4">
                         <canvas id="killLossRatioChart_ytd"></canvas>
                     </div>
-                    <div class="chart-container my-4">
+                    <div class="chart-container my-4 wordcloud-container">
                         <canvas id="topShipsKilledWordCloud_ytd"></canvas>
                     </div>
                     <div class="chart-container my-4">
-                        <canvas id="valueOverTimeChart_ytd"></canvas>
+                        <canvas id="victimsByCorpChart_ytd"></canvas>
+                    </div>
+                    <div class="chart-container my-4">
+                        <canvas id="averageFleetSizeChart_ytd"></canvas>
                     </div>
                 </div>
             </div>
@@ -196,11 +191,6 @@
         window.ytdKillActivityData = {{ .YTDKillActivityData }};
         window.lastMKillActivityData = {{ .LastMKillActivityData }};
 
-        // Victims Sunburst Data
-        window.mtdVictimsSunburstData = {{ .MTDVictimsSunburstData }};
-        window.ytdVictimsSunburstData = {{ .YTDVictimsSunburstData }};
-        window.lastMVictimsSunburstData = {{ .LastMVictimsSunburstData }};
-
         // Kill Heatmap Data
         window.mtdKillHeatmapData = {{ .MTDKillHeatmapData }};
         window.ytdKillHeatmapData = {{ .YTDKillHeatmapData }};
@@ -217,16 +207,15 @@
         window.lastMTopShipsKilledData = {{ .LastMTopShipsKilledData }};
 
         // Value Over Time Data
-        window.mtdValueOverTimeData = {{ .MTDValueOverTimeData }};
-        window.ytdValueOverTimeData = {{ .YTDValueOverTimeData }};
-        window.lastMValueOverTimeData = {{ .LastMValueOverTimeData }};
-    </script>
-    <script>
-        console.log('MTD Top Ships Killed Data:', window.mtdTopShipsKilledData);
-        console.log('YTD Top Ships Killed Data:', window.ytdTopShipsKilledData);
-        console.log('Last Month Top Ships Killed Data:', window.lastMTopShipsKilledData);
-    </script>
+        window.mtdVictimsByCorpData = {{ .MTDVictimsByCorpData }};
+        window.ytdVictimsByCorpData = {{ .YTDVictimsByCorpData }};
+        window.lastMVictimsByCorpData = {{ .LastMVictimsByCorpData }};
 
+        // Average Fleet Size Data
+        window.mtdAverageFleetSizeData = {{ .MTDAverageFleetSizeData }};
+        window.ytdAverageFleetSizeData = {{ .YTDAverageFleetSizeData }};
+        window.lastMAverageFleetSizeData = {{ .LastMAverageFleetSizeData }};
+    </script>
     <!-- Custom JS -->
     <script type="module" src="/static/js/tps.js"></script>
 </body>

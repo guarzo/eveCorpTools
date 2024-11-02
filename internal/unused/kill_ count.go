@@ -1,34 +1,15 @@
-package visuals
+package unused
 
 import (
 	"sort"
 
 	"github.com/guarzo/zkillanalytics/internal/config"
 	"github.com/guarzo/zkillanalytics/internal/model"
+	"github.com/guarzo/zkillanalytics/internal/visuals"
 )
 
-// CharacterKillData holds the data for character kill counts
-type CharacterKillData struct {
-	CharacterID int
-	KillCount   int
-	Name        string
-	Points      int
-	SoloKills   int
-}
-
-type ChartJSData struct {
-	Labels   []string         `json:"labels"`
-	Datasets []ChartJSDataset `json:"datasets"`
-}
-
-type ChartJSDataset struct {
-	Label           string   `json:"label"`
-	Data            []int    `json:"data"`
-	BackgroundColor []string `json:"backgroundColor"`
-}
-
-func PrepareKillCountChartData(chartData *model.ChartData) (ChartJSData, error) {
-	characterKills := make(map[int]CharacterKillData)
+func PrepareKillCountChartData(chartData *model.ChartData) (visuals.ChartJSData, error) {
+	characterKills := make(map[int]visuals.CharacterKillData)
 
 	for _, km := range chartData.KillMails {
 		for _, attacker := range km.EsiKillMail.Attackers {
@@ -46,7 +27,7 @@ func PrepareKillCountChartData(chartData *model.ChartData) (ChartJSData, error) 
 				characterKills[characterID] = data
 			} else {
 				if character, exists := chartData.CharacterInfos[characterID]; exists {
-					characterKills[characterID] = CharacterKillData{
+					characterKills[characterID] = visuals.CharacterKillData{
 						CharacterID: characterID,
 						KillCount:   1,
 						Name:        character.Name,
@@ -56,7 +37,7 @@ func PrepareKillCountChartData(chartData *model.ChartData) (ChartJSData, error) 
 		}
 	}
 
-	var sortedData []CharacterKillData
+	var sortedData []visuals.CharacterKillData
 	for _, data := range characterKills {
 		sortedData = append(sortedData, data)
 	}
@@ -77,12 +58,12 @@ func PrepareKillCountChartData(chartData *model.ChartData) (ChartJSData, error) 
 	for i, d := range sortedData {
 		labels = append(labels, d.Name)
 		dataValues = append(dataValues, d.KillCount)
-		backgroundColors = append(backgroundColors, colors[i%len(colors)])
+		backgroundColors = append(backgroundColors, visuals.colors[i%len(visuals.colors)])
 	}
 
-	chartJSData := ChartJSData{
+	chartJSData := visuals.ChartJSData{
 		Labels: labels,
-		Datasets: []ChartJSDataset{
+		Datasets: []visuals.ChartJSDataset{
 			{
 				Label:           "Kill Count",
 				Data:            dataValues,

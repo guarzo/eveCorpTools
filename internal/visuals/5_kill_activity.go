@@ -26,7 +26,16 @@ func GetKillActivityOverTime(chartData *model.ChartData, interval string) []Time
 			bucket = timestamp.Truncate(24 * time.Hour)
 		case "weekly":
 			year, week := timestamp.ISOWeek()
-			bucket = time.Date(year, 0, (week-1)*7+1, 0, 0, 0, 0, time.UTC)
+			// Calculate the first Monday of the ISO week-based year
+			jan4 := time.Date(year, time.January, 4, 0, 0, 0, 0, time.UTC)
+			jan4Weekday := jan4.Weekday()
+			daysToMonday := (int(jan4Weekday) + 6) % 7
+			firstMonday := jan4.AddDate(0, 0, -daysToMonday)
+			// Calculate the start of the desired week
+			bucket = firstMonday.AddDate(0, 0, (week-1)*7)
+		default:
+			// Default to daily if interval is unrecognized
+			bucket = timestamp.Truncate(24 * time.Hour)
 		}
 
 		killCounts[bucket]++

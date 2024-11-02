@@ -14,7 +14,7 @@ const valueOverTimeChartConfig = {
         lastMonth: 'lastMValueOverTimeData',
     },
     type: 'line',
-    options: getCommonOptions('Isk Destoryed', {
+    options: getCommonOptions('Isk Destroyed', {
         plugins: {
             legend: { display: false },
         },

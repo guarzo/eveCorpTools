@@ -1,4 +1,4 @@
-package visuals
+package unused
 
 import (
 	"github.com/guarzo/zkillanalytics/internal/model"

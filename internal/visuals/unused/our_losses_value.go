@@ -1,4 +1,4 @@
-package visuals
+package unused
 
 import (
 	"sort"
