@@ -67,14 +67,15 @@ const topShipsKilledChartConfig = {
         const maxKillCount = Math.max(...limitedData.map(d => d.weight));
         const scalingFactor = maxKillCount > 0 ? 60 / maxKillCount : 10;
 
-        const scaledData = limitedData.map(d => ({
+        const scaledData = limitedData.map((d) => ({
             text: d.text,
-            weight: d.weight * scalingFactor
+            weight: d.weight * scalingFactor,
+            color: getShipColor(d.text)
         }));
 
         const labels = scaledData.map(d => d.text);
         const weights = scaledData.map(d => d.weight);
-        const colors = scaledData.map((d, index) => getShipColor(d.text, index));
+        const colors = scaledData.map((d, index) => getShipColor(d.text));
         const rotations = scaledData.map(() => (Math.random() > 0.5 ? 0 : 90));
 
         const datasets = [{

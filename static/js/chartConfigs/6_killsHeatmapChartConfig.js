@@ -1,4 +1,4 @@
-// static/js/chartConfigs/6_killsHeatmapChartConfig.js
+// static/js/chartConfigs/killsHeatmapChartConfig.js
 
 import { getCommonOptions, validateChartDataArray } from '../utils.js';
 
@@ -14,9 +14,9 @@ const killsHeatmapChartConfig = {
                 callbacks: {
                     title: function () { return ''; }, // Remove title
                     label: function (context) {
-                        const xLabel = context.raw.x; // Access x value directly
-                        const yLabel = context.raw.y; // Access y value directly
-                        const value = context.raw.v;
+                        const xLabel = context.raw.x || 'Unknown';
+                        const yLabel = context.raw.y || 'Unknown';
+                        const value = context.raw.v || 0;
                         return `Day: ${yLabel}, Hour: ${xLabel}, Kills: ${value}`;
                     },
                 },
@@ -73,9 +73,9 @@ const killsHeatmapChartConfig = {
         },
         elements: {
             rectangle: {
-                borderWidth: 1,
-                borderColor: '#ffffff',
-                borderSkipped: 'bottom',
+                borderWidth: 0, // Remove borders
+                // borderColor: '#ffffff', // Optional: Remove or comment out
+                // borderSkipped: 'bottom', // Optional: Remove or comment out
             },
         },
         responsive: true,
@@ -88,7 +88,7 @@ const killsHeatmapChartConfig = {
             return { labels: [], datasets: [], noDataMessage: 'No data available for this chart.' };
         }
 
-        console.log('Incoming data for Kills Heatmap:', data); // Debugging log
+        // console.log('Incoming data for Kills Heatmap:', data); // Debugging log
 
         // Ensure data has exactly 7 days
         if (data.length !== 7) {
@@ -110,11 +110,11 @@ const killsHeatmapChartConfig = {
 
         let maxKills = 0; // To determine scaling for backgroundColor
 
-        for (let day = 0; day < 7; day++) {
-            for (let hour = 0; hour < 24; hour++) {
-                const kills = (data[day] && data[day][hour] !== undefined) ? data[day][hour] : 0;
+        for (let day = 0; day < yLabels.length; day++) {
+            for (let hour = 0; hour < xLabels.length; hour++) {
+                const kills = (data[day] && typeof data[day][hour] === 'number') ? data[day][hour] : 0;
                 matrixData.push({
-                    x: hour.toString(),
+                    x: xLabels[hour],
                     y: yLabels[day],
                     v: kills,
                 });
@@ -126,7 +126,7 @@ const killsHeatmapChartConfig = {
 
         // Check if there are at least 3 days with data
         let daysWithData = 0;
-        for (let day = 0; day < 7; day++) {
+        for (let day = 0; day < yLabels.length; day++) {
             const totalKillsPerDay = (data[day] && Array.isArray(data[day])) ? data[day].reduce((a, b) => a + (b || 0), 0) : 0;
             if (totalKillsPerDay > 0) {
                 daysWithData++;
@@ -138,22 +138,32 @@ const killsHeatmapChartConfig = {
             return { labels: [], datasets: [], noDataMessage: 'Not enough data to display the chart.' };
         }
 
+        // Generate background colors array
+        const backgroundColors = matrixData.map(dataPoint => {
+            const kills = dataPoint.v;
+            if (kills > 0) {
+                // Calculate opacity based on kill count
+                const alpha = maxKills > 0 ? Math.min(kills / maxKills, 1) : 0;
+                // Return shades of red with opacity
+                return `rgba(255, 0, 0, ${0.3 + 0.7 * alpha})`;
+            } else {
+                return 'rgba(0, 0, 0, 0)'; // Fully transparent
+            }
+        });
+
+        // Debugging logs
+        console.log('Matrix Data:', matrixData);
+        console.log('Max Kills:', maxKills);
+        console.log('Background Colors:', backgroundColors);
+        // console.log('Border Colors:', borderColors);
+
         const dataset = {
             label: 'Kills Heatmap',
             data: matrixData,
-            // Removed xLabels and yLabels from dataset as they are not needed
-            backgroundColor: function (context) {
-                const value = context.dataset.data[context.dataIndex].v;
-                if (value > 0) {
-                    // Define a red color with varying opacity based on kill count
-                    const alpha = maxKills > 0 ? Math.min(value / maxKills, 1) : 0;
-                    return `rgba(255, 0, 0, ${alpha})`; // Red with varying opacity
-                } else {
-                    // Assign a light gray color for no kills
-                    return 'rgba(211, 211, 211, 0.1)'; // Light gray with low opacity
-                }
-            },
+            backgroundColor: backgroundColors, // Array of colors
         };
+
+        console.log('Processed dataset for Kills Heatmap:', dataset); // Debugging log
 
         return { labels: [], datasets: [dataset] };
     },

@@ -69,7 +69,7 @@ const killToLossRatioChartConfig = {
             return { labels: [], datasets: [], noDataMessage: 'No data available for this chart.' };
         }
 
-        console.log('Incoming data for Kill-to-Loss Ratio:', data); // Debugging log
+        // console.log('Incoming data for Kill-to-Loss Ratio:', data); // Debugging log
 
         // Sort data by Ratio descending
         const sortedData = [...data].sort((a, b) => (b.Ratio || 0) - (a.Ratio || 0));

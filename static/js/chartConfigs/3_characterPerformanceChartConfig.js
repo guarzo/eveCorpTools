@@ -22,7 +22,7 @@ const characterPerformanceChartConfig = {
             return { labels: [], datasets: [] };
         }
 
-        console.log('Incoming data for Character Performance:', data); // Debugging log
+        // console.log('Incoming data for Character Performance:', data); // Debugging log
 
         // Sort data by KillCount descending
         const sortedData = [...data].sort((a, b) => (b.KillCount || 0) - (a.KillCount || 0));
@@ -70,12 +70,12 @@ const characterPerformanceChartConfig = {
                 pointRadius: 4,
             },
         ];
-
-        console.log('Processed Labels:', truncatedLabels);
-        console.log('Kills Data:', kills);
-        console.log('Solo Kills Data:', soloKills);
-        console.log('Points Data:', points);
-        console.log('Datasets:', datasets);
+        //
+        // console.log('Processed Labels:', truncatedLabels);
+        // console.log('Kills Data:', kills);
+        // console.log('Solo Kills Data:', soloKills);
+        // console.log('Points Data:', points);
+        // console.log('Datasets:', datasets);
 
         return { labels: truncatedLabels, datasets, fullLabels: labels };
     },

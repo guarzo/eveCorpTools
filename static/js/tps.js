@@ -15,11 +15,6 @@ import fleetSizeAndValueKilledOverTimeChartConfig from './chartConfigs/10_fleetS
 // Reference the global Chart.js object
 const Chart = window.Chart;
 
-// Register necessary plugins
-// Example:
-// import { noDataPlugin } from './plugins/noDataPlugin.js';
-// Chart.register(noDataPlugin);
-
 // Map base chart names to their configurations
 const chartConfigs = {
     'characterDamageAndFinalBlowsChart': damageFinalBlowsChartConfig,
@@ -56,11 +51,12 @@ function createChart(config, ctxElem, processedData) {
             chart = new Chart(ctxElem.getContext('2d'), {
                 type: 'wordCloud',
                 data: {
-                    labels: processedData.labels,
+                    labels: processedData.labels, // Not used in Word Cloud
                     datasets: [{
-                        data: processedData.datasets[0].data, // Array of weights
-                        backgroundColor: processedData.datasets[0].backgroundColor, // Array of colors
-                        rotation: processedData.datasets[0].rotation || [],
+                        data: processedData.datasets[0].data, // Array of { text, value }
+                        backgroundColor: processedData.datasets[0].backgroundColor,
+                        rotation: processedData.datasets[0].rotation,
+                        weightFactor: processedData.datasets[0].weightFactor,
                     }]
                 },
                 options: config.options,
@@ -74,22 +70,18 @@ function createChart(config, ctxElem, processedData) {
                 data: {
                     datasets: [{
                         label: 'Matrix Data',
-                        data: processedData.datasets[0].data, // Array of objects with x, y, v
-                        backgroundColor: function(context) {
-                            const value = context.dataset.data[context.dataIndex].v;
-                            // Define color based on value
-                            return value > 50 ? 'rgba(255, 99, 132, 0.8)' :
-                                value > 20 ? 'rgba(54, 162, 235, 0.8)' :
-                                    'rgba(75, 192, 192, 0.8)';
-                        },
+                        data: processedData.datasets[0].data, // Array of { x, y, v }
+                        backgroundColor: processedData.datasets[0].backgroundColor,
                         borderWidth: 1,
+                        borderColor: '#ffffff',
+                        borderSkipped: 'bottom',
                         width: function(context) {
                             const a = context.chart.chartArea;
-                            return (a && a.right && a.left) ? (a.right - a.left) / 24 : 20; // Fallback to 20 if undefined
+                            return (a && a.right && a.left) ? (a.right - a.left) / 24 : 20; // 24 hours
                         },
                         height: function(context) {
                             const a = context.chart.chartArea;
-                            return (a && a.bottom && a.top) ? (a.bottom - a.top) / 7 : 20; // Fallback to 20 if undefined
+                            return (a && a.bottom && a.top) ? (a.bottom - a.top) / 7 : 20; // 7 days
                         },
                     }]
                 },
