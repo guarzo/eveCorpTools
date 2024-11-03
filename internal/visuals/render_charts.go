@@ -61,14 +61,6 @@ var chartDefinitions = []Chart{
 		Type:        "bar",
 	},
 	{
-		FieldPrefix: "CombinedLossesData",
-		PrepareFunc: func(cd *model.ChartData) interface{} {
-			return GetCombinedLossData(cd)
-		},
-		Description: "Combined Losses",
-		Type:        "bar",
-	},
-	{
 		FieldPrefix: "CharacterPerformanceData",
 		PrepareFunc: func(cd *model.ChartData) interface{} {
 			return GetCharacterPerformance(cd)
@@ -131,6 +123,14 @@ var chartDefinitions = []Chart{
 		},
 		Description: "Fleet Size and Value Killed Over Time",
 		Type:        "line",
+	},
+	{
+		FieldPrefix: "CombinedLossesData",
+		PrepareFunc: func(cd *model.ChartData) interface{} {
+			return GetCombinedLossData(cd)
+		},
+		Description: "Combined Losses",
+		Type:        "bar",
 	},
 }
 

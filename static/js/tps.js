@@ -18,8 +18,6 @@ const Chart = window.Chart;
 // Map base chart names to their configurations
 const chartConfigs = {
     'characterDamageAndFinalBlowsChart': damageFinalBlowsChartConfig,
-    'combinedLossesChart': combinedLossesChartConfig,
-    'characterPerformanceChart': characterPerformanceChartConfig,
     'ourShipsUsedChart': ourShipsUsedChartConfig,
     'killActivityOverTimeChart': killActivityOverTimeChartConfig,
     'killsHeatmapChart': killsHeatmapChartConfig,
@@ -27,6 +25,8 @@ const chartConfigs = {
     'topShipsKilledChart': topShipsKilledChartConfig,
     'victimsByCorporationChart': victimsByCorporationChartConfig,
     'fleetSizeAndValueKilledOverTimeChart': fleetSizeAndValueKilledOverTimeChartConfig,
+    'characterPerformanceChart': characterPerformanceChartConfig,
+    'combinedLossesChart': combinedLossesChartConfig,
 };
 
 // Global object to keep track of Chart instances
