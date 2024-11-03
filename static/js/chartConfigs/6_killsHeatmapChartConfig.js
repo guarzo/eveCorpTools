@@ -152,9 +152,9 @@ const killsHeatmapChartConfig = {
         });
 
         // Debugging logs
-        console.log('Matrix Data:', matrixData);
-        console.log('Max Kills:', maxKills);
-        console.log('Background Colors:', backgroundColors);
+        // console.log('Matrix Data:', matrixData);
+        // console.log('Max Kills:', maxKills);
+        // console.log('Background Colors:', backgroundColors);
         // console.log('Border Colors:', borderColors);
 
         const dataset = {
@@ -163,7 +163,7 @@ const killsHeatmapChartConfig = {
             backgroundColor: backgroundColors, // Array of colors
         };
 
-        console.log('Processed dataset for Kills Heatmap:', dataset); // Debugging log
+        // console.log('Processed dataset for Kills Heatmap:', dataset); // Debugging log
 
         return { labels: [], datasets: [dataset] };
     },
