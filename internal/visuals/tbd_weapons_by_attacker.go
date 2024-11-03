@@ -48,10 +48,10 @@ func RenderWeaponsByCharacter(orchestrator *service.OrchestrateService, chartDat
 		}
 	}
 
-	// Convert the map to a slice of CharacterKillData and sort by kill count
-	var characterData []CharacterKillData
+	// Convert the map to a slice of CharacterPerformanceData and sort by kill count
+	var characterData []CharacterPerformanceData
 	for character, kills := range characterKills {
-		characterData = append(characterData, CharacterKillData{
+		characterData = append(characterData, CharacterPerformanceData{
 			Name:      character,
 			KillCount: kills,
 		})
@@ -60,7 +60,7 @@ func RenderWeaponsByCharacter(orchestrator *service.OrchestrateService, chartDat
 		return characterData[i].KillCount > characterData[j].KillCount
 	})
 
-	// Replace the sorted list of character names with the names from the sorted CharacterKillData slice
+	// Replace the sorted list of character names with the names from the sorted CharacterPerformanceData slice
 	sortedCharacters := make([]string, len(characterData))
 
 	for i, data := range characterData {

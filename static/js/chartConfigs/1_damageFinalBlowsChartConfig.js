@@ -6,21 +6,13 @@ import { truncateLabel, getCommonOptions, validateChartDataArray } from '../util
  * Configuration for the Damage Done and Final Blows Chart
  */
 const damageFinalBlowsChartConfig = {
-    id: 'damageFinalBlowsChart',
-    instance: {},
-    dataKeys: {
-        mtd: { dataVar: 'mtdCharacterDamageData', canvasId: 'damageFinalBlowsChart_mtd' },
-        ytd: { dataVar: 'ytdCharacterDamageData', canvasId: 'damageFinalBlowsChart_ytd' },
-        lastMonth: { dataVar: 'lastMCharacterDamageData', canvasId: 'damageFinalBlowsChart_lastM' },
-    },
     type: 'bar', // Base type for mixed charts
     options: getCommonOptions('Top Damage Done and Final Blows', {
-        // No need to redefine plugins here as they're handled in getCommonOptions
         scales: {
-            // No additional scale options needed here
+            // Additional scale options can be added here if needed
         },
         datasets: {
-            // No additional dataset options needed here
+            // Additional dataset options can be added here if needed
         },
     }),
     processData: function (data) {

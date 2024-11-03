@@ -9,7 +9,7 @@ import (
 )
 
 func PrepareKillCountChartData(chartData *model.ChartData) (visuals.ChartJSData, error) {
-	characterKills := make(map[int]visuals.CharacterKillData)
+	characterKills := make(map[int]visuals.CharacterPerformanceData)
 
 	for _, km := range chartData.KillMails {
 		for _, attacker := range km.EsiKillMail.Attackers {
@@ -27,7 +27,7 @@ func PrepareKillCountChartData(chartData *model.ChartData) (visuals.ChartJSData,
 				characterKills[characterID] = data
 			} else {
 				if character, exists := chartData.CharacterInfos[characterID]; exists {
-					characterKills[characterID] = visuals.CharacterKillData{
+					characterKills[characterID] = visuals.CharacterPerformanceData{
 						CharacterID: characterID,
 						KillCount:   1,
 						Name:        character.Name,
@@ -37,7 +37,7 @@ func PrepareKillCountChartData(chartData *model.ChartData) (visuals.ChartJSData,
 		}
 	}
 
-	var sortedData []visuals.CharacterKillData
+	var sortedData []visuals.CharacterPerformanceData
 	for _, data := range characterKills {
 		sortedData = append(sortedData, data)
 	}

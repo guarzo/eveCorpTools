@@ -18,10 +18,7 @@ func GetTopShipsKilledData(chartData *model.ChartData) []ShipKillData {
 	// Initialize a map to count killmails by ship type
 	shipKillCounts := make(map[int]ShipKillData)
 
-	if trackedCharacters == nil || len(trackedCharacters) == 0 {
-		fmt.Printf("No tracked characters found, fetching from %d killmails", len(chartData.KillMails))
-		trackedCharacters = orchestrator.GetTrackedCharactersFromKillMails(chartData.KillMails, &chartData.ESIData)
-	}
+	trackedCharacters := orchestrator.GetTrackedCharactersFromKillMails(chartData.KillMails, &chartData.ESIData)
 
 	// Populate the kill count map using victims' ships from detailed killmails
 	for _, km := range chartData.KillMails {

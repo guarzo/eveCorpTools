@@ -34,10 +34,10 @@ func GetSoloKills(chartData *model.ChartData) *charts.Bar {
 		}
 	}
 
-	// Convert the map to a slice of CharacterKillData and sort by final blow count
-	var characterData []visuals.CharacterKillData
+	// Convert the map to a slice of CharacterPerformanceData and sort by final blow count
+	var characterData []visuals.CharacterPerformanceData
 	for character, solos := range characterKills {
-		characterData = append(characterData, visuals.CharacterKillData{
+		characterData = append(characterData, visuals.CharacterPerformanceData{
 			Name:      character,
 			KillCount: solos,
 		})
@@ -46,7 +46,7 @@ func GetSoloKills(chartData *model.ChartData) *charts.Bar {
 		return characterData[i].KillCount > characterData[j].KillCount
 	})
 
-	// Replace the sorted list of character names with the names from the sorted CharacterKillData slice
+	// Replace the sorted list of character names with the names from the sorted CharacterPerformanceData slice
 	sortedCharacters := make([]string, len(characterData))
 	for i, data := range characterData {
 		sortedCharacters[i] = data.Name

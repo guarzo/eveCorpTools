@@ -6,15 +6,7 @@ import { truncateLabel, getShipColor, getCommonOptions, validateOurShipsUsedData
  * Configuration for the Our Ships Used Chart
  */
 const ourShipsUsedChartConfig = {
-    id: 'ourShipsUsedChart',
-    instance: {}, // Initialize as an object to store chart instances per timeframe
-    dataKeys: {
-        mtd: { dataVar: 'mtdOurShipsUsedData', canvasId: 'ourShipsUsedChart_mtd' },
-        ytd: { dataVar: 'ytdOurShipsUsedData', canvasId: 'ourShipsUsedChart_ytd' },
-        lastMonth: { dataVar: 'lastMOurShipsUsedData', canvasId: 'ourShipsUsedChart_lastM' },
-    },
     type: 'bar',
-    dataType: 'object', // Specify that this chart expects object data
     options: getCommonOptions('Our Ships Used', {
         indexAxis: 'y',
         plugins: {

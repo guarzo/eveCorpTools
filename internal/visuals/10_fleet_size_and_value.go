@@ -17,7 +17,7 @@ type FleetSizeAndValueData struct {
 }
 
 // GetFleetSizeAndValueOverTime calculates the average fleet size and total value over specified time intervals
-func GetFleetSizeAndValueOverTime(chartData *model.ChartData, interval string) []FleetSizeAndValueData {
+func GetFleetSizeAndValueData(chartData *model.ChartData, interval string) []FleetSizeAndValueData {
 	fleetValueMap := make(map[time.Time]struct {
 		TotalFleetSize int
 		Count          int

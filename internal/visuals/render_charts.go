@@ -1,3 +1,5 @@
+// internal/visuals/render_charts.go
+
 package visuals
 
 import (
@@ -6,7 +8,8 @@ import (
 	"html/template"
 	"os"
 	"path/filepath"
-	"reflect"
+	"strings"
+	"unicode"
 
 	"github.com/sirupsen/logrus"
 
@@ -16,54 +19,35 @@ import (
 
 // Global variables
 var (
-	trackedCharacters []int
-	orchestrator      *service.OrchestrateService
-	logger            *logrus.Logger
+	orchestrator *service.OrchestrateService
+	logger       *logrus.Logger
 )
 
 // TemplateData holds all the data passed to the template
 type TemplateData struct {
-	// Chart data for MTD, YTD, Last Month
-	MTDCharacterDamageData        template.JS
-	YTDCharacterDamageData        template.JS
-	LastMCharacterDamageData      template.JS
-	MTDOurLossesValueData         template.JS
-	YTDOurLossesValueData         template.JS
-	LastMOurLossesValueData       template.JS
-	MTDCharacterPerformanceData   template.JS
-	YTDCharacterPerformanceData   template.JS
-	LastMCharacterPerformanceData template.JS
-	MTDOurShipsUsedData           template.JS
-	YTDOurShipsUsedData           template.JS
-	LastMOurShipsUsedData         template.JS
-	MTDKillActivityData           template.JS
-	YTDKillActivityData           template.JS
-	LastMKillActivityData         template.JS
-	MTDKillHeatmapData            template.JS
-	YTDKillHeatmapData            template.JS
-	LastMKillHeatmapData          template.JS
-	MTDKillLossRatioData          template.JS
-	YTDKillLossRatioData          template.JS
-	LastMKillLossRatioData        template.JS
-	MTDTopShipsKilledData         template.JS
-	YTDTopShipsKilledData         template.JS
-	LastMTopShipsKilledData       template.JS
-	MTDVictimsByCorpData          template.JS
-	YTDVictimsByCorpData          template.JS
-	LastMVictimsByCorpData        template.JS
-	MTDValueOverTimeData          template.JS
-	YTDValueOverTimeData          template.JS
-	LastMValueOverTimeData        template.JS
-	MTDAverageFleetSizeData       template.JS
-	YTDAverageFleetSizeData       template.JS
-	LastMAverageFleetSizeData     template.JS
+	TimeFrames []TimeFrameData
 }
 
-// Chart represents a single chart with its data preparation function and field prefix
+// TimeFrameData represents data for a specific time frame (MTD, YTD, LastM)
+type TimeFrameData struct {
+	Name   string       // e.g., "MTD", "YTD", "LastM"
+	Charts []ChartEntry // Slice of charts for this time frame
+}
+
+// ChartEntry represents a single chart's data
+type ChartEntry struct {
+	Name string      // e.g., "Character Damage and Final Blows"
+	ID   string      // e.g., "characterDamageAndFinalBlowsChart_MTD"
+	Data template.JS // JSON data for the chart
+	Type string      // e.g., "bar", "line", "matrix", "wordCloud"
+}
+
+// Chart represents a single chart with its data preparation function
 type Chart struct {
 	FieldPrefix string
 	PrepareFunc func(*model.ChartData) interface{}
 	Description string
+	Type        string // e.g., "bar", "line", "matrix", "wordCloud"
 }
 
 // Define all charts with their corresponding preparation functions and field prefixes
@@ -74,13 +58,15 @@ var chartDefinitions = []Chart{
 			return GetDamageAndFinalBlows(cd)
 		},
 		Description: "Character Damage and Final Blows",
+		Type:        "bar",
 	},
 	{
-		FieldPrefix: "OurLossesValueData",
+		FieldPrefix: "CombinedLossesData",
 		PrepareFunc: func(cd *model.ChartData) interface{} {
 			return GetCombinedLossData(cd)
 		},
-		Description: "Our Losses",
+		Description: "Combined Losses",
+		Type:        "bar",
 	},
 	{
 		FieldPrefix: "CharacterPerformanceData",
@@ -88,6 +74,7 @@ var chartDefinitions = []Chart{
 			return GetCharacterPerformance(cd)
 		},
 		Description: "Character Performance",
+		Type:        "bar",
 	},
 	{
 		FieldPrefix: "OurShipsUsedData",
@@ -95,27 +82,31 @@ var chartDefinitions = []Chart{
 			return GetOurShipsUsed(cd)
 		},
 		Description: "Our Ships Used",
+		Type:        "bar",
 	},
 	{
 		FieldPrefix: "KillActivityData",
 		PrepareFunc: func(cd *model.ChartData) interface{} {
 			return GetKillActivityOverTime(cd, "daily")
 		},
-		Description: "Kill Activity",
+		Description: "Kill Activity Over Time",
+		Type:        "line",
 	},
 	{
 		FieldPrefix: "KillHeatmapData",
 		PrepareFunc: func(cd *model.ChartData) interface{} {
 			return GetKillHeatmapData(cd)
 		},
-		Description: "Kill HeatMap",
+		Description: "Kills Heatmap",
+		Type:        "matrix",
 	},
 	{
 		FieldPrefix: "KillLossRatioData",
 		PrepareFunc: func(cd *model.ChartData) interface{} {
 			return GetKillLossRatioData(cd)
 		},
-		Description: "Kill Loss Ratio",
+		Description: "Kill-to-Loss Ratio",
+		Type:        "bar",
 	},
 	{
 		FieldPrefix: "TopShipsKilledData",
@@ -123,38 +114,28 @@ var chartDefinitions = []Chart{
 			return GetTopShipsKilledData(cd)
 		},
 		Description: "Top Ships Killed",
+		Type:        "wordCloud",
 	},
 	{
 		FieldPrefix: "VictimsByCorpData",
 		PrepareFunc: func(cd *model.ChartData) interface{} {
 			return GetVictimsByCorp(cd)
 		},
-		Description: "Victims by Corp",
+		Description: "Victims by Corporation",
+		Type:        "bar",
 	},
 	{
-		FieldPrefix: "ValueOverTimeData",
+		FieldPrefix: "FleetSizeAndValueData",
 		PrepareFunc: func(cd *model.ChartData) interface{} {
-			return GetValueOverTimeData(cd, "daily")
+			return GetFleetSizeAndValueData(cd, "daily")
 		},
-		Description: "Value Over Time",
-	},
-	{
-		FieldPrefix: "AverageFleetSizeData",
-		PrepareFunc: func(cd *model.ChartData) interface{} {
-			return GetAverageFleetSizeOverTime(cd, "daily")
-		},
-		Description: "Average Fleet Size Over Time",
+		Description: "Fleet Size and Value Killed Over Time",
+		Type:        "line",
 	},
 }
 
-// TimeFrame represents the different time frames for the charts
-type TimeFrame struct {
-	Prefix string
-	Data   *model.ChartData
-}
-
-// RenderSnippets prepares the template data and renders the template to a file
-func RenderSnippets(orchestrateService *service.OrchestrateService, ytdChartData, lastMonthChartData, mtdChartData *model.ChartData, filePath string) error {
+// RenderCharts prepares the template data and renders the template to a file
+func RenderCharts(orchestrateService *service.OrchestrateService, ytdChartData, lastMonthChartData, mtdChartData *model.ChartData, filePath string) error {
 	orchestrator = orchestrateService
 	logger = orchestrator.Logger
 
@@ -163,47 +144,73 @@ func RenderSnippets(orchestrateService *service.OrchestrateService, ytdChartData
 	lastMTrackedCharacters := orchestrateService.GetTrackedCharactersFromKillMails(lastMonthChartData.KillMails, &lastMonthChartData.ESIData)
 	mtdTrackedCharacters := orchestrateService.GetTrackedCharactersFromKillMails(mtdChartData.KillMails, &mtdChartData.ESIData)
 
-	trackedCharacters = append(trackedCharacters, ytdTrackedCharacters...)
-	trackedCharacters = append(trackedCharacters, lastMTrackedCharacters...)
+	trackedCharacters := append(ytdTrackedCharacters, lastMTrackedCharacters...)
 	trackedCharacters = append(trackedCharacters, mtdTrackedCharacters...)
 
 	orchestrator.Logger.Infof("there are %d tracked characters", len(trackedCharacters))
 
-	data := TemplateData{}
-
-	// Define time frames
-	timeFrames := []TimeFrame{
-		{"MTD", mtdChartData},
-		{"YTD", ytdChartData},
-		{"LastM", lastMonthChartData},
+	data := TemplateData{
+		TimeFrames: []TimeFrameData{
+			{
+				Name:   "MTD",
+				Charts: []ChartEntry{},
+			},
+			{
+				Name:   "LastM",
+				Charts: []ChartEntry{},
+			},
+			{
+				Name:   "YTD",
+				Charts: []ChartEntry{},
+			},
+		},
 	}
 
-	// Use reflection to dynamically set fields in TemplateData
-	v := reflect.ValueOf(&data).Elem()
+	// Define time frames and associate chart data
+	timeFrames := []struct {
+		Name string
+		Data *model.ChartData
+	}{
+		{"MTD", mtdChartData},
+		{"LastM", lastMonthChartData},
+		{"YTD", ytdChartData},
+	}
 
-	for _, chart := range chartDefinitions {
-		for _, tf := range timeFrames {
-			// Construct the field name, e.g., "MTDCharacterDamageData"
-			fieldName := fmt.Sprintf("%s%s", tf.Prefix, chart.FieldPrefix)
+	// Populate TemplateData
+	for _, tf := range timeFrames {
+		for _, chart := range chartDefinitions {
+			// Prepare data
 			preparedData, err := prepareData(tf.Data, chart.PrepareFunc, chart.Description)
 			if err != nil {
 				orchestrator.Logger.Errorf("Error preparing data for %s: %v", chart.Description, err)
 				preparedData = template.JS("[]") // Fallback to empty array
 			}
 
-			// Set the field using reflection
-			field := v.FieldByName(fieldName)
-			if field.IsValid() && field.CanSet() {
-				field.Set(reflect.ValueOf(preparedData))
-			} else {
-				orchestrator.Logger.Errorf("Invalid field name: %s", fieldName)
-				return fmt.Errorf("invalid field name: %s", fieldName)
+			// Generate unique canvas ID based on Description and Timeframe
+			chartID := fmt.Sprintf("%sChart_%s", toLowerCamelCase(chart.Description), tf.Name)
+
+			// Append to charts for this time frame
+			for i, finalTF := range data.TimeFrames {
+				if finalTF.Name == tf.Name {
+					data.TimeFrames[i].Charts = append(data.TimeFrames[i].Charts, ChartEntry{
+						Name: chart.Description,
+						ID:   chartID,
+						Data: preparedData,
+						Type: chart.Type,
+					})
+					break
+				}
 			}
 		}
 	}
 
-	// Render the template
-	tmpl, err := template.New("tps.tmpl").ParseFiles(filepath.Join("static", "tmpl", "tps.tmpl"))
+	// Create a template.FuncMap with the toLower function
+	funcMap := template.FuncMap{
+		"toLower": strings.ToLower,
+	}
+
+	// Render the template with the FuncMap
+	tmpl, err := template.New("tps.tmpl").Funcs(funcMap).ParseFiles(filepath.Join("static", "tmpl", "tps.tmpl"))
 	if err != nil {
 		return fmt.Errorf("failed to parse template: %w", err)
 	}
@@ -219,6 +226,31 @@ func RenderSnippets(orchestrateService *service.OrchestrateService, ytdChartData
 		return fmt.Errorf("failed to execute template: %w", err)
 	}
 	return nil
+}
+
+// Helper function to convert description to lowerCamelCase for IDs
+func toLowerCamelCase(s string) string {
+	if len(s) == 0 {
+		return s
+	}
+	// Example: "Character Damage and Final Blows" -> "characterDamageAndFinalBlows"
+	result := ""
+	capitalizeNext := false
+	for i, r := range s {
+		if i == 0 {
+			result += string(unicode.ToLower(r))
+		} else if r == ' ' || r == '-' || r == '_' {
+			capitalizeNext = true
+		} else {
+			if capitalizeNext {
+				result += string(unicode.ToUpper(r))
+				capitalizeNext = false
+			} else {
+				result += string(r)
+			}
+		}
+	}
+	return result
 }
 
 // Generic helper function to prepare data

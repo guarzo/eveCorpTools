@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"html/template"
@@ -57,7 +58,7 @@ import (
 //}
 
 func NotFoundHandler(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles(filepath.Join("static", "404.tmpl"))
+	tmpl, err := template.ParseFiles(filepath.Join("static", "tmpl", "404.tmpl"))
 	if err != nil {
 		http.Error(w, "404 Page Not Found", http.StatusNotFound)
 		return
@@ -78,15 +79,22 @@ func LoadingHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set headers and write response
-	w.WriteHeader(http.StatusOK)
-	if err := tmpl.Execute(w, nil); err != nil {
+	// Execute the template into a buffer first
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, nil); err != nil {
 		fmt.Printf("Error executing template %s: %v\n", tmplPath, err)
 		http.Error(w, "Failed to render loading page", http.StatusInternalServerError)
 		return
 	}
 
-	// Explicitly flush the response
+	// Set headers and write the buffer to the response
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	if _, err := w.Write(buf.Bytes()); err != nil {
+		fmt.Printf("Error writing response: %v\n", err)
+	}
+
+	// Explicitly flush the response if possible
 	if flusher, ok := w.(http.Flusher); ok {
 		flusher.Flush()
 	}
@@ -128,7 +136,7 @@ func generateChart(orchestrator *service.OrchestrateService, route config.Route,
 		if err != nil {
 			return err
 		}
-		return visuals.RenderSnippets(orchestrator, chartData, lastMonthData, mtdData, filePath)
+		return visuals.RenderCharts(orchestrator, chartData, lastMonthData, mtdData, filePath)
 	}
 }
 

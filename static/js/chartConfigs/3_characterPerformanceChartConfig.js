@@ -1,33 +1,28 @@
 // static/js/chartConfigs/characterPerformanceChartConfig.js
-import { truncateLabel, getCommonOptions, validateChartDataArray } from '../utils.js';
+
+import { truncateLabel, getColor, getCommonOptions, validateChartDataArray } from '../utils.js';
 
 /**
  * Configuration for the Character Performance Chart
  */
 const characterPerformanceChartConfig = {
-    id: 'characterPerformanceChart',
-    instance: {}, // Object to hold instances per timeframe
-    dataKeys: {
-        mtd: { dataVar: 'mtdCharacterPerformanceData', canvasId: 'characterPerformanceChart_mtd' },
-        ytd: { dataVar: 'ytdCharacterPerformanceData', canvasId: 'characterPerformanceChart_ytd' },
-        lastMonth: { dataVar: 'lastMCharacterPerformanceData', canvasId: 'characterPerformanceChart_lastM' },
-    },
     type: 'bar', // Base type
     options: getCommonOptions('Character Performance', {
-        // No need to redefine plugins here as they're handled in getCommonOptions
         scales: {
-            // y1 is already defined in getCommonOptions for Points
+            // Additional scale options can be added here if needed
         },
         datasets: {
-            // Define additional dataset options if needed
+            // Additional dataset options can be added here if needed
         },
     }),
     processData: function (data) {
         const chartName = 'Character Performance Chart';
         if (!validateChartDataArray(data, chartName)) {
-            // Trigger noData plugin
+            // Return empty labels and datasets to trigger the noDataPlugin
             return { labels: [], datasets: [] };
         }
+
+        console.log('Incoming data for Character Performance:', data); // Debugging log
 
         // Sort data by KillCount descending
         const sortedData = [...data].sort((a, b) => (b.KillCount || 0) - (a.KillCount || 0));
@@ -36,7 +31,7 @@ const characterPerformanceChartConfig = {
         const topN = 10;
         const limitedData = sortedData.slice(0, topN);
 
-        const labels = limitedData.map(item => item.Name || 'Unknown'); // Ensure correct field name
+        const labels = limitedData.map(item => item.CharacterName || item.Name || 'Unknown');
         const truncatedLabels = labels.map(label => truncateLabel(label, 15));
 
         const kills = limitedData.map(item => item.KillCount || 0);
@@ -51,7 +46,7 @@ const characterPerformanceChartConfig = {
                 backgroundColor: 'rgba(75, 192, 192, 0.7)',
                 borderColor: 'rgba(75, 192, 192, 1)',
                 borderWidth: 1,
-                yAxisID: 'y', // Assign to primary y-axis
+                yAxisID: 'y',
             },
             {
                 label: 'Solo Kills',
@@ -60,7 +55,7 @@ const characterPerformanceChartConfig = {
                 backgroundColor: 'rgba(153, 102, 255, 0.7)',
                 borderColor: 'rgba(153, 102, 255, 1)',
                 borderWidth: 1,
-                yAxisID: 'y', // Assign to primary y-axis
+                yAxisID: 'y',
             },
             {
                 label: 'Points',
@@ -70,13 +65,12 @@ const characterPerformanceChartConfig = {
                 borderColor: 'rgba(255, 159, 64, 1)',
                 borderWidth: 2,
                 fill: false,
-                yAxisID: 'y1', // Assign to secondary y-axis
+                yAxisID: 'y1',
                 tension: 0.1,
                 pointRadius: 4,
             },
         ];
 
-        // Debugging Logs
         console.log('Processed Labels:', truncatedLabels);
         console.log('Kills Data:', kills);
         console.log('Solo Kills Data:', soloKills);

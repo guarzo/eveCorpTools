@@ -1,105 +1,64 @@
-// static/js/chartConfigs/victimsByCorpChartConfig.js
+// static/js/chartConfigs/9_victimsByCorpChartConfig.js
 
-import { truncateLabel, getColor, getCommonOptions, validateChartDataArray } from '../utils.js';
+import { getCommonOptions, validateChartDataArray } from '../utils.js';
 
 /**
- * Configuration for the Kills by Corporation Bar Chart
+ * Configuration for the Victims by Corporation Chart
  */
-const victimsByCorpChartConfig = {
-    id: 'victimsByCorpChart',
-    instance: {}, // To store chart instances per timeframe if needed
-    dataKeys: {
-        mtd: { dataVar: 'mtdVictimsByCorpData', canvasId: 'victimsByCorpChart_mtd' },
-        ytd: { dataVar: 'ytdVictimsByCorpData', canvasId: 'victimsByCorpChart_ytd' },
-        lastMonth: { dataVar: 'lastMVictimsByCorpData', canvasId: 'victimsByCorpChart_lastM' },
-    },
-    type: 'bar',
-    dataType: 'array', // Expecting an array of CorporationKillCount
+const victimsByCorporationChartConfig = {
+    type: 'bar', // or the appropriate chart type
     options: getCommonOptions('Victims by Corporation', {
-        plugins: {
-            legend: { display: false },
-            tooltip: {
-                callbacks: {
-                    label: function (context) {
-                        const killCount = context.parsed.y !== undefined ? context.parsed.y : 0;
-                        return `Killmails: ${killCount}`;
-                    },
-                },
-            },
-        },
+        // ... your specific options here ...
         scales: {
             x: {
-                type: 'category',
                 title: {
                     display: true,
-                    text: 'Corporations',
-                    color: '#ffffff',
-                    font: {
-                        size: 14,
-                        family: 'Montserrat, sans-serif',
-                        weight: 'bold',
-                    },
+                    text: 'Corporation',
                 },
-                ticks: {
-                    color: '#ffffff',
-                    maxRotation: 45,
-                    minRotation: 45,
-                    autoSkip: false,
-                },
-                grid: { display: false },
             },
             y: {
-                beginAtZero: true,
                 title: {
                     display: true,
-                    text: 'Kill Count',
-                    color: '#ffffff',
-                    font: {
-                        size: 14,
-                        family: 'Montserrat, sans-serif',
-                        weight: 'bold',
-                    },
+                    text: 'Number of Victims',
                 },
-                ticks: {
-                    color: '#ffffff',
-                },
-                grid: { color: '#444' },
             },
         },
     }),
-    processData: function (data) {
-        const chartName = 'Victims by Corporation Chart';
+    processData: function(data) {
+        const chartName = 'Victims by Corporation';
         if (!validateChartDataArray(data, chartName)) {
-            console.log("failed validate for Victims by Corp")
-            console.log(data,chartName)
-            // Return empty labels and datasets to trigger the noDataPlugin
-            return { labels: [], datasets: [] };
+            // Return empty data to trigger the noDataPlugin
+            return { labels: [], datasets: [], noDataMessage: 'No data available for this chart.' };
         }
 
-        // Sort data by kill count descending
-        const sortedData = data.sort((a, b) => b.KillCount - a.KillCount);
+        console.log('Incoming data for Victims by Corporation:', data); // Debugging log
 
-        // Limit to top 15 corporations
-        const limitedData = sortedData.slice(0, 15);
+        // Inspect each data item
+        data.forEach((item, index) => {
+            console.log(`Item ${index}:`, item);
+        });
 
-        // Prepare labels and data
-        const labels = limitedData.map(item => item.name || item.corporation_id || "Unknown");
-        const counts = limitedData.map(item => item.kill_count);
+        // Update the field names based on the actual data structure
+        const labels = data.map(item => item.name || 'Unknown');
+        const victims = data.map(item => item.kill_count || 0);
 
-        // Assign colors to each bar
-        const backgroundColors = counts.map((count, index) => getColor(index));
+        // Check for 'Unknown' labels
+        const allUnknown = labels.every(label => label === 'Unknown');
+        if (allUnknown) {
+            console.warn(`All labels for ${chartName} are 'Unknown'. Check data source.`);
+        }
 
-        const datasets = [{
-            label: 'Killmails',
-            data: counts,
-            backgroundColor: backgroundColors,
-            borderColor: 'rgba(75, 192, 192, 1)',
-            borderWidth: 1,
-        }];
-        console.log("processed data victims by corp", labels, datasets)
-
-        return { labels, datasets };
+        return {
+            labels: labels,
+            datasets: [{
+                label: 'Number of Victims',
+                data: victims,
+                backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 1,
+            }]
+        };
     },
 };
 
-export default victimsByCorpChartConfig;
+export default victimsByCorporationChartConfig;

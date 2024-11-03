@@ -6,21 +6,11 @@ import { getCommonOptions, validateChartDataArray } from '../utils.js';
  * Configuration for the Kill Activity Over Time Chart
  */
 const killActivityChartConfig = {
-    id: 'killActivityChart',
-    instance: {}, // Initialize as an object to store chart instances per timeframe
-    dataKeys: {
-        mtd: { dataVar: 'mtdKillActivityData', canvasId: 'killActivityChart_mtd' },
-        ytd: { dataVar: 'ytdKillActivityData', canvasId: 'killActivityChart_ytd' },
-        lastMonth: { dataVar: 'lastMKillActivityData', canvasId: 'killActivityChart_lastM' },
-    },
     type: 'line',
-    dataType: 'array', // Specify that this chart expects array data
     options: getCommonOptions('Kill Activity Over Time', {
         plugins: {
             legend: { display: true, position: 'top', labels: { color: '#ffffff' } },
             tooltip: {
-                mode: 'nearest', // Changed for better tooltip behavior
-                intersect: true,
                 callbacks: {
                     label: function (context) {
                         const label = context.dataset.label || '';
@@ -102,7 +92,7 @@ const killActivityChartConfig = {
             return { x: date, y: kills };
         }).filter(point => point !== null); // Remove nulls
 
-        // Check if there are at least 7 days of data
+        // Check if there are at least 3 data points
         if (dataPoints.length < 3) {
             console.warn(`Not enough data points (${dataPoints.length}) for ${chartName}.`);
             return { labels: [], datasets: [], noDataMessage: 'Not enough data to display the chart.' };

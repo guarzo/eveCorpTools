@@ -7,8 +7,8 @@ import (
 	"github.com/guarzo/zkillanalytics/internal/model"
 )
 
-// CharacterKillData holds the data for character kill counts
-type CharacterKillData struct {
+// CharacterPerformanceData holds the data for character kill counts
+type CharacterPerformanceData struct {
 	CharacterID int
 	KillCount   int
 	Name        string
@@ -27,8 +27,8 @@ type ChartJSDataset struct {
 	BackgroundColor []string `json:"backgroundColor"`
 }
 
-func GetCharacterPerformance(chartData *model.ChartData) []CharacterKillData {
-	characterStats := make(map[int]*CharacterKillData)
+func GetCharacterPerformance(chartData *model.ChartData) []CharacterPerformanceData {
+	characterStats := make(map[int]*CharacterPerformanceData)
 
 	for _, km := range chartData.KillMails {
 		for _, attacker := range km.EsiKillMail.Attackers {
@@ -49,7 +49,7 @@ func GetCharacterPerformance(chartData *model.ChartData) []CharacterKillData {
 
 			data, exists := characterStats[characterID]
 			if !exists {
-				data = &CharacterKillData{
+				data = &CharacterPerformanceData{
 					Name: characterInfo.Name,
 				}
 				characterStats[characterID] = data
@@ -65,7 +65,7 @@ func GetCharacterPerformance(chartData *model.ChartData) []CharacterKillData {
 	}
 
 	// Convert map to slice
-	var result []CharacterKillData
+	var result []CharacterPerformanceData
 	for _, data := range characterStats {
 		result = append(result, *data)
 	}

@@ -1,20 +1,12 @@
-// static/js/chartConfigs/7_killLossRatioChartConfig.js
+// static/js/chartConfigs/killToLossRatioChartConfig.js
 
 import { truncateLabel, getColor, getCommonOptions, validateChartDataArray } from '../utils.js';
 
 /**
  * Configuration for the Kill-to-Loss Ratio Chart
  */
-const killLossRatioChartConfig = {
-    id: 'killLossRatioChart',
-    instance: {}, // Initialize as an object to store chart instances per timeframe
-    dataKeys: {
-        mtd: { dataVar: 'mtdKillLossRatioData', canvasId: 'killLossRatioChart_mtd' },
-        ytd: { dataVar: 'ytdKillLossRatioData', canvasId: 'killLossRatioChart_ytd' },
-        lastMonth: { dataVar: 'lastMKillLossRatioData', canvasId: 'killLossRatioChart_lastM' },
-    },
+const killToLossRatioChartConfig = {
     type: 'bar',
-    dataType: 'array', // Specify that this chart expects array data
     options: getCommonOptions('Kill-to-Loss Ratio', {
         plugins: {
             legend: { display: false },
@@ -53,8 +45,6 @@ const killLossRatioChartConfig = {
             },
             y: {
                 beginAtZero: true,
-                ticks: { color: '#ffffff' },
-                grid: { color: '#444' },
                 title: {
                     display: true,
                     text: 'Ratio',
@@ -65,6 +55,10 @@ const killLossRatioChartConfig = {
                         weight: 'bold',
                     },
                 },
+                ticks: {
+                    color: '#ffffff',
+                },
+                grid: { color: '#444' },
             },
         },
     }),
@@ -75,9 +69,14 @@ const killLossRatioChartConfig = {
             return { labels: [], datasets: [], noDataMessage: 'No data available for this chart.' };
         }
 
+        console.log('Incoming data for Kill-to-Loss Ratio:', data); // Debugging log
+
+        // Sort data by Ratio descending
+        const sortedData = [...data].sort((a, b) => (b.Ratio || 0) - (a.Ratio || 0));
+
         // Separate persistent characters and top ratios
-        const persistentCharacters = data.filter(item => isPersistentCharacter(item.CharacterName));
-        const topRatios = data.filter(item => !isPersistentCharacter(item.CharacterName))
+        const persistentCharacters = sortedData.filter(item => isPersistentCharacter(item.CharacterName));
+        const topRatios = sortedData.filter(item => !isPersistentCharacter(item.CharacterName))
             .sort((a, b) => (b.Ratio || 0) - (a.Ratio || 0))
             .slice(0, 10); // Top 10 by ratio
 
@@ -88,7 +87,7 @@ const killLossRatioChartConfig = {
         const maxDisplay = 20;
         const limitedData = combinedData.slice(0, maxDisplay);
 
-        // Check if there are at least 7 characters to display
+        // Check if there are at least 3 characters to display
         if (limitedData.length < 3) {
             console.warn(`Not enough data points (${limitedData.length}) for ${chartName}.`);
             return { labels: [], datasets: [], noDataMessage: 'Not enough data to display the chart.' };
@@ -127,4 +126,4 @@ function isPersistentCharacter(characterName) {
     return persistentList.includes(characterName);
 }
 
-export default killLossRatioChartConfig;
+export default killToLossRatioChartConfig;

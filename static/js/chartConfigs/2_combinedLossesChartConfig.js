@@ -1,14 +1,11 @@
 // static/js/chartConfigs/combinedLossesChartConfig.js
+
 import { truncateLabel, getCommonOptions, validateChartDataArray } from '../utils.js';
 
+/**
+ * Configuration for the Combined Losses Chart
+ */
 const combinedLossesChartConfig = {
-    id: 'combinedLossesChart',
-    instance: {}, // Changed from null to an object to hold instances per timeframe
-    dataKeys: {
-        mtd: { dataVar: 'mtdOurLossesValueData', canvasId: 'combinedLossesChart_mtd' },
-        ytd: { dataVar: 'ytdOurLossesValueData', canvasId: 'combinedLossesChart_ytd' },
-        lastMonth: { dataVar: 'lastMOurLossesValueData', canvasId: 'combinedLossesChart_lastM' },
-    },
     type: 'bar', // Base type for mixed charts
     options: getCommonOptions('Combined Losses', {
         plugins: {
@@ -101,7 +98,6 @@ const combinedLossesChartConfig = {
             mode: 'index',
             intersect: false,
         },
-        // Removed duplicated 'plugins' property
         datasets: {
             bar: {
                 barPercentage: 0.6, // Adjusted for better visibility
@@ -128,8 +124,6 @@ const combinedLossesChartConfig = {
 
         const lossesValue = limitedData.map(item => item.LossesValue || 0);
         const lossesCount = limitedData.map(item => item.LossesCount || 0);
-        const shipTypes = limitedData.map(item => item.ShipType || 'Unknown');
-        const shipCounts = limitedData.map(item => item.ShipCount || 0);
 
         const datasets = [
             {

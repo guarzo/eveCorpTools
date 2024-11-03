@@ -13,8 +13,8 @@ import (
 	"github.com/guarzo/zkillanalytics/internal/service"
 )
 
-// ServeRoute is an HTTP handler that generates a bar chart based on the mode
-func ServeRoute(route config.Route, orchestrateService *service.OrchestrateService) http.HandlerFunc {
+// TPSHandler is an HTTP handler that generates a bar chart based on the mode
+func TPSHandler(route config.Route, orchestrateService *service.OrchestrateService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Parse URL parameters to determine data mode
 		vars := mux.Vars(r)

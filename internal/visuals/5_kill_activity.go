@@ -7,12 +7,12 @@ import (
 	"github.com/guarzo/zkillanalytics/internal/model"
 )
 
-type TimeSeriesData struct {
+type KillActivityData struct {
 	Time  time.Time
 	Kills int
 }
 
-func GetKillActivityOverTime(chartData *model.ChartData, interval string) []TimeSeriesData {
+func GetKillActivityOverTime(chartData *model.ChartData, interval string) []KillActivityData {
 	killCounts := make(map[time.Time]int)
 
 	for _, km := range chartData.KillMails {
@@ -42,9 +42,9 @@ func GetKillActivityOverTime(chartData *model.ChartData, interval string) []Time
 	}
 
 	// Convert map to slice and sort by time
-	var timeSeries []TimeSeriesData
+	var timeSeries []KillActivityData
 	for t, count := range killCounts {
-		timeSeries = append(timeSeries, TimeSeriesData{Time: t, Kills: count})
+		timeSeries = append(timeSeries, KillActivityData{Time: t, Kills: count})
 	}
 	sort.Slice(timeSeries, func(i, j int) bool {
 		return timeSeries[i].Time.Before(timeSeries[j].Time)
