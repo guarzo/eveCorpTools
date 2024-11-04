@@ -81,7 +81,6 @@ func (os *OrchestrateService) GetAllData(ctx context.Context, corporations, alli
 
 	os.Logger.Infof("Fetching data from %s to %s...", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 	fetchStart := time.Now()
-	os.Logger.Info("really starting")
 	year := startDate.Year()
 	esiRefresh := false
 

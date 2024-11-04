@@ -60,8 +60,9 @@ func loggingMiddleware(logger *logrus.Logger) mux.MiddlewareFunc {
 // registerTPSRoutes registers the routes for the TPS subdomain
 func registerTPSRoutes(r *mux.Router, orchestrateService *service.OrchestrateService) {
 	r.HandleFunc("/", routes.TPSHandler(config.Snippets, orchestrateService)).Methods("GET")
-	r.HandleFunc("/lastMonth", routes.TPSHandler(config.All, orchestrateService)).Methods("GET")
-	r.HandleFunc("/currentMonth", routes.TPSHandler(config.All, orchestrateService)).Methods("GET")
+	//r.HandleFunc("/lastMonth", routes.TPSHandler(config.All, orchestrateService)).Methods("GET")
+	//r.HandleFunc("/currentMonth", routes.TPSHandler(config.All, orchestrateService)).Methods("GET")
+	r.HandleFunc("/refresh", routes.RefreshTPSHandler(orchestrateService)).Methods("GET")
 	// r.HandleFunc("/config", routes.TPSHandler(persist.Config, orchestrateService)).Methods("GET")
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	r.NotFoundHandler = http.HandlerFunc(routes.NotFoundHandler)

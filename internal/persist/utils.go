@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const dataDirectory = "data/monthly"
@@ -64,6 +65,20 @@ func DeleteFilesInDirectory(dir string) error {
 		}
 	}
 
+	return nil
+}
+
+func DeleteCurrentMonthFile() error {
+	currentYear := time.Now().Year()
+	currentMonth := time.Now().Month()
+	return DeleteKillMailFile(currentYear, int(currentMonth))
+}
+
+func DeleteKillMailFile(year, month int) error {
+	fileName := GenerateZkillFileName(year, month)
+	if err := os.Remove(fileName); err != nil {
+		return err
+	}
 	return nil
 }
 
