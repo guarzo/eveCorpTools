@@ -3,178 +3,128 @@ package loot
 import (
 	"context"
 	"encoding/json"
-	"github.com/gorilla/mux"
-	"github.com/guarzo/zkillanalytics/internal/handlers"
-	"github.com/guarzo/zkillanalytics/internal/persist"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
-	"os"
 	"sync"
-	"time"
+
+	"github.com/gorilla/mux"
+
+	"github.com/guarzo/zkillanalytics/internal/handlers"
+	"github.com/guarzo/zkillanalytics/internal/persist"
 
 	"github.com/guarzo/zkillanalytics/internal/config"
 	"github.com/guarzo/zkillanalytics/internal/model"
 	"github.com/guarzo/zkillanalytics/internal/service"
 )
 
+// LootAppraisalPageHandler renders the loot appraisal page.
 func LootAppraisalPageHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("static/tmpl/lootappraisal.tmpl"))
 	if err := tmpl.Execute(w, nil); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Failed to render template", http.StatusInternalServerError)
 	}
 }
 
-// SaveLootSplitHandler handles saving the loot split details
+// SaveLootSplitHandler handles saving a single loot split.
 func SaveLootSplitHandler(w http.ResponseWriter, r *http.Request) {
 	var lootSplit model.LootSplit
 	if err := json.NewDecoder(r.Body).Decode(&lootSplit); err != nil {
 		log.Printf("Error decoding request body: %v", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
 
-	lootSplit.Date = time.Now().UTC().Format(time.RFC3339)
-
-	var lootSplits []model.LootSplit
-
-	// Load existing splits
-	file, err := os.Open("data/loot_split.json")
-	if err == nil {
-		defer file.Close()
-		if err := json.NewDecoder(file).Decode(&lootSplits); err != nil {
-			log.Printf("Error decoding existing splits: %v", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
-
-	// Append new split
-	lootSplits = append(lootSplits, lootSplit)
-
-	// Save all splits
-	file, err = os.Create("data/loot_split.json")
-	if err != nil {
-		log.Printf("Error creating file for saving splits: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer file.Close()
-
-	if err := json.NewEncoder(file).Encode(lootSplits); err != nil {
-		log.Printf("Error encoding splits to file: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	// Attempt to add the new loot split
+	if err := persist.AddLootSplit(config.LootFile, lootSplit); err != nil {
+		log.Printf("Error saving loot split: %v", err)
+		http.Error(w, "Failed to save loot split", http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
 }
 
-// SaveLootSplitsHandler handles saving the loot split details
+// SaveLootSplitsHandler handles saving multiple loot splits.
 func SaveLootSplitsHandler(w http.ResponseWriter, r *http.Request) {
 	var lootSplits []model.LootSplit
 	if err := json.NewDecoder(r.Body).Decode(&lootSplits); err != nil {
 		log.Printf("Error decoding request body: %v", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
 
-	// Save all splits
-	file, err := os.Create("data/loot_split.json")
-	if err != nil {
-		log.Printf("Error creating file for saving splits: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer file.Close()
-
-	if err := json.NewEncoder(file).Encode(lootSplits); err != nil {
-		log.Printf("Error encoding splits to file: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	// Attempt to save all loot splits
+	if err := persist.SaveLootSplits(config.LootFile, lootSplits); err != nil {
+		log.Printf("Error saving loot splits: %v", err)
+		http.Error(w, "Failed to save loot splits", http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
 }
 
+// FetchLootSplitsHandler handles fetching all loot splits.
 func FetchLootSplitsHandler(w http.ResponseWriter, r *http.Request) {
-	file, err := os.Open("data/loot_split.json")
+	lootSplits, err := persist.LoadLootSplits(config.LootFile)
 	if err != nil {
-		log.Printf("Error opening file: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer file.Close()
-
-	var lootSplits []model.LootSplit
-	if err := json.NewDecoder(file).Decode(&lootSplits); err != nil {
-		log.Printf("Error decoding JSON: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Error loading loot splits: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
+	// Successfully loaded splits; return them as JSON
+	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(lootSplits); err != nil {
-		log.Printf("Error encoding JSON: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Error encoding JSON response: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
 	}
 }
 
+// LootSummaryHandler renders the loot summary page.
 func LootSummaryHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl, err := template.ParseFiles("static/tmpl/lootsummary.tmpl")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Failed to parse template", http.StatusInternalServerError)
 		return
 	}
-	tmpl.Execute(w, nil)
+	if err := tmpl.Execute(w, nil); err != nil {
+		http.Error(w, "Failed to render template", http.StatusInternalServerError)
+		return
+	}
 }
 
-// DeleteLootSplitHandler handles the deletion of a loot split
+// DeleteLootSplitHandler handles the deletion of a loot split by ID.
 func DeleteLootSplitHandler(w http.ResponseWriter, r *http.Request) {
 	var requestData struct {
 		ID int `json:"id"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&requestData); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Printf("Error decoding request body: %v", err)
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
 
-	var lootSplits []model.LootSplit
-
-	// Load existing splits
-	file, err := os.Open("data/loot_split.json")
-	if err == nil {
-		defer file.Close()
-		if err := json.NewDecoder(file).Decode(&lootSplits); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
-
-	// Remove the split with the given ID
-	if requestData.ID >= 0 && requestData.ID < len(lootSplits) {
-		lootSplits = append(lootSplits[:requestData.ID], lootSplits[requestData.ID+1:]...)
-	} else {
-		http.Error(w, "Invalid ID", http.StatusBadRequest)
-		return
-	}
-
-	// Save the updated splits
-	file, err = os.Create("data/loot_split.json")
+	// Attempt to delete the loot split
+	_, err := persist.DeleteLootSplit(config.LootFile, requestData.ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Error deleting loot split: %v", err)
+		if err.Error() == fmt.Sprintf("invalid ID: %d", requestData.ID) {
+			http.Error(w, "Invalid ID", http.StatusBadRequest)
+		} else {
+			http.Error(w, "Failed to delete loot split", http.StatusInternalServerError)
+		}
 		return
 	}
-	defer file.Close()
 
-	if err := json.NewEncoder(file).Encode(lootSplits); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
+	// Acknowledge successful deletion
 	w.WriteHeader(http.StatusOK)
 }
 
+// GetPilotNamesHandler retrieves and returns pilot names.
 func GetPilotNamesHandler(orchestrateService *service.OrchestrateService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Load added and removed pilots
@@ -235,6 +185,7 @@ func GetPilotNamesHandler(orchestrateService *service.OrchestrateService) http.H
 	}
 }
 
+// AddPilotHandler handles adding a new pilot.
 func AddPilotHandler(orchestrateService *service.OrchestrateService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Println("AddPilotHandler invoked")
@@ -270,6 +221,7 @@ func AddPilotHandler(orchestrateService *service.OrchestrateService) http.Handle
 	}
 }
 
+// RemovePilotHandler handles removing an existing pilot.
 func RemovePilotHandler(orchestrateService *service.OrchestrateService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)

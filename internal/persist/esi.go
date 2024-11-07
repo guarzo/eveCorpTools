@@ -1,6 +1,7 @@
 package persist
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -59,8 +60,8 @@ func SaveFailedCharacters(failedChars *model.FailedCharacters) error {
 }
 
 // LoadIdsFromFile loads IDs from the specified file.
-func LoadIdsFromFile() (model.Ids, error) {
-	var ids model.Ids
+func LoadIdsFromFile() (*model.Ids, error) {
+	var ids *model.Ids
 	if err := ReadJSONFromFile(idsFile, &ids); err != nil {
 		return ids, err
 	}
@@ -75,17 +76,17 @@ func SaveIdsToFile(ids *model.Ids) error {
 }
 
 // CheckIfIdsChanged compares new and old IDs to identify any differences.
-func CheckIfIdsChanged(ids *model.Ids) (bool, *model.Ids, string) {
+func CheckIfIdsChanged(ids *model.Ids) (bool, *model.Ids, error) {
 	// Load the existing IDs from file
 	oldIds, err := LoadIdsFromFile()
 	if err != nil {
-		return true, nil, err.Error()
+		return true, nil, err
 	}
 
 	// Load trusted characters and corporations
 	trustedCharacters, err := LoadTrustedCharacters()
 	if err != nil {
-		return true, nil, fmt.Sprintf("failed to load trusted characters: %v", err)
+		return true, nil, errors.New(fmt.Sprintf("failed to load trusted characters: %v", err))
 	}
 
 	// Append trusted character IDs
@@ -134,5 +135,5 @@ func CheckIfIdsChanged(ids *model.Ids) (bool, *model.Ids, string) {
 		AllianceIDs:    newAllianceIds,
 		CharacterIDs:   newCharacterIds,
 		CorporationIDs: newCorporationIds,
-	}, ""
+	}, nil
 }

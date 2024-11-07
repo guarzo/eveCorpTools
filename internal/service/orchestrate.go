@@ -123,16 +123,20 @@ func (os *OrchestrateService) GetAllData(ctx context.Context, corporations, alli
 	}
 
 	fetchIDs, err := persist.LoadIdsFromFile()
-	if err != nil || (fetchIDs.CorporationIDs == nil && fetchIDs.AllianceIDs == nil && fetchIDs.CharacterIDs == nil) {
+	if err != nil || fetchIDs == nil || (fetchIDs.CorporationIDs == nil && fetchIDs.AllianceIDs == nil && fetchIDs.CharacterIDs == nil) {
 		os.Logger.Warnf("Using new ID File: %v", err)
-		fetchIDs = *hardCodedIDs
-	} else {
+		fetchIDs = &model.Ids{ // Initialize fetchIDs as a pointer to avoid nil reference issues
+			CorporationIDs: make([]int, 0),
+			AllianceIDs:    make([]int, 0),
+			CharacterIDs:   make([]int, 0),
+		}
 		os.Logger.Infof("Loaded IDs from file")
 	}
 
-	idChanged, newIDs, idStr := persist.CheckIfIdsChanged(hardCodedIDs)
-	if idStr != "" {
-		os.Logger.Infof("Checking if IDs changed: %s", idStr)
+	idChanged, newIDs, err := persist.CheckIfIdsChanged(hardCodedIDs)
+	if err != nil {
+		newIDs = hardCodedIDs
+		os.Logger.Errorf("Error checking if IDs changes")
 	}
 
 	// Create parameters for data fetching
@@ -196,7 +200,7 @@ func (os *OrchestrateService) GetAllData(ctx context.Context, corporations, alli
 		return nil, err
 	}
 
-	err = persist.SaveIdsToFile(&fetchIDs)
+	err = persist.SaveIdsToFile(fetchIDs)
 	if err != nil {
 		os.Logger.Errorf("Error saving IDs data: %v", err)
 		return nil, err
@@ -204,6 +208,12 @@ func (os *OrchestrateService) GetAllData(ctx context.Context, corporations, alli
 
 	if saveErr := persist.SaveFailedCharacters(os.Failed); saveErr != nil {
 		os.Logger.Errorf("Error saving IDs data: %v", err)
+	}
+
+	cacheFile := persist.GenerateCacheDataFileName()
+	err = os.ESIService.Cache.SaveToFile(cacheFile)
+	if err != nil {
+		os.Logger.Errorf("Error saving cache: %v", err)
 	}
 
 	fetchTotalTime := time.Since(fetchStart)

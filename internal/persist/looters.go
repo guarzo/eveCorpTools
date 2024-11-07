@@ -3,9 +3,13 @@ package persist
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"sync"
+	"time"
+
+	"github.com/guarzo/zkillanalytics/internal/model"
 )
 
 var (
@@ -110,4 +114,100 @@ func RemovePilot(name string) error {
 
 	log.Println("Pilot successfully marked as removed and saved to file")
 	return nil
+}
+
+// LoadLootSplits reads the loot splits from the specified JSON file.
+// It returns an empty slice if the file does not exist or is empty.
+func LoadLootSplits(filename string) ([]model.LootSplit, error) {
+	var lootSplits []model.LootSplit
+
+	file, err := os.Open(filename)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// File does not exist; return empty slice
+			return lootSplits, nil
+		}
+		return nil, fmt.Errorf("failed to open file %s: %w", filename, err)
+	}
+	defer file.Close()
+
+	// Check if file is empty
+	fi, err := file.Stat()
+	if err != nil {
+		return nil, fmt.Errorf("failed to stat file %s: %w", filename, err)
+	}
+
+	if fi.Size() == 0 {
+		// Empty file; return empty slice
+		return lootSplits, nil
+	}
+
+	// Reset file pointer to the beginning
+	if _, err := file.Seek(0, 0); err != nil {
+		return nil, fmt.Errorf("failed to seek file %s: %w", filename, err)
+	}
+
+	// Attempt to decode JSON
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&lootSplits); err != nil {
+		if err == io.EOF {
+			// Empty JSON; return empty slice
+			return lootSplits, nil
+		}
+		return nil, fmt.Errorf("failed to decode JSON from file %s: %w", filename, err)
+	}
+
+	return lootSplits, nil
+}
+
+// SaveLootSplits writes the provided loot splits to the specified JSON file.
+func SaveLootSplits(filename string, lootSplits []model.LootSplit) error {
+	return WriteJSONToFile(filename, lootSplits)
+}
+
+// AddLootSplit adds a new loot split to the existing splits and saves them.
+// It sets the Date field of the new split to the current UTC time.
+func AddLootSplit(filename string, newSplit model.LootSplit) error {
+	// Load existing splits
+	lootSplits, err := LoadLootSplits(filename)
+	if err != nil {
+		return fmt.Errorf("failed to load existing loot splits: %w", err)
+	}
+
+	// Set the Date field to current UTC time
+	newSplit.Date = time.Now().UTC().Format(time.RFC3339)
+
+	// Append the new split
+	lootSplits = append(lootSplits, newSplit)
+
+	// Save all splits
+	if err := SaveLootSplits(filename, lootSplits); err != nil {
+		return fmt.Errorf("failed to save loot splits: %w", err)
+	}
+
+	return nil
+}
+
+// DeleteLootSplit deletes a loot split by its ID and saves the updated splits.
+func DeleteLootSplit(filename string, id int) ([]model.LootSplit, error) {
+	// Load existing splits
+	lootSplits, err := LoadLootSplits(filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load existing loot splits: %w", err)
+	}
+
+	// Validate ID
+	if id < 0 || id >= len(lootSplits) {
+		return nil, fmt.Errorf("invalid ID: %d", id)
+	}
+
+	// Remove the split with the given ID
+	lootSplits = append(lootSplits[:id], lootSplits[id+1:]...)
+
+	// Save the updated splits
+	if err := SaveLootSplits(filename, lootSplits); err != nil {
+		return nil, fmt.Errorf("failed to save updated loot splits: %w", err)
+	}
+
+	return lootSplits, nil
 }

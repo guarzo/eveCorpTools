@@ -18,60 +18,128 @@ async function fetchLootSummaries() {
 
         console.log('Fetched data:', data); // Debugging line
 
-        // Check if data is an array and has elements
-        if (Array.isArray(data) && data.length > 0) {
-            // Process data
-            const processedData = data.map((row, index) => {
-                return {
+        // Check if data is an array
+        if (Array.isArray(data)) {
+            if (data.length > 0) {
+                // Process data
+                const processedData = data.map((row, index) => ({
                     ...row,
                     id: index,
-                    date: row.date ? luxon.DateTime.fromISO(row.date, { zone: 'utc' }).toFormat('yyyy-MM-dd HH:mm:ss') : 'N/A',
-                    totalBuyPrice: row.totalBuyPrice ? formatNumber(row.totalBuyPrice) : '0'
-                };
-            });
+                    date: row.date
+                        ? luxon.DateTime.fromISO(row.date, { zone: 'utc' }).toFormat('yyyy-MM-dd HH:mm:ss')
+                        : 'N/A',
+                    totalBuyPrice: row.totalBuyPrice
+                        ? formatNumber(Number(row.totalBuyPrice))
+                        : '0', // Convert to number
+                }));
 
-            // Initialize Tabulator table
-            const table = new Tabulator("#lootSummaryTable", {
-                data: processedData,
-                layout: "fitColumns",
-                columns: [
-                    { title: "Date", field: "date" },
-                    { title: "Battle Report", field: "battleReport", formatter: "link", formatterParams: { labelField: "battleReport", urlField: "battleReport" } },
-                    { title: "Total Buy Price", field: "totalBuyPrice" }
-                ],
-                // Additional Tabulator configurations as needed
-            });
 
-            // Set up row click event
-            table.on("rowClick", function(e, row) {
-                const details = row.getData();
-                document.getElementById("selectedRowId").value = details.id;
-                document.getElementById("detailDate").innerText = details.date || 'N/A';
-                document.getElementById("detailBattleReport").innerText = details.battleReport || 'N/A';
-                document.getElementById("detailBattleReport").href = details.battleReport || '#';
-                document.getElementById("detailTotalBuyPrice").innerText = details.totalBuyPrice || '0';
-                displaySplitDetails(details.splitDetails);
-                document.getElementById("detailContainer").style.display = "block";
-            });
+                window.lootSummaryTable = new Tabulator("#lootSummaryTable", {
+                    data: processedData,
+                    layout: "fitData",
+                    responsiveLayout: "hide",
+                    columns: [
+                        { title: "Date", field: "date", minWidth: 300 },
+                        { title: "Battle Report", field: "battleReport", formatter: "link", formatterParams: { labelField: "battleReport", urlField: "battleReport", minWidth: 300 } },
+                        { title: "Total Buy Price", field: "totalBuyPrice", minWidth: 300 },
+                        {
+                            title: "Remove",
+                            formatter: "buttonCross",
+                            hozAlign: "center",
+                            headerSort: false,
+                            minWidth: 50,
+                            cellClick: function (e, cell) {
+                                const rowData = cell.getRow().getData();
+                                confirmDelete(rowData.id); // Pass row id to confirmDelete
+                            }
+                        }
+                    ],
+                    // Additional Tabulator configurations as needed
+                });
 
-            // Ensure the lootSummaryTable is visible
-            document.getElementById("lootSummaryTable").style.display = "block";
+                // Set up row click event
+                window.lootSummaryTable.on("rowClick", function(e, row) {
+                    const details = row.getData();
+                    document.getElementById("selectedRowId").value = details.id;
+                    document.getElementById("detailDate").innerText = details.date || 'N/A';
+                    document.getElementById("detailBattleReport").innerText = details.battleReport || 'N/A';
+                    document.getElementById("detailBattleReport").href = details.battleReport || '#';
+                    document.getElementById("detailTotalBuyPrice").innerText = details.totalBuyPrice || '0';
+                    displaySplitDetails(details.splitDetails);
+                    document.getElementById("detailContainer").style.display = "block";
+                });
 
-            // Hide the 'no data' message if it exists
-            const noDataMessage = document.getElementById("noDataMessage");
-            if (noDataMessage) {
-                noDataMessage.style.display = "none";
+                // Ensure the lootSummaryTable is visible
+                document.getElementById("lootSummaryTable").style.display = "block";
+
+                // Hide the 'no data' message if it exists
+                const noDataMessage = document.getElementById("noDataMessage");
+                if (noDataMessage) {
+                    noDataMessage.style.display = "none";
+                }
+
+            } else {
+                // No data available
+                displayNoDataMessage();
             }
-
         } else {
-            // No data available
-            displayNoDataMessage();
+            // Unexpected data format
+            console.warn("Unexpected data format:", data);
+            displayErrorMessage("Received data in unexpected format.");
         }
 
     } catch (error) {
-        console.error("Error fetching loot summaries.", error);
-        displayErrorMessage(error.message);
+        console.error("Error fetching loot summaries:", error);
+        displayErrorMessage(error.message || "An unexpected error occurred.");
     }
+}
+
+function confirmDelete(id) {
+    Swal.fire({
+        title: 'Are you sure?',
+        text: "This action cannot be undone!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!',
+        cancelButtonText: 'Cancel',
+        reverseButtons: false
+    }).then((result) => {
+        if (result.isConfirmed) {
+            deleteDetails(id); // Pass the id to deleteDetails
+            Swal.fire({
+                title: 'Deleted!',
+                text: 'The loot split entry has been deleted.',
+                icon: 'success',
+                confirmButtonColor: '#3085d6'
+            });
+        }
+    });
+}
+
+function deleteDetails(id) {
+    fetch('/delete-loot-split', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ id: id })
+    })
+        .then(response => {
+            if (response.ok) {
+                console.log("Loot split deleted successfully.");
+                fetchLootSummaries(); // Refresh the table
+                document.getElementById("detailContainer").style.display = "none"; // Hide details container
+            } else {
+                console.error("Error deleting loot split.");
+                toastr.error('Failed to delete loot split.');
+            }
+        })
+        .catch(error => {
+            console.error("Error deleting loot split.", error);
+            toastr.error('An error occurred while deleting the loot split.');
+        });
 }
 
 function formatNumber(num) {
