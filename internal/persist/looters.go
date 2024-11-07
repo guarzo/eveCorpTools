@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/guarzo/zkillanalytics/internal/config"
 	"github.com/guarzo/zkillanalytics/internal/model"
 )
 
@@ -210,4 +211,25 @@ func DeleteLootSplit(filename string, id int) ([]model.LootSplit, error) {
 	}
 
 	return lootSplits, nil
+}
+
+// CreateLootSplitBackup creates a backup of the loot splits file with a timestamp
+func CreateLootSplitBackup() error {
+	// Ensure backup directory exists
+	if err := os.MkdirAll(config.LootDir, 0755); err != nil {
+		return fmt.Errorf("failed to create backup directory: %v", err)
+	}
+
+	// Generate backup filename with timestamp
+	timestamp := time.Now().Format("20060102_150405")
+	backupFilename := fmt.Sprintf("%s/loot_splits_backup_%s.json", config.LootDir, timestamp)
+
+	// Load the current loot splits to create a backup
+	lootSplits, err := LoadLootSplits(config.LootFile)
+	if err != nil {
+		return fmt.Errorf("failed to load current loot splits for backup: %v", err)
+	}
+
+	// Use writeJSONToFile helper to create the backup file
+	return WriteJSONToFile(backupFilename, lootSplits)
 }

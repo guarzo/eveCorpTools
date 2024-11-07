@@ -108,6 +108,12 @@ func DeleteLootSplitHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Step 1: Create a backup of the loot splits file before deletion
+	if err := persist.CreateLootSplitBackup(); err != nil {
+		http.Error(w, "Failed to create backup", http.StatusInternalServerError)
+		return
+	}
+
 	// Attempt to delete the loot split
 	_, err := persist.DeleteLootSplit(config.LootFile, requestData.ID)
 	if err != nil {
