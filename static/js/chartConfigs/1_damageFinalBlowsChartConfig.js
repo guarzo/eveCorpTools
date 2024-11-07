@@ -14,6 +14,23 @@ const damageFinalBlowsChartConfig = {
         datasets: {
             // Additional dataset options can be added here if needed
         },
+        plugins: {
+            tooltip: {
+                mode: 'nearest', // Focus on the hovered bar segment
+                intersect: true, // Show tooltip only when directly hovering over a segment
+                callbacks: {
+                    label: function (context) {
+                        let labels = []; // Array to hold multiple dataset values
+                        context.chart.data.datasets.forEach((dataset, index) => {
+                            const label = dataset.label || '';
+                            const value = dataset.data[context.dataIndex];
+                            labels.push(`${label}: ${value.toLocaleString()}`);
+                        });
+                        return labels; //
+                    },
+                },
+            },
+        },
     }),
     processData: function (data) {
         const chartName = 'Damage Done and Final Blows';

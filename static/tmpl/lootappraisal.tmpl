@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loot Split Calculator</title>
+    <link rel="icon" href="/static/images/favicon.ico" type="image/x-icon">
+
+    <!-- Tailwind CSS -->
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <link href="https://unpkg.com/tabulator-tables@6.3.0/dist/css/tabulator.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
+</head>
+<body class="bg-teal-700 text-gray-200 font-sans min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="w-full bg-teal-700 h-20 py-4 px-8 shadow-xl border-b-4 border-custom-yellow-dark flex items-center">
+        <button onclick="window.location.href='/loot-summary'" class="text-custom-yellow-dark text-2xl hover:text-yellow-300">
+            <i class="fas fa-list" title="Summary Page"></i>
+        </button>
+        <h1 class="text-3xl font-bold text-custom-yellow-dark ml-4 flex-grow text-center">Loot Split Calculator</h1>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow bg-gradient-to-b from-main-bg-start to-main-bg-end p-6">
+        <div class="container mx-auto w-full lg:w-2/3">
+            <section class="space-y-6">
+                <!-- Loot Entry Container -->
+                <div id="loot-entry-container" class="mb-6"></div>
+
+                <!-- Jita Price Container -->
+                <div id="jita-price-container" class="text-center text-2xl font-semibold text-custom-yellow-dark"></div>
+
+                <hr class="my-4 border-gray-700">
+
+                <!-- Add Pilot Form -->
+                <form id="addPilotForm" class="flex flex-col sm:flex-row items-center gap-4 mb-6 justify-center">
+                    <input type="text" id="pilotNameInput" placeholder="Pilot to add" required
+                           class="w-full max-w-xs px-4 py-2 rounded-lg bg-gray-700 text-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-500">
+                    <button type="submit"
+                            class="px-6 py-2 bg-teal-500 hover:bg-teal-600 text-gray-900 font-semibold rounded-lg shadow-md transition duration-200">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </form>
+
+                <!-- Pilot List Container -->
+                <div id="pilot-list-container" class="bg-gray-800 p-4 rounded-lg shadow-lg border-2 border-teal-600 text-yellow-400"></div>
+
+                <!-- Pilot Assignment Container -->
+                <div id="pilot-assignment-container" class="my-6"></div>
+
+                <hr class="my-4 border-gray-700">
+
+                <!-- Calculation Result Container -->
+                <div id="calculation-result-container"></div>
+
+                <!-- Battle Report Container -->
+                <div id="battle-report-container" class="text-center mt-8"></div>
+
+                <!-- Save Split Container -->
+                <div id="save-split-container"></div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full bg-teal-700 h-20 py-4 text-center shadow-xl border-t-4 border-custom-yellow-dark flex items-center justify-center">
+        <div class="container mx-auto flex flex-col items-center justify-center h-full">
+            <img src="/static/images/new_logo.png" alt="Zoolanders Logo" class="max-h-full h-12 w-auto object-contain mb-1">
+            <p class="text-sm">&copy; 2024 Zoolanders Loot Split. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript Dependencies -->
+    <script src="https://unpkg.com/tabulator-tables@6.3.0/dist/js/tabulator.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script> <!-- Fixed Toastr.js inclusion -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Custom JavaScript -->
+    <script src="/static/js/pilot-list.js"></script>
+    <script src="/static/js/loot-entry.js"></script>
+    <script src="/static/js/pilot-assignment.js"></script>
+    <script src="/static/js/calculation-result.js"></script>
+    <script src="/static/js/save-split.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            initLootEntry();
+            initCalculationResult();
+            initSaveSplit();
+        });
+    </script>
+</body>
+</html>

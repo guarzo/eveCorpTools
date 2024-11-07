@@ -38,7 +38,7 @@ func GetDamageAndFinalBlows(chartData *model.ChartData) []CharacterData {
 					Name: characterInfo.Name,
 				}
 				characterStats[characterID] = data
-				logger.Infof("Character %s included", characterInfo.Name)
+				// logger.Infof("Character %s included", characterInfo.Name)
 			}
 
 			// Accumulate damage done

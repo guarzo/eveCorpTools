@@ -40,23 +40,19 @@ func (km *KillMailService) GetKillMailDataForMonth(ctx context.Context, params *
 	aggregatedMonthData := &model.KillMailData{
 		KillMails: []model.DetailedKillMail{},
 	}
-
 	killMailIDs := make(map[int]bool)
-
 	entityGroups := map[string][]int{
 		config.EntityTypeCorporation: params.Corporations,
 		config.EntityTypeAlliance:    params.Alliances,
 		config.EntityTypeCharacter:   params.Characters,
 	}
 
-	km.Logger.Infof("Fetching data for %04d-%02d...", params.Year, month)
-
-	const maxPages = 100 // Define a sensible maximum number of pages
+	km.Logger.Infof("Starting data fetch for %04d-%02d", params.Year, month)
+	const maxPages = 100
 	processedKillMails := 0
 
 	for entityType, entityIDs := range entityGroups {
 		for _, entityID := range entityIDs {
-			// Fetch kills
 			page := 1
 			for page <= maxPages {
 				killMails, err := km.ZKillClient.GetKillsPageData(ctx, entityType, entityID, page, params.Year, month)
@@ -65,14 +61,16 @@ func (km *KillMailService) GetKillMailDataForMonth(ctx context.Context, params *
 					break
 				}
 				if len(killMails) == 0 {
+					km.Logger.Infof("No more kills found for %s ID %d in %04d-%02d after page %d", entityType, entityID, params.Year, month, page)
 					break
 				}
+				km.Logger.Infof("Fetched %d killmails for %s ID %d on page %d in %04d-%02d", len(killMails), entityType, entityID, page, params.Year, month)
 
 				err = km.processKillMails(ctx, killMails, killMailIDs, aggregatedMonthData)
 				if err != nil {
+					km.Logger.Errorf("Error processing kills for %s ID %d page %d: %v", entityType, entityID, page, err)
 					break
 				}
-
 				page++
 				processedKillMails += len(killMails)
 			}
@@ -85,23 +83,24 @@ func (km *KillMailService) GetKillMailDataForMonth(ctx context.Context, params *
 					km.Logger.Errorf("Error fetching losses for %s ID %d page %d: %v", entityType, entityID, page, err)
 					break
 				}
-
 				if len(lossKillMails) == 0 {
+					km.Logger.Infof("No more losses found for %s ID %d in %04d-%02d after page %d", entityType, entityID, params.Year, month, page)
 					break
 				}
+				km.Logger.Infof("Fetched %d losses for %s ID %d on page %d in %04d-%02d", len(lossKillMails), entityType, entityID, page, params.Year, month)
 
 				err = km.processKillMails(ctx, lossKillMails, killMailIDs, aggregatedMonthData)
 				if err != nil {
 					km.Logger.Errorf("Error processing losses for %s ID %d page %d: %v", entityType, entityID, page, err)
 					break
 				}
-
 				page++
 				processedKillMails += len(lossKillMails)
 			}
 		}
 	}
 
+	km.Logger.Infof("Completed data aggregation for %04d-%02d with %d total killmails", params.Year, month, processedKillMails)
 	return aggregatedMonthData, nil
 }
 

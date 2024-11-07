@@ -1,7 +1,6 @@
 package visuals
 
 import (
-	"fmt"
 	"sort"
 
 	"github.com/guarzo/zkillanalytics/internal/model"
@@ -59,9 +58,9 @@ func GetTopShipsKilledData(chartData *model.ChartData) []ShipKillData {
 	if len(sortedData) > 20 {
 		sortedData = sortedData[:20]
 	}
-	for _, data := range sortedData {
-		fmt.Printf("Ship: %s, KillCount: %d\n", data.Name, data.KillCount)
-	}
+	//for _, data := range sortedData {
+	//	fmt.Printf("Ship: %s, KillCount: %d\n", data.Name, data.KillCount)
+	//}
 
 	return sortedData
 }

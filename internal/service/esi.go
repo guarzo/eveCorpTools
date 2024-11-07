@@ -64,12 +64,9 @@ func (es *EsiService) GetCharacterInfo(ctx context.Context, characterID int) (*m
 		var notFoundError *model.NotFoundError
 		if errors.As(err, &notFoundError) {
 			// Handle the 404 case silently or with a warning, without logging as an error
-			es.Logger.Debugf("Character %d not found; skipping\n", characterID)
-
-		} else {
-			es.Logger.Errorf("Error fetching character info: %v", err)
+			return nil, nil
 		}
-
+		es.Logger.Errorf("Error fetching character info: %v", err)
 		return nil, err
 	}
 
@@ -107,6 +104,9 @@ func (es *EsiService) LoadTrackedCharacters(ctx context.Context, killMails []mod
 					es.Logger.Errorf("Failed to fetch victim character data for ID %d: %v", km.Victim.CharacterID, err)
 					continue
 				}
+				if victimData == nil {
+					continue
+				}
 				esiData.CharacterInfos[km.Victim.CharacterID] = *victimData
 			}
 		}
@@ -118,6 +118,9 @@ func (es *EsiService) LoadTrackedCharacters(ctx context.Context, killMails []mod
 					attackerData, err := es.GetCharacterInfo(ctx, attacker.CharacterID)
 					if err != nil {
 						es.Logger.Errorf("Failed to fetch attacker character data for ID %d: %v", attacker.CharacterID, err)
+						continue
+					}
+					if attackerData == nil {
 						continue
 					}
 					esiData.CharacterInfos[attacker.CharacterID] = *attackerData
@@ -161,6 +164,9 @@ func (es *EsiService) RefreshEsiData(ctx context.Context, chartData *model.Chart
 		charData, err := es.GetCharacterInfo(ctx, characterID)
 		if err != nil {
 			es.Logger.Errorf("Failed to refresh character ID %d: %v", characterID, err)
+			continue
+		}
+		if charData == nil {
 			continue
 		}
 		chartData.ESIData.CharacterInfos[characterID] = *charData

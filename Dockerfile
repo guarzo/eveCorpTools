@@ -1,5 +1,5 @@
 # Stage 1: Build the Go binary
-FROM golang:1.23.0 AS builder
+FROM golang:1.23.2 AS builder
 ARG CGO_ENABLED=0
 ARG VERSION
 

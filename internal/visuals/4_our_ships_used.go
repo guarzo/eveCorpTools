@@ -33,7 +33,7 @@ func GetOurShipsUsed(chartData *model.ChartData) OurShipsUsedData {
 			// Assume you have a function to get ship type name by ID
 			shipName := orchestrator.LookupType(attacker.ShipTypeID)
 
-			if shipName == "" || shipName == "Capsule" || shipName == "Unknown" {
+			if shipName == "" || shipName == "Capsule" || shipName == "Unknown" || shipName == "#System" {
 				continue
 			}
 

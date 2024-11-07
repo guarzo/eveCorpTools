@@ -14,6 +14,19 @@ const characterPerformanceChartConfig = {
         datasets: {
             // Additional dataset options can be added here if needed
         },
+        plugins: {
+            tooltip: {
+                mode: 'nearest', // Focus on the hovered bar segment
+                intersect: true, // Show tooltip only when directly hovering over a segment
+                callbacks: {
+                    label: function (context) {
+                        const datasetLabel = context.dataset.label || '';
+                        const value = context.raw; // Ensure this matches `kills`, `soloKills`, or `points`
+                        return `${datasetLabel}: ${value.toLocaleString()}`;
+                    },
+                },
+            },
+        },
     }),
     processData: function (data) {
         const chartName = 'Character Performance Chart';

@@ -18,7 +18,7 @@ func GetVictimsSunburst(chartData *model.ChartData) []SunburstData {
 	//	corpID := victim.CorporationID
 	//	allianceID := victim.AllianceID
 	//
-	//	if persist.Contains(config.CorporationIDs, corpID) || persist.Contains(config.AllianceIDs, allianceID) {
+	//	if persist-trust.Contains(config.CorporationIDs, corpID) || persist-trust.Contains(config.AllianceIDs, allianceID) {
 	//		continue
 	//	}
 	//

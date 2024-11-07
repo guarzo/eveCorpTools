@@ -122,7 +122,7 @@ const killToLossRatioChartConfig = {
 function isPersistentCharacter(characterName) {
     // Define your logic to determine persistent characters
     // For example, based on a list of character names
-    const persistentList = ['Gustav Oswaldo', 'Faoble', 'Stealthbot']; // Example list
+    const persistentList = ["NotaRealPilotName"]; // Example list
     return persistentList.includes(characterName);
 }
 

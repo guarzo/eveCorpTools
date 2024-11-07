@@ -17,9 +17,13 @@ const combinedLossesChartConfig = {
             tooltip: {
                 callbacks: {
                     label: function (context) {
-                        const label = context.dataset.label || '';
-                        const value = context.parsed.y !== undefined ? context.parsed.y : context.parsed.x;
-                        return `${label}: ${value}`;
+                        let labels = []; // Array to hold multiple dataset values
+                        context.chart.data.datasets.forEach((dataset, index) => {
+                            const label = dataset.label || '';
+                            const value = dataset.data[context.dataIndex];
+                            labels.push(`${label}: ${value.toLocaleString()}`);
+                        });
+                        return labels; //
                     },
                 },
             },

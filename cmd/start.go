@@ -6,6 +6,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	"log"
 	"mime"
 	"net/http"
 	"os"
@@ -22,8 +24,11 @@ import (
 	"github.com/guarzo/zkillanalytics/internal/api/zkill"
 	"github.com/guarzo/zkillanalytics/internal/config"
 	"github.com/guarzo/zkillanalytics/internal/data"
+	"github.com/guarzo/zkillanalytics/internal/handlers"
+	"github.com/guarzo/zkillanalytics/internal/handlers/loot"
+	"github.com/guarzo/zkillanalytics/internal/handlers/tps"
+	"github.com/guarzo/zkillanalytics/internal/handlers/trust"
 	"github.com/guarzo/zkillanalytics/internal/persist"
-	"github.com/guarzo/zkillanalytics/internal/routes"
 	"github.com/guarzo/zkillanalytics/internal/service"
 	"github.com/guarzo/zkillanalytics/internal/utils"
 )
@@ -59,13 +64,10 @@ func loggingMiddleware(logger *logrus.Logger) mux.MiddlewareFunc {
 
 // registerTPSRoutes registers the routes for the TPS subdomain
 func registerTPSRoutes(r *mux.Router, orchestrateService *service.OrchestrateService) {
-	r.HandleFunc("/", routes.TPSHandler(config.Snippets, orchestrateService)).Methods("GET")
-	//r.HandleFunc("/lastMonth", routes.TPSHandler(config.All, orchestrateService)).Methods("GET")
-	//r.HandleFunc("/currentMonth", routes.TPSHandler(config.All, orchestrateService)).Methods("GET")
-	r.HandleFunc("/refresh", routes.RefreshTPSHandler(orchestrateService)).Methods("GET")
-	// r.HandleFunc("/config", routes.TPSHandler(persist.Config, orchestrateService)).Methods("GET")
+	r.HandleFunc("/", tps.TPSHandler(config.Snippets, orchestrateService)).Methods("GET")
+	r.HandleFunc("/refresh", tps.RefreshTPSHandler(orchestrateService)).Methods("GET")
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-	r.NotFoundHandler = http.HandlerFunc(routes.NotFoundHandler)
+	r.NotFoundHandler = http.HandlerFunc(handlers.NotFoundHandler)
 }
 
 // registerLootRoutes registers the routes for the loot subdomain
@@ -73,25 +75,57 @@ func registerLootRoutes(r *mux.Router, orchestrateService *service.OrchestrateSe
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/loot-appraisal", http.StatusMovedPermanently)
 	}).Methods("GET")
-	r.HandleFunc("/loot-appraisal", routes.LootAppraisalPageHandler).Methods("GET")
-	r.HandleFunc("/appraise-loot", routes.AppraiseLootHandler).Methods("POST")
-	r.HandleFunc("/fetch-character-names", routes.FetchCharacterNamesHandler(orchestrateService)).Methods("GET")
-	r.HandleFunc("/save-loot-split", routes.SaveLootSplitHandler).Methods("POST")
-	r.HandleFunc("/delete-loot-split", routes.DeleteLootSplitHandler).Methods("POST")
-	r.HandleFunc("/save-loot-splits", routes.SaveLootSplitsHandler).Methods("POST")
-	r.HandleFunc("/fetch-loot-splits", routes.FetchLootSplitsHandler).Methods("GET")
-	r.HandleFunc("/loot-summary", routes.LootSummaryHandler).Methods("GET")
+	r.HandleFunc("/loot-appraisal", loot.LootAppraisalPageHandler).Methods("GET")
+	r.HandleFunc("/appraise-loot", loot.AppraiseLootHandler).Methods("POST")
+	r.HandleFunc("/api/pilots", loot.GetPilotNamesHandler(orchestrateService)).Methods("GET")
+	r.HandleFunc("/api/pilots", loot.AddPilotHandler(orchestrateService)).Methods("POST")
+	r.HandleFunc("/api/pilots/{name}", loot.RemovePilotHandler(orchestrateService)).Methods("DELETE")
+	r.HandleFunc("/save-loot-split", loot.SaveLootSplitHandler).Methods("POST")
+	r.HandleFunc("/delete-loot-split", loot.DeleteLootSplitHandler).Methods("POST")
+	r.HandleFunc("/save-loot-splits", loot.SaveLootSplitsHandler).Methods("POST")
+	r.HandleFunc("/fetch-loot-splits", loot.FetchLootSplitsHandler).Methods("GET")
+	r.HandleFunc("/loot-summary", loot.LootSummaryHandler).Methods("GET")
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-	r.NotFoundHandler = http.HandlerFunc(routes.NotFoundHandler)
+	r.NotFoundHandler = http.HandlerFunc(handlers.NotFoundHandler)
+}
 
-	// Optional: Handle /favicon.ico to prevent 404 errors
-	r.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
-		http.NotFound(w, r)
-	}).Methods("GET")
+// registerTrustRoutes registers the routes for the loot subdomain
+func registerTrustRoutes(r *mux.Router, sessionStore *handlers.SessionService, trustedService *service.TrustedService, esiService *service.EsiService) {
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
+
+	r.HandleFunc("/callback/", trust.CallbackHandler(sessionStore, esiService))
+
+	// user functions
+	r.HandleFunc("/", trust.HomeHandler(sessionStore, esiService))
+	r.HandleFunc("/login", trust.LoginHandler(esiService))
+	r.HandleFunc("/auth-character", trust.AuthCharacterHandler(esiService))
+	r.HandleFunc("/logout", trust.LogoutHandler(sessionStore))
+
+	r.HandleFunc("/update-comment", trust.UpdateCommentHandler)
+
+	r.HandleFunc("/validate-and-add-trusted-character", trust.AddTrustedCharacterHandler(sessionStore, trustedService, esiService)).Methods("POST")
+	r.HandleFunc("/remove-trusted-character", trust.RemoveTrustedCharacterHandler(trustedService)).Methods("POST")
+
+	r.HandleFunc("/validate-and-add-trusted-corporation", trust.AddTrustedCorporationHandler(sessionStore, trustedService, esiService)).Methods("POST")
+	r.HandleFunc("/remove-trusted-corporation", trust.RemoveTrustedCorporationHandler(trustedService)).Methods("POST")
+
+	r.HandleFunc("/add-contacts", trust.AddContactsHandler(sessionStore, esiService))
+	r.HandleFunc("/delete-contacts", trust.DeleteContactsHandler(sessionStore, esiService))
+
+	r.HandleFunc("/validate-and-add-untrusted-character", trust.AddUntrustedCharacterHandler(sessionStore, trustedService, esiService)).Methods("POST")
+	r.HandleFunc("/remove-untrusted-character", trust.RemoveUntrustedCharacterHandler(trustedService)).Methods("POST")
+
+	r.HandleFunc("/validate-and-add-untrusted-corporation", trust.AddUntrustedCorporationHandler(sessionStore, trustedService, esiService)).Methods("POST")
+	r.HandleFunc("/remove-untrusted-corporation", trust.RemoveUntrustedCorporationHandler(trustedService)).Methods("POST")
+
+	// admin routes
+	r.HandleFunc("/reset-identities", trust.ResetIdentitiesHandler(sessionStore))
+	r.NotFoundHandler = http.HandlerFunc(handlers.NotFoundHandler)
+
 }
 
 // registerDefaultRoutes registers the default routes for hosts like localhost:8080 or zoolanders.space
-func registerDefaultRoutes(r *mux.Router, orchestrateService *service.OrchestrateService, logger *logrus.Logger) {
+func registerDefaultRoutes(r *mux.Router, logger *logrus.Logger) {
 	// Health Check Endpoint
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		health := struct {
@@ -110,7 +144,7 @@ func registerDefaultRoutes(r *mux.Router, orchestrateService *service.Orchestrat
 	}).Methods("GET")
 
 	// Register a route to list all routes (Optional)
-	r.HandleFunc("/routes", routes.ListRoutesHandler(r, logger)).Methods("GET")
+	r.HandleFunc("/routes", handlers.ListRoutesHandler(r, logger)).Methods("GET")
 
 	// Add a handler for the root path
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -118,14 +152,13 @@ func registerDefaultRoutes(r *mux.Router, orchestrateService *service.Orchestrat
 		w.Write([]byte("Welcome to the Default Router!"))
 	}).Methods("GET")
 
-	// Optional: Handle /favicon.ico to prevent 404 errors
 	r.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 	}).Methods("GET")
 }
 
 // StartServer starts the HTTP server with the specified routes
-func StartServer(port int, userAgent, version, hostConfig string) {
+func StartServer(setup *config.AppSetup) {
 	// Initialize Logger
 	logger := logrus.New()
 	logger.SetOutput(os.Stdout)
@@ -144,12 +177,12 @@ func StartServer(port int, userAgent, version, hostConfig string) {
 	logger.WithFields(logrus.Fields{
 		"GOMAXPROCS":     fmt.Sprintf("%d", runtime.GOMAXPROCS(0)),
 		"GOMEMLIMIT":     "Not Set", // Adjust based on actual usage or remove if not applicable
-		"VERSION":        version,
-		"Listen Address": fmt.Sprintf(":%d", port),
-		"HOST_CONFIG":    hostConfig,
+		"VERSION":        setup.Version,
+		"Listen Address": fmt.Sprintf(":%d", setup.Port),
+		"HOST_CONFIG":    setup.HostConfig,
 	}).Info("Runtime information")
 
-	logger.Infof("host is %s", hostConfig)
+	logger.Infof("host is %s", setup.HostConfig)
 
 	err := mime.AddExtensionType(".js", "application/javascript")
 	if err != nil {
@@ -158,17 +191,18 @@ func StartServer(port int, userAgent, version, hostConfig string) {
 
 	// Validate host_config
 	validHosts := map[string]bool{
-		"tps.zoolanders.space":  true,
-		"loot.zoolanders.space": true,
-		"localhost":             true, // Optionally include "localhost" as a valid default
+		"tps.zoolanders.space":   true,
+		"loot.zoolanders.space":  true,
+		"trust.zoolanders.space": true,
+		"localhost":              true, // Optionally include "localhost" as a valid default
 	}
 
-	if hostConfig != "" && !validHosts[hostConfig] {
-		logger.Fatalf("Invalid host_config: %s. Must be one of %v", hostConfig, keys(validHosts))
+	if setup.HostConfig != "" && !validHosts[setup.HostConfig] {
+		logger.Fatalf("Invalid host_config: %s. Must be one of %v", setup.HostConfig, keys(validHosts))
 	}
 
 	// Initialize Cache
-	cache := persist.NewInMemoryCache(logger)
+	cache := persist.NewCache(logger)
 	if cache == nil {
 		logger.Fatal("Failed to initialize cache")
 	}
@@ -186,11 +220,23 @@ func StartServer(port int, userAgent, version, hostConfig string) {
 		logger.Errorf("Failed to load failed characters: %v", err)
 	}
 
+	// Initialize configuration directory
+	if err = persist.Initialize(setup.Key); err != nil {
+		log.Fatalf("Failed to initialize identity: %v", err)
+	}
+
+	// Initialize OAuth2 configuration
+
+	sessionStore := handlers.NewSessionService(setup.Secret)
+
 	// Ensure necessary directories exist
 	dirs := []string{
 		"data",
-		"data/monthly",
-		"data/charts",
+		"data/tps",
+		"data/tps/store",
+		"data/tps/charts",
+		"data/loot",
+		"data/trust",
 	}
 	for _, dir := range dirs {
 		if err = os.MkdirAll(dir, os.ModePerm); err != nil {
@@ -207,9 +253,10 @@ func StartServer(port int, userAgent, version, hostConfig string) {
 	}
 
 	// Initialize HTTP Client with User-Agent
-	httpClient := utils.NewHTTPClientWithUserAgent(userAgent)
+	httpClient := utils.NewHTTPClientWithUserAgent(setup.UserAgent)
 
 	esiClient := esi.NewEsiClient(config.BaseEsiURL, failedChars, httpClient, cache, logger)
+	esiClient.InitializeOAuth(setup.ClientID, setup.ClientSecret, setup.CallbackURL)
 	zkillClient := zkill.NewZkillClient(config.ZkillURL, httpClient, cache, logger)
 
 	// Initialize Services
@@ -221,6 +268,12 @@ func StartServer(port int, userAgent, version, hostConfig string) {
 	}
 	killMailService := service.NewKillMailService(zkillClient, esiService, cache, logger)
 	orchestrateService := service.NewOrchestrateService(esiService, killMailService, invTypeService, failedChars, cache, logger, httpClient)
+	// Load trusted characters on startup
+	dataLoader := persist.LoadTrustedCharacters
+	dataSaver := persist.SaveTrustedCharacters
+
+	// Initialize TrustedService with dependency injection
+	trustedService := service.NewTrustedService(dataLoader, dataSaver, logger)
 
 	// Create a root context that we can cancel on shutdown
 	ctx, cancel := context.WithCancel(context.Background())
@@ -245,16 +298,26 @@ func StartServer(port int, userAgent, version, hostConfig string) {
 			if idx := strings.Index(host, ":"); idx != -1 {
 				host = host[:idx]
 			}
-			if strings.EqualFold(host, "localhost") && hostConfig != "" {
-				host = hostConfig
+
+			// Allow 'localhost' to match any targetHost for development purposes
+			isLocalhost := strings.EqualFold(host, "localhost")
+
+			//logger.Infof("host is %s", host)
+			//logger.Infof("hostConfig is %s", setup.HostConfig)
+
+			var match bool
+			if isLocalhost && setup.HostConfig == targetHost {
+				match = true
+			} else {
+				match = strings.EqualFold(host, targetHost)
 			}
-			match := strings.EqualFold(host, targetHost)
-			logger.WithFields(logrus.Fields{
-				"originalHost":  r.Host,
-				"effectiveHost": host,
-				"targetHost":    targetHost,
-				"match":         match,
-			}).Debug("Host matching")
+
+			//logger.WithFields(logrus.Fields{
+			//	"originalHost":  r.Host,
+			//	"effectiveHost": host,
+			//	"targetHost":    targetHost,
+			//	"match":         match,
+			//}).Info("Host matching")
 			return match
 		}
 	}
@@ -268,13 +331,17 @@ func StartServer(port int, userAgent, version, hostConfig string) {
 	registerLootRoutes(lootRouter, orchestrateService)
 	logger.Info("Registered Loot subdomain routes")
 
+	trustRouter := mainRouter.MatcherFunc(hostMatcher("trust.zoolanders.space")).Subrouter()
+	registerTrustRoutes(trustRouter, sessionStore, trustedService, esiService)
+	logger.Info("Registered Trust subdomain routes")
+
 	// Default Router handles all other hosts
 	defaultRouter := mainRouter.NewRoute().Subrouter()
-	registerDefaultRoutes(defaultRouter, orchestrateService, logger)
+	registerDefaultRoutes(defaultRouter, logger)
 	logger.Info("Registered Default routes")
 
 	// Log all registered routes for debugging
-	utils.ListRoutes(mainRouter, logger)
+	handlers.ListRoutes(mainRouter, logger)
 
 	// Implement a catch-all NotFoundHandler
 	mainRouter.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -287,7 +354,7 @@ func StartServer(port int, userAgent, version, hostConfig string) {
 	})
 
 	// Define server address
-	addr := fmt.Sprintf(":%d", port)
+	addr := fmt.Sprintf(":%d", setup.Port)
 	server := &http.Server{
 		Addr:    addr,
 		Handler: mainRouter,
@@ -327,7 +394,7 @@ func StartServer(port int, userAgent, version, hostConfig string) {
 
 	// Start the server in a goroutine
 	go func() {
-		logger.Infof("Starting server version %s on port %d", version, port)
+		logger.Infof("Starting server version %s on port %d", setup.Version, setup.Port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			// Error starting or closing listener
 			logger.Fatalf("HTTP server ListenAndServe: %v", err)

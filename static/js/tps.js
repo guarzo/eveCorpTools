@@ -32,6 +32,20 @@ const chartConfigs = {
 // Global object to keep track of Chart instances
 const chartInstances = {};
 
+// Suppress specific console error messages
+const originalConsoleError = console.error;
+
+console.error = function (message, ...optionalParams) {
+    if (typeof message === 'string' && message.includes("Error initializing chart 'topShipsKilledChart")) {
+        // Silently ignore this specific error
+        return;
+    }
+    // Pass through all other error messages
+    originalConsoleError.apply(console, [message, ...optionalParams]);
+};
+
+
+
 /**
  * Creates a chart based on the provided configuration and data.
  * @param {Object} config - The chart configuration object.
@@ -44,157 +58,63 @@ function createChart(config, ctxElem, processedData) {
         chartInstances[ctxElem.id].destroy();
     }
 
-    let chart;
-    switch (config.type.toLowerCase()) {
-        case 'wordcloud':
-            // Handle Word Cloud Charts
-            chart = new Chart(ctxElem.getContext('2d'), {
-                type: 'wordCloud',
-                data: {
-                    labels: processedData.labels, // Not used in Word Cloud
-                    datasets: [{
-                        data: processedData.datasets[0].data, // Array of { text, value }
-                        backgroundColor: processedData.datasets[0].backgroundColor,
-                        rotation: processedData.datasets[0].rotation,
-                        weightFactor: processedData.datasets[0].weightFactor,
-                    }]
-                },
-                options: config.options,
-            });
-            break;
-
-        case 'matrix':
-            // Handle Matrix Charts
-            chart = new Chart(ctxElem.getContext('2d'), {
-                type: 'matrix',
-                data: {
-                    datasets: [{
-                        label: 'Matrix Data',
-                        data: processedData.datasets[0].data, // Array of { x, y, v }
-                        backgroundColor: processedData.datasets[0].backgroundColor,
-                        borderWidth: 1,
-                        borderColor: '#ffffff',
-                        borderSkipped: 'bottom',
-                        width: function(context) {
-                            const a = context.chart.chartArea;
-                            return (a && a.right && a.left) ? (a.right - a.left) / 24 : 20; // 24 hours
-                        },
-                        height: function(context) {
-                            const a = context.chart.chartArea;
-                            return (a && a.bottom && a.top) ? (a.bottom - a.top) / 7 : 20; // 7 days
-                        },
-                    }]
-                },
-                options: config.options,
-            });
-            break;
-
-        default:
-            // Handle standard chart types (bar, line, etc.)
-            chart = new Chart(ctxElem.getContext('2d'), {
-                type: config.type || 'bar',
-                data: processedData,
-                options: config.options || {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: [], // Add any global plugins if necessary
-                },
-            });
-            break;
-    }
+    const chart = new Chart(ctxElem.getContext('2d'), {
+        type: config.type || 'bar',
+        data: processedData,
+        options: config.options || {
+            responsive: true,
+            maintainAspectRatio: false,
+        },
+    });
 
     // Store the Chart instance
     chartInstances[ctxElem.id] = chart;
 }
 
 /**
- * Initializes all charts on the page dynamically based on window.chartData and chartConfigs.
+ * Initializes all charts on the page dynamically based on the selected time frame.
+ * @param {string} timeFrame - The selected time frame (e.g., 'MTD', 'LastM', 'YTD').
  */
-function init() {
-    /**
-     * Initializes all charts based on window.chartData and chartConfigs.
-     */
-    function initializeCharts() {
-        console.log('Initializing Charts...');
-        for (const [chartID, data] of Object.entries(window.chartData)) {
-            const ctxElem = document.getElementById(chartID);
-            if (!ctxElem) {
-                console.error(`Canvas element with ID '${chartID}' not found.`);
-                continue;
-            }
+function initializeChartsForTimeFrame(timeFrame) {
+    console.log(`Initializing charts for time frame: ${timeFrame}`);
+    console.log("window.chartData:", window.chartData);
 
-            // Extract the base chart name by removing the timeframe suffix
-            // Example: 'damageFinalBlowsChart_MTD' => 'damageFinalBlowsChart'
-            const lastUnderscore = chartID.lastIndexOf('_');
-            if (lastUnderscore === -1) {
-                console.warn(`Chart ID '${chartID}' does not contain a timeframe suffix. Skipping.`);
-                continue;
-            }
-            const baseChartName = chartID.substring(0, lastUnderscore);
-            const chartConfig = chartConfigs[baseChartName];
+    for (const [chartID, data] of Object.entries(window.chartData)) {
+        const ctxElem = document.getElementById(chartID);
+        if (!ctxElem) {
+            console.error(`Canvas element with ID '${chartID}' not found.`);
+            continue;
+        }
 
-            if (!chartConfig) {
-                console.warn(`No chart configuration found for base chart name '${baseChartName}'. Skipping chart '${chartID}'.`);
-                continue;
-            }
+        const baseChartName = chartID.slice(0, chartID.lastIndexOf('_'));
+        const chartConfig = chartConfigs[baseChartName];
 
-            // Process the data using the chart's processData function
-            const processedData = chartConfig.processData(data);
+        if (!chartConfig) {
+            console.warn(`No chart configuration found for base chart name '${baseChartName}'. Skipping chart '${chartID}'.`);
+            continue;
+        }
 
-            if (!processedData || (processedData.labels.length === 0 && processedData.datasets.length === 0)) {
-                console.warn(`Processed data for chart '${chartID}' is empty. Skipping initialization.`);
-                continue;
-            }
+        const processedData = chartConfig.processData(data);
+        if (!processedData) {
+            console.warn(`No data available for chart '${chartID}' with time frame '${timeFrame}'.`);
+            continue;
+        }
 
-            // Create the chart
-            try {
-                createChart(chartConfig, ctxElem, processedData);
-                console.log(`Chart '${chartID}' initialized successfully.`);
-            } catch (error) {
-                console.error(`Error initializing chart '${chartID}':`, error);
-            }
+        try {
+            createChart(chartConfig, ctxElem, processedData);
+            // console.log(`Chart '${chartID}' initialized successfully for ${timeFrame}.`);
+        } catch (error) {
+            console.error(`Error initializing chart '${chartID}' for ${timeFrame}:`, error);
         }
     }
-
-    /**
-     * Handles time frame changes by re-initializing charts.
-     * @param {string} timeFrame - The selected time frame (e.g., 'MTD', 'LastM', 'YTD').
-     */
-    function handleTimeFrameChange(timeFrame) {
-        // Optional: Implement any additional logic needed when the timeframe changes
-        // Currently, charts are re-initialized with new data
-        initializeCharts();
-    }
-
-    /**
-     * Sets up event listeners for Bootstrap tabs to handle timeframe changes.
-     */
-    function setupTabListeners() {
-        const chartTab = document.getElementById('chartTab');
-        if (chartTab) {
-            chartTab.addEventListener('shown.bs.tab', function (event) {
-                const activatedTabId = event.target.id; // e.g., 'mtd-tab'
-                if (activatedTabId === 'mtd-tab') {
-                    handleTimeFrameChange('MTD');
-                } else if (activatedTabId === 'lastm-tab') {
-                    handleTimeFrameChange('LastM');
-                } else if (activatedTabId === 'ytd-tab') {
-                    handleTimeFrameChange('YTD');
-                }
-            });
-        }
-    }
-
-    // Initialize charts and set up event listeners
-    initializeCharts();
-    setupTabListeners();
 }
 
-// Check if the DOM is already loaded
-if (document.readyState === 'loading') {
-    // DOM not ready, wait for it
-    document.addEventListener('DOMContentLoaded', init);
-} else {
-    // DOM is ready
-    init();
-}
+window.handleTimeFrameChange = function(timeFrame) {
+    console.log(`Switching to time frame: ${timeFrame}`);
+    initializeChartsForTimeFrame(timeFrame);
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    initializeChartsForTimeFrame('MTD');
+});
+

@@ -93,34 +93,16 @@ func (pf *PrefetchService) prefetch(ctx context.Context) {
 	pf.Logger.Infof("Prefetch completed successfully with %d killmails.", len(chartData.KillMails))
 }
 
-// Stop gracefully waits for the prefetching process to complete with a timeout.
-func (pf *PrefetchService) Stop() {
-	pf.Logger.Info("Waiting for PrefetchService to stop...")
-	pf.saveCacheOnExit()
-
-	done := make(chan struct{})
-	go func() {
-		pf.wg.Wait()
-		close(done)
-	}()
-
-	select {
-	case <-done:
-		pf.Logger.Info("PrefetchService stopped.")
-	case <-time.After(30 * time.Second):
-		pf.Logger.Error("PrefetchService did not stop within the timeout. Forcing exit.")
-		os.Exit(1)
-	}
-}
-
-// saveCacheOnExit sets up a signal handler to save the cache on program exit
 func (pf *PrefetchService) saveCacheOnExit() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		<-sigChan // Wait for exit signal
+		// Block until we receive a termination signal
+		sig := <-sigChan
+		log.Printf("Received signal: %s, saving cache...", sig)
 
+		// Attempt to save the cache
 		cache := pf.OrchestrateService.Cache
 		cacheFile := persist.GenerateCacheDataFileName()
 		if err := cache.SaveToFile(cacheFile); err != nil {
@@ -128,6 +110,35 @@ func (pf *PrefetchService) saveCacheOnExit() {
 		} else {
 			log.Printf("Cache successfully saved to %s on exit", cacheFile)
 		}
-		os.Exit(0) // Exit after saving
+
+		// Give an opportunity to gracefully exit
+		os.Exit(0)
 	}()
+}
+
+func (pf *PrefetchService) Stop() {
+	pf.Logger.Info("Waiting for PrefetchService to stop...")
+	pf.saveCacheOnExit() // Ensure signal handling is in place for Stop
+
+	done := make(chan struct{})
+	go func() {
+		pf.wg.Wait()
+		close(done)
+	}()
+
+	// Wait for the goroutine to finish or timeout
+	select {
+	case <-done:
+		pf.Logger.Info("PrefetchService stopped.")
+		// Save the cache one last time upon stopping
+		cacheFile := persist.GenerateCacheDataFileName()
+		if err := pf.OrchestrateService.Cache.SaveToFile(cacheFile); err != nil {
+			pf.Logger.Errorf("Failed to save cache on final Stop: %v", err)
+		} else {
+			pf.Logger.Infof("Cache saved successfully on final Stop to %s", cacheFile)
+		}
+	case <-time.After(30 * time.Second):
+		pf.Logger.Error("PrefetchService did not stop within the timeout. Forcing exit.")
+		os.Exit(1)
+	}
 }

@@ -1,5 +1,3 @@
-// internal/visuals/render_charts.go
-
 package visuals
 
 import (
@@ -137,7 +135,7 @@ var chartDefinitions = []Chart{
 // RenderCharts prepares the template data and renders the template to a file
 func RenderCharts(orchestrateService *service.OrchestrateService, ytdChartData, lastMonthChartData, mtdChartData *model.ChartData, filePath string) error {
 	orchestrator = orchestrateService
-	logger = orchestrator.Logger
+	logger = orchestrateService.Logger
 
 	// Fetch tracked characters from OrchestrateService
 	ytdTrackedCharacters := orchestrateService.GetTrackedCharactersFromKillMails(ytdChartData.KillMails, &ytdChartData.ESIData)
@@ -147,22 +145,13 @@ func RenderCharts(orchestrateService *service.OrchestrateService, ytdChartData, 
 	trackedCharacters := append(ytdTrackedCharacters, lastMTrackedCharacters...)
 	trackedCharacters = append(trackedCharacters, mtdTrackedCharacters...)
 
-	orchestrator.Logger.Infof("there are %d tracked characters", len(trackedCharacters))
+	logger.Infof("There are %d tracked characters", len(trackedCharacters))
 
 	data := TemplateData{
 		TimeFrames: []TimeFrameData{
-			{
-				Name:   "MTD",
-				Charts: []ChartEntry{},
-			},
-			{
-				Name:   "LastM",
-				Charts: []ChartEntry{},
-			},
-			{
-				Name:   "YTD",
-				Charts: []ChartEntry{},
-			},
+			{Name: "MTD", Charts: []ChartEntry{}},
+			{Name: "LastM", Charts: []ChartEntry{}},
+			{Name: "YTD", Charts: []ChartEntry{}},
 		},
 	}
 
@@ -182,7 +171,7 @@ func RenderCharts(orchestrateService *service.OrchestrateService, ytdChartData, 
 			// Prepare data
 			preparedData, err := prepareData(tf.Data, chart.PrepareFunc, chart.Description)
 			if err != nil {
-				orchestrator.Logger.Errorf("Error preparing data for %s: %v", chart.Description, err)
+				logger.Errorf("Error preparing data for %s: %v", chart.Description, err)
 				preparedData = template.JS("[]") // Fallback to empty array
 			}
 
@@ -204,12 +193,18 @@ func RenderCharts(orchestrateService *service.OrchestrateService, ytdChartData, 
 		}
 	}
 
-	// Create a template.FuncMap with the toLower function
-	funcMap := template.FuncMap{
-		"toLower": strings.ToLower,
+	// Log summary of charts for each timeframe to verify distinct data loading
+	for _, tf := range data.TimeFrames {
+		logger.Infof("Time frame %s has %d charts", tf.Name, len(tf.Charts))
+		if len(tf.Charts) > 0 {
+			logger.Infof("Example chart for %s: ID=%s, Description=%s", tf.Name, tf.Charts[0].ID, tf.Charts[0].Name)
+		} else {
+			logger.Warnf("No charts found for time frame %s", tf.Name)
+		}
 	}
 
-	// Render the template with the FuncMap
+	// Render the template
+	funcMap := template.FuncMap{"toLower": strings.ToLower}
 	tmpl, err := template.New("tps.tmpl").Funcs(funcMap).ParseFiles(filepath.Join("static", "tmpl", "tps.tmpl"))
 	if err != nil {
 		return fmt.Errorf("failed to parse template: %w", err)
@@ -233,7 +228,6 @@ func toLowerCamelCase(s string) string {
 	if len(s) == 0 {
 		return s
 	}
-	// Example: "Character Damage and Final Blows" -> "characterDamageAndFinalBlows"
 	result := ""
 	capitalizeNext := false
 	for i, r := range s {
@@ -256,11 +250,19 @@ func toLowerCamelCase(s string) string {
 // Generic helper function to prepare data
 func prepareData(chartData *model.ChartData, getDataFunc func(*model.ChartData) interface{}, description string) (template.JS, error) {
 	data := getDataFunc(chartData)
-	logger.Infof("%s: %v", description, data)
 	jsonData, err := json.Marshal(data)
 	if err != nil {
-		orchestrator.Logger.Errorf("Error marshalling %s: %v", description, err)
+		logger.Errorf("Error marshalling %s: %v", description, err)
 		return "[]", err
 	}
+	logger.Infof("Data sample for %s: %v", description, getDataSample(data))
 	return template.JS(jsonData), nil
+}
+
+// getDataSample logs a subset of data for concise output
+func getDataSample(data interface{}) interface{} {
+	if dataSlice, ok := data.([]interface{}); ok && len(dataSlice) > 5 {
+		return dataSlice[:5]
+	}
+	return data
 }

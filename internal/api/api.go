@@ -5,27 +5,48 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"time"
 
 	"github.com/guarzo/zkillanalytics/internal/model"
 )
 
-// RetryWithExponentialBackoff retries the provided function with exponential backoff.
+const (
+	maxRetries = 5
+	baseDelay  = 1 * time.Second
+	maxDelay   = 32 * time.Second
+)
+
 func RetryWithExponentialBackoff(operation func() (interface{}, error)) (interface{}, error) {
 	var result interface{}
 	var err error
-	backoff := time.Second
+	delay := baseDelay
 
-	for i := 0; i < 5; i++ {
-		result, err = operation()
-		if err == nil {
+	for i := 0; i < maxRetries; i++ {
+		if result, err = operation(); err == nil {
 			return result, nil
 		}
-		time.Sleep(backoff)
-		backoff *= 2
+
+		var customErr *CustomError
+		if !errors.As(err, &customErr) || (customErr.StatusCode != http.StatusServiceUnavailable && customErr.StatusCode != http.StatusGatewayTimeout) && customErr.StatusCode != http.StatusInternalServerError {
+			break
+		}
+
+		if i == maxRetries-1 {
+			break
+		}
+
+		jitter := time.Duration(rand.Int63n(int64(delay)))
+		time.Sleep(delay + jitter)
+
+		delay *= 2
+		if delay > maxDelay {
+			delay = maxDelay
+		}
 	}
 
 	return nil, err
