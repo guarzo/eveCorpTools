@@ -16,12 +16,12 @@ const characterPerformanceChartConfig = {
         },
         plugins: {
             tooltip: {
-                mode: 'nearest', // Focus on the hovered bar segment
-                intersect: true, // Show tooltip only when directly hovering over a segment
+                mode: 'index', // Shows values for all datasets at the hovered index
+                intersect: false, // Allows the tooltip to show both bar and line data
                 callbacks: {
                     label: function (context) {
                         const datasetLabel = context.dataset.label || '';
-                        const value = context.raw; // Ensure this matches `kills`, `soloKills`, or `points`
+                        const value = context.raw;
                         return `${datasetLabel}: ${value.toLocaleString()}`;
                     },
                 },

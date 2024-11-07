@@ -44,7 +44,9 @@ function initPilotList() {
 function addPilotToContainer(name, container, showRemoveButton = false) {
     if (!isPilotInContainer(name, container)) {
         const box = document.createElement('div');
-        box.className = 'draggable-box bg-cyan-500 text-white px-4 py-2 rounded-lg shadow-lg cursor-move border border-yellow-300 hover:bg-cyan-600 hover:shadow-2xl transition-all duration-200 flex items-center justify-between';
+        box.className = 'draggable-box bg-teal-500 text-gray-100 px-4 py-2 rounded-lg shadow-lg cursor-move border border-teal-500 hover:bg-teal-400 transition-all duration-200 flex items-center justify-between';
+
+
         box.draggable = true;
         box.ondragstart = (event) => event.dataTransfer.setData("text/plain", name);
 

@@ -1,13 +1,16 @@
 function initCalculationResult() {
     const container = document.getElementById("calculation-result-container");
     container.innerHTML = `
-        <div id="valuesContainer" class="bg-gray-800 p-4 rounded-lg text-center space-y-2">
-            <!-- Calculation results will be displayed here -->
-        </div>
-        <div id="splitRulesContainer" class="text-yellow-400 text-lg mt-4">
-            <!-- Split rules will be displayed here -->
-        </div>`;
+    <div id="valuesContainer" class="bg-gray-800 p-4 rounded-lg text-center text-gray-100 space-y-2">
+        <!-- Calculation results will be displayed here -->
+    </div>
+    <div id="splitRulesContainer" class="text-teal-200 text-lg mt-4">
+        <!-- Split rules will be displayed here -->
+    </div>`;
 }
+
+
+
 
 function calculateValues(totalBuyPrice) {
     const valuesContainer = document.getElementById('valuesContainer');

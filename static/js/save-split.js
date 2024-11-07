@@ -2,12 +2,17 @@ function initSaveSplit() {
     const container = document.getElementById("battle-report-container");
     container.innerHTML = `
         <div class="input-container text-center">
-            <textarea id="battleReport" class="w-full h-12 p-4 text-gray-900 rounded-lg resize-none focus:outline-none"
-                      placeholder="Enter battle report..."></textarea>
+            <textarea id="battleReport" 
+                      class="w-full h-12 p-4 text-gray-200 bg-gray-700 rounded-lg resize-none focus:outline-none overflow-y-hidden"
+                      placeholder="Enter battle report..." rows="1"></textarea>
         </div>
         <div class="button-container mt-4 text-center">
-            <button id="saveSplitButton" class="px-4 py-2 bg-custom-yellow-dark text-black font-semibold rounded shadow hover:bg-yellow-500">Save Split</button>
+            <button id="saveSplitButton" class="px-4 py-2 bg-teal-500 text-gray-100 font-semibold rounded shadow hover:bg-teal-400">
+                Save Split
+            </button>
         </div>`;
+
+
 
     document.getElementById("saveSplitButton").addEventListener("click", saveLootSplit);
 }

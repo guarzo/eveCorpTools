@@ -1,21 +1,23 @@
 function initLootEntry() {
     const container = document.getElementById("loot-entry-container");
     container.innerHTML = `
-        <div class="input-container text-center">
-            <textarea id="lootEntry" class="w-full p-4 text-gray-900 rounded-lg resize-none focus:outline-none" rows="4"
-                      placeholder="Enter loot information..." oninput="autoExpand(this)"></textarea>
-            <div class="button-container mt-4">
-                <button id="appraiseLootButton" class="px-4 py-2 bg-custom-yellow-dark text-black font-semibold rounded shadow hover:bg-yellow-500">Appraise Loot</button>
-            </div>
-        </div>`;
+    <div class="input-container text-center">
+        <textarea id="lootEntry" class="w-full p-4 text-gray-200 bg-gray-700 rounded-lg resize-none focus:outline-none" rows="4"
+                  placeholder="Enter loot information..." oninput="autoExpand(this)"></textarea>
+        <div class="button-container mt-4">
+            <button id="appraiseLootButton" class="px-4 py-2 bg-teal-500 text-gray-100 font-semibold rounded shadow hover:bg-teal-400">Appraise Loot</button>
+        </div>
+    </div>`;
+
 
     document.getElementById("appraiseLootButton").addEventListener("click", fetchLootPrice);
 
     const jitaPriceContainer = document.getElementById("jita-price-container");
     jitaPriceContainer.innerHTML = `
         <div class="input-container text-center mt-6">
-            <span id="lootInput" class="text-2xl font-semibold text-yellow-400">0 ISK</span>
+            <span id="lootInput" class="text-2xl font-semibold text-teal-200">0 ISK</span>
         </div>`;
+
 }
 
 function autoExpand(field) {

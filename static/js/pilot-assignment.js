@@ -3,17 +3,18 @@ function initPilotAssignment() {
     const container = document.getElementById("pilot-assignment-container");
     container.innerHTML = `
         <div class="grid-container grid grid-cols-2 gap-4">
-            <div id="scout" class="grid-box bg-gray-800 p-4 text-center text-lg rounded-lg shadow-lg border border-yellow-400" 
+            <div id="scout" class="grid-box bg-gray-800 p-4 text-center text-lg rounded-lg shadow-lg border border-teal-500" 
                  ondrop="drop(event)" ondragover="allowDrop(event)">
-                <div class="text-yellow-400 font-bold mb-2">Scout</div>
+                <div class="text-teal-200 font-bold mb-2">Scout</div>
                 <div class="pilot-assignment-area flex flex-wrap gap-2 justify-center"></div>
             </div>
-            <div id="involved" class="grid-box bg-gray-800 p-4 text-center text-lg rounded-lg shadow-lg border border-yellow-400" 
+            <div id="involved" class="grid-box bg-gray-800 p-4 text-center text-lg rounded-lg shadow-lg border border-teal-500" 
                  ondrop="drop(event)" ondragover="allowDrop(event)">
-                <div class="text-yellow-400 font-bold mb-2">Involved</div>
+                <div class="text-teal-200 font-bold mb-2">Involved</div>
                 <div class="pilot-assignment-area flex flex-wrap gap-2 justify-center"></div>
             </div>
         </div>`;
+
 
     const pilotNamesContainer = document.getElementById("pilotNamesContainer");
     if (pilotNamesContainer) {

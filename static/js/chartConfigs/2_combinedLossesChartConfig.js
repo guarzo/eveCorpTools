@@ -17,15 +17,13 @@ const combinedLossesChartConfig = {
             tooltip: {
                 callbacks: {
                     label: function (context) {
-                        let labels = []; // Array to hold multiple dataset values
-                        context.chart.data.datasets.forEach((dataset, index) => {
-                            const label = dataset.label || '';
-                            const value = dataset.data[context.dataIndex];
-                            labels.push(`${label}: ${value.toLocaleString()}`);
-                        });
-                        return labels; //
+                        const label = context.dataset.label || '';
+                        const value = context.raw;
+                        return `${label}: ${value.toLocaleString()}`;
                     },
                 },
+                mode: 'index', // Allows showing values for both bar and line charts in a single tooltip
+                intersect: false, // Displays values for both datasets at the hovered index
             },
         },
         scales: {
