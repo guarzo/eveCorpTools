@@ -17,11 +17,9 @@ function initSaveSplit() {
     document.getElementById("saveSplitButton").addEventListener("click", saveLootSplit);
 }
 
-
 async function saveLootSplit() {
     const totalBuyPriceElement = document.getElementById("lootInput");
     const totalBuyPrice = parseFloat(totalBuyPriceElement.innerText.replace(/,/g, '').replace(' ISK', '')); // Remove commas and convert to number
-    const valuesContainer = document.getElementById("valuesContainer");
     const splitDetails = {};
     const battleReportElement = document.getElementById("battleReport");
     const battleReport = battleReportElement ? battleReportElement.value : '';
@@ -31,22 +29,34 @@ async function saveLootSplit() {
         return;
     }
 
-    const scoutBox = document.getElementById('scout').querySelector('.draggable-box');
-    const involvedBox = document.getElementById('involved').querySelectorAll('.draggable-box');
-    if (!scoutBox && involvedBox.length === 0) {
-        alert("At least one pilot must be selected.");
-        return;
-    }
-
     if (!battleReport) {
         alert("Battle Report is required.");
         return;
     }
 
-    valuesContainer.querySelectorAll('p').forEach(p => {
-        const key = p.textContent.split(':')[0].trim();
-        const value = p.textContent.split(':')[1].replace(/[^\d]/g, '').trim();
-        splitDetails[key] = value;
+    // Extract values for Scout, Involved pilots, and Corp from valuesContainer
+    document.getElementById("valuesContainer").querySelectorAll('p').forEach(p => {
+        const textContent = p.textContent.trim();
+
+        // Match Scout and Involved entries with names and amounts
+        const match = textContent.match(/(Scout|Involved):\s*([^-\d]+)?\s*-\s*([\d,]+)/);
+
+        if (match) {
+            const role = match[1];
+            const name = match[2]?.trim() || ''; // Handle name if it exists
+            const amount = match[3].replace(/,/g, ''); // Remove commas from amount
+
+            if (name) {
+                // For Involved and Scout, store with the name as part of the key
+                splitDetails[`${role}: ${name}`] = amount;
+            }
+        }
+
+        // Separate check for the Corp entry
+        if (textContent.startsWith("Corp:")) {
+            const corpAmount = textContent.split(":")[1].trim().replace(/,/g, ''); // Extract amount and remove commas
+            splitDetails["Corp"] = corpAmount;
+        }
     });
 
     const lootSplit = {
@@ -76,3 +86,4 @@ async function saveLootSplit() {
         console.error("Error saving loot split:", error);
     }
 }
+

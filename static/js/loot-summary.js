@@ -60,6 +60,7 @@ async function fetchLootSummaries() {
                 // Set up row click event
                 window.lootSummaryTable.on("rowClick", function(e, row) {
                     const details = row.getData();
+                    console.log(details)
                     document.getElementById("selectedRowId").value = details.id;
                     document.getElementById("detailDate").innerText = details.date || 'N/A';
                     document.getElementById("detailBattleReport").innerText = details.battleReport || 'N/A';
@@ -150,12 +151,13 @@ function formatNumber(num) {
 function displaySplitDetails(splitDetails) {
     const splitDetailsContainer = document.getElementById("splitDetails");
     splitDetailsContainer.innerHTML = '';
+    console.log(splitDetails)
     if (splitDetails && typeof splitDetails === 'object' && Object.keys(splitDetails).length > 0) {
         for (const key in splitDetails) {
             if (splitDetails.hasOwnProperty(key)) {
                 const value = splitDetails[key];
                 splitDetailsContainer.innerHTML += `
-                    <p><strong>${key}:</strong> ${formatNumber(value)}
+                    <p><strong>${key}:</strong> ${formatNumber(Number(value))}
                         <span class="clipboard-icon cursor-pointer text-gray-400 hover:text-green-500 ml-2" onclick="copyToClipboard(this, '${value}')">
                             <i class="fas fa-clipboard"></i>
                         </span>
