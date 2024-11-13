@@ -4,13 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/guarzo/zkillanalytics/internal/handlers"
-	"github.com/guarzo/zkillanalytics/internal/model"
-	"golang.org/x/oauth2"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/oauth2"
+
+	"github.com/guarzo/zkillanalytics/internal/handlers"
+	"github.com/guarzo/zkillanalytics/internal/model"
 
 	"github.com/guarzo/zkillanalytics/internal/service"
 )
@@ -256,7 +258,6 @@ func handleRemoveEntity(trustedService *service.TrustedService, w http.ResponseW
 	}
 }
 
-// Updated handler functions for entity removal without `SessionService`
 func RemoveTrustedCharacterHandler(trustedService *service.TrustedService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		handleRemoveEntity(trustedService, w, r, "trusted", "character")

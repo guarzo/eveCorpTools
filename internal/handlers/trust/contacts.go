@@ -3,11 +3,12 @@ package trust
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+
 	"github.com/guarzo/zkillanalytics/internal/handlers"
 	"github.com/guarzo/zkillanalytics/internal/persist"
 	"github.com/guarzo/zkillanalytics/internal/service"
 	"github.com/guarzo/zkillanalytics/internal/xlog"
-	"net/http"
 )
 
 // Helper function to send JSON responses
@@ -30,6 +31,7 @@ func sendJSONError(w http.ResponseWriter, message string, statusCode int) {
 	}
 }
 
+// AddContactsHandler processes the request to add contacts to the EVE API.
 // AddContactsHandler processes the request to add contacts to the EVE API.
 func AddContactsHandler(s *handlers.SessionService, esiService *service.EsiService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -82,10 +84,13 @@ func AddContactsHandler(s *handlers.SessionService, esiService *service.EsiServi
 			contactIDs = append(contactIDs, corporation.CorporationID)
 		}
 		xlog.Logf("Collected %d contact IDs to add for CharacterID %v", len(contactIDs), request.CharacterID)
+
+		// If no contacts to add, respond with a success message
 		if len(contactIDs) == 0 {
 			sendJSONResponse(w, http.StatusOK, map[string]string{"message": "No contacts to add"})
 			return
 		}
+
 		// Use AddContacts to perform the API call
 		if err := esiService.EsiClient.AddContacts(request.CharacterID, &token, contactIDs); err != nil {
 			xlog.Logf("Error adding contacts for CharacterID %v: %v", request.CharacterID, err)
@@ -132,7 +137,7 @@ func DeleteContactsHandler(s *handlers.SessionService, esiService *service.EsiSe
 		xlog.Logf("Loaded token for CharacterID %v: %+v", request.CharacterID, token)
 
 		// Load untrusted contacts
-		untrustedData, err := persist.LoadTrustedCharacters()
+		untrustedData, err := persist.LoadTrustedCharacters() // Corrected function
 		if err != nil {
 			xlog.Logf("Error loading untrusted contacts: %v", err)
 			sendJSONError(w, "Failed to load untrusted contacts", http.StatusInternalServerError)
@@ -149,6 +154,12 @@ func DeleteContactsHandler(s *handlers.SessionService, esiService *service.EsiSe
 			contactIDs = append(contactIDs, corporation.CorporationID)
 		}
 		xlog.Logf("Collected %d contact IDs to delete for CharacterID %v", len(contactIDs), request.CharacterID)
+
+		// If no contacts to delete, respond with a success message
+		if len(contactIDs) == 0 {
+			sendJSONResponse(w, http.StatusOK, map[string]string{"message": "No contacts to delete"})
+			return
+		}
 
 		// Use DeleteContacts to perform the API call
 		if err := esiService.EsiClient.DeleteContacts(request.CharacterID, &token, contactIDs); err != nil {

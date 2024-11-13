@@ -38,6 +38,20 @@ function showLoading() {
     }
 }
 
+/**
+ * Updates the "Write Contacts for All" button's disabled state based on character tiles.
+ */
+function updateWriteAllButtonState() {
+    const writeAllBtn = document.getElementById("write-contacts-all-btn");
+    const characterTiles = document.querySelectorAll(".character-tile");
+    if (writeAllBtn) {
+        writeAllBtn.disabled = characterTiles.length === 0;
+        writeAllBtn.style.cursor = characterTiles.length === 0 ? "not-allowed" : "pointer";
+        writeAllBtn.style.opacity = characterTiles.length === 0 ? "0.6" : "1";
+    }
+}
+
+
 function hideLoading() {
     if (activeRequests > 0) {
         activeRequests -= 1;
@@ -176,6 +190,145 @@ async function fetchWithHandling(url, options) {
 }
 
 /**
+ * Updates the progress bar.
+ * @param {number} total - Total number of operations.
+ * @param {number} completed - Number of completed operations.
+ */
+function updateProgressBar(total, completed) {
+    const progressBar = document.getElementById("progress-bar");
+    if (progressBar) {
+        const percentage = total === 0 ? 0 : (completed / total) * 100;
+        progressBar.style.width = `${percentage}%`;
+    }
+}
+
+/**
+ * Resets the progress bar.
+ */
+function resetProgressBar() {
+    const progressBar = document.getElementById("progress-bar");
+    if (progressBar) {
+        progressBar.style.width = `0%`;
+    }
+}
+
+
+/**
+ * Adds an event listener to the "Write Contacts for All" button.
+ */
+function setupWriteAllButton() {
+    const writeAllBtn = document.getElementById("write-contacts-all-btn");
+    if (writeAllBtn) {
+        writeAllBtn.addEventListener("click", function () {
+            console.log("Write Contacts for All button clicked.");
+            writeContactsForAll();
+        });
+    } else {
+        console.error(`Button with ID "write-contacts-all-btn" not found.`);
+    }
+}
+
+async function writeContactsForAll() {
+    const writeAllBtn = document.getElementById("write-contacts-all-btn");
+    const progressBar = document.getElementById("write-all-progress-bar");
+    if (!writeAllBtn || !progressBar) {
+        console.error(`Button or progress bar not found.`);
+        return;
+    }
+
+    // Disable the button to prevent multiple clicks
+    toggleButtonState(writeAllBtn, true);
+    showLoading();
+
+    const totalCharacters = TabulatorIdentities.length;
+    let completed = 0;
+    let successCount = 0;
+    let failureCount = 0;
+
+    // Reset progress bar
+    progressBar.style.width = '0%';
+
+    // Function to update progress
+    const updateProgress = () => {
+        completed += 1;
+        const percentage = Math.round((completed / totalCharacters) * 100);
+        progressBar.style.width = `${percentage}%`;
+    };
+
+    // Array to hold promises
+    const promises = TabulatorIdentities.map(character => {
+        return writeContacts(character.CharacterID)
+            .then(() => {
+                successCount += 1;
+            })
+            .catch(() => {
+                failureCount += 1;
+            })
+            .finally(() => {
+                updateProgress();
+            });
+    });
+
+    try {
+        await Promise.all(promises);
+        if (failureCount === 0) {
+            toastr.success(`Successfully updated contacts for all ${totalCharacters} characters.`);
+        } else if (successCount === 0) {
+            toastr.error(`Failed to update contacts for all ${totalCharacters} characters.`);
+        } else {
+            toastr.warning(`Updated contacts for ${successCount} characters. Failed for ${failureCount} characters.`);
+        }
+    } catch (error) {
+        console.error(`Error writing contacts for all characters: ${error}`);
+        toastr.error("An unexpected error occurred while writing contacts for all characters.");
+    } finally {
+        // Reset the progress bar after completion
+        progressBar.style.width = '0%'; // Reset to 0%
+
+        // Optionally, add a slight delay for visual feedback
+        setTimeout(() => {
+            // If you want to hide the progress bar after resetting
+            // You can add a class to hide it or manipulate its visibility
+            // For example, removing the width might suffice if it's set to 0%
+            // Or you can toggle a hidden class
+            // Here, we'll ensure it's at 0% and visible for the next operation
+        }, 300); // Adjust the timeout as needed based on transition duration
+
+        hideLoading();
+        toggleButtonState(writeAllBtn, false);
+    }
+}
+
+
+/**
+ * Limits the number of concurrently executing promises.
+ * @param {Array} items - Array of items to process.
+ * @param {number} limit - Maximum number of concurrent promises.
+ * @param {function} asyncFn - Async function to execute for each item.
+ * @returns {Promise<Array>} - Resolves when all promises are completed.
+ */
+async function concurrentPromises(items, limit, asyncFn) {
+    const results = [];
+    const executing = [];
+
+    for (const item of items) {
+        const p = Promise.resolve().then(() => asyncFn(item));
+        results.push(p);
+
+        if (limit <= items.length) {
+            const e = p.then(() => executing.splice(executing.indexOf(e), 1));
+            executing.push(e);
+            if (executing.length >= limit) {
+                await Promise.race(executing);
+            }
+        }
+    }
+    return Promise.all(results);
+}
+
+
+
+/**
  * Function to write contacts
  * Calls /add-contacts and /delete-contacts endpoints sequentially
  * @param {number} characterID - ID of the character
@@ -247,6 +400,7 @@ async function writeContacts(characterID) {
     } finally {
         hideLoading();
         toggleButtonState(toggleBtn, false);
+        updateWriteAllButtonState();
     }
 }
 
@@ -333,6 +487,9 @@ function updateTileTrustStatus(tile, isTrusted) {
         tile.dataset.trustStatus = "untrusted";
         console.log(`Applied 'untrusted' border class to tile.`);
     }
+
+    updateWriteAllButtonState(); // Update button state after operation
+
 }
 
 
@@ -450,6 +607,8 @@ function initializeCharacterTiles() {
             }
         });
     });
+
+    updateWriteAllButtonState();
 }
 
 
@@ -1321,6 +1480,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Untrusted tables and sections are already hidden earlier
     }, 200);
+
+    setupWriteAllButton();
 
     // Setup all form event listeners
     setupFormEventListeners();
