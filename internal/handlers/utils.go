@@ -3,14 +3,14 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
-	"net/http"
 
 	"github.com/guarzo/zkillanalytics/internal/persist"
 )
 
-// Helper function to send JSON responses.
 func WriteJSONResponse(w http.ResponseWriter, data interface{}, statusCode int, logger *logrus.Logger) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
@@ -21,7 +21,6 @@ func WriteJSONResponse(w http.ResponseWriter, data interface{}, statusCode int, 
 	}
 }
 
-// Helper function to send JSON-formatted error messages with an identifier context and logger support.
 func WriteJSONError(w http.ResponseWriter, message string, identifier string, statusCode int, logger *logrus.Logger) {
 	// Include the identifier in the error message if provided
 	fullMessage := message
@@ -36,7 +35,6 @@ func WriteJSONError(w http.ResponseWriter, message string, identifier string, st
 	WriteJSONResponse(w, ErrorResponse{Error: fullMessage}, statusCode, logger)
 }
 
-// Helper function to retrieve main identity and token from session.
 func GetSessionIdentity(s *SessionService, r *http.Request, logger *logrus.Logger) (int64, oauth2.Token, error) {
 	session, err := s.Get(r, SessionName)
 	if err != nil {

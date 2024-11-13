@@ -299,35 +299,6 @@ async function writeContactsForAll() {
     }
 }
 
-
-/**
- * Limits the number of concurrently executing promises.
- * @param {Array} items - Array of items to process.
- * @param {number} limit - Maximum number of concurrent promises.
- * @param {function} asyncFn - Async function to execute for each item.
- * @returns {Promise<Array>} - Resolves when all promises are completed.
- */
-async function concurrentPromises(items, limit, asyncFn) {
-    const results = [];
-    const executing = [];
-
-    for (const item of items) {
-        const p = Promise.resolve().then(() => asyncFn(item));
-        results.push(p);
-
-        if (limit <= items.length) {
-            const e = p.then(() => executing.splice(executing.indexOf(e), 1));
-            executing.push(e);
-            if (executing.length >= limit) {
-                await Promise.race(executing);
-            }
-        }
-    }
-    return Promise.all(results);
-}
-
-
-
 /**
  * Function to write contacts
  * Calls /add-contacts and /delete-contacts endpoints sequentially
@@ -886,10 +857,18 @@ function initializeAllTabulatorTables() {
                             text: `Do you want to stop trusting "${characterName}"?`,
                             icon: 'warning',
                             showCancelButton: true,
-                            confirmButtonColor: '#d33',
-                            cancelButtonColor: '#3085d6',
                             confirmButtonText: 'Yes',
-                            cancelButtonText: 'No'
+                            cancelButtonText: 'No',
+                            customClass: {
+                                popup: 'bg-gray-800 text-gray-200', // Tailwind classes for modal background and text
+                                title: 'font-semibold text-xl', // Tailwind classes for title styling
+                                content: 'text-gray-300', // Tailwind classes for content/body text
+                                confirmButton: 'bg-teal-500 hover:bg-teal-600 text-gray-900 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-400',
+                                cancelButton: 'bg-red-500 hover:bg-red-600 text-gray-900 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-400',
+                                actions: 'flex justify-center space-x-4', // Tailwind classes for button container
+                                // Optionally, customize the icon
+                                icon: 'text-yellow-400' // Tailwind class for icon color
+                            }
                         }).then((result) => {
                             if (result.isConfirmed) {
                                 removeEntity('trusted', 'character', characterID.toString()); // Convert to string
@@ -932,10 +911,19 @@ function initializeAllTabulatorTables() {
                             text: `Do you want to stop trusting "${corporationName}"?`,
                             icon: 'warning',
                             showCancelButton: true,
-                            confirmButtonColor: '#d33',
-                            cancelButtonColor: '#3085d6',
                             confirmButtonText: 'Yes',
-                            cancelButtonText: 'No'
+                            cancelButtonText: 'No',
+                            customClass: {
+                                popup: 'bg-gray-800 text-gray-200', // Tailwind classes for modal background and text
+                                title: 'font-semibold text-xl', // Tailwind classes for title styling
+                                content: 'text-gray-300', // Tailwind classes for content/body text
+                                confirmButton: 'bg-teal-500 hover:bg-teal-600 text-gray-900 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-400',
+                                cancelButton: 'bg-red-500 hover:bg-red-600 text-gray-900 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-400',
+                                actions: 'flex justify-center space-x-4', // Tailwind classes for button container
+                                // Optionally, customize the icon
+                                icon: 'text-yellow-400' // Tailwind class for icon color
+                            }
+
                         }).then((result) => {
                             if (result.isConfirmed) {
                                 removeEntity('trusted', 'corporation', corporationID.toString()); // Convert to string
@@ -978,10 +966,18 @@ function initializeAllTabulatorTables() {
                             text: `Has everyone updated their standings for "${characterName}"?`,
                             icon: 'warning',
                             showCancelButton: true,
-                            confirmButtonColor: '#d33',
-                            cancelButtonColor: '#3085d6',
                             confirmButtonText: 'Yes',
-                            cancelButtonText: 'No'
+                            cancelButtonText: 'No',
+                            customClass: {
+                                popup: 'bg-gray-800 text-gray-200', // Tailwind classes for modal background and text
+                                title: 'font-semibold text-xl', // Tailwind classes for title styling
+                                content: 'text-gray-300', // Tailwind classes for content/body text
+                                confirmButton: 'bg-teal-500 hover:bg-teal-600 text-gray-900 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-400',
+                                cancelButton: 'bg-red-500 hover:bg-red-600 text-gray-900 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-400',
+                                actions: 'flex justify-center space-x-4', // Tailwind classes for button container
+                                // Optionally, customize the icon
+                                icon: 'text-yellow-400' // Tailwind class for icon color
+                            }
                         }).then((result) => {
                             if (result.isConfirmed) {
                                 removeEntity('untrusted', 'character', characterID.toString()); // Convert to string
@@ -1024,11 +1020,19 @@ function initializeAllTabulatorTables() {
                             text: `Has everyone updated their standings for "${corporationName}"?`,
                             icon: 'warning',
                             showCancelButton: true,
-                            confirmButtonColor: '#d33',
-                            cancelButtonColor: '#3085d6',
                             confirmButtonText: 'Yes',
-                            cancelButtonText: 'No'
-                        }).then((result) => {
+                            cancelButtonText: 'No',
+                            customClass: {
+                                popup: 'bg-gray-800 text-gray-200', // Tailwind classes for modal background and text
+                                title: 'font-semibold text-xl', // Tailwind classes for title styling
+                                content: 'text-gray-300', // Tailwind classes for content/body text
+                                confirmButton: 'bg-teal-500 hover:bg-teal-600 text-gray-900 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-400',
+                                cancelButton: 'bg-red-500 hover:bg-red-600 text-gray-900 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-400',
+                                actions: 'flex justify-center space-x-4', // Tailwind classes for button container
+                                // Optionally, customize the icon
+                                icon: 'text-yellow-400' // Tailwind class for icon color
+                            }
+                            }).then((result) => {
                             if (result.isConfirmed) {
                                 removeEntity('untrusted', 'corporation', corporationID.toString()); // Convert to string
                             }

@@ -2,14 +2,16 @@ package trust
 
 import (
 	"fmt"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
+
 	"github.com/guarzo/zkillanalytics/internal/handlers"
 	"github.com/guarzo/zkillanalytics/internal/model"
 	"github.com/guarzo/zkillanalytics/internal/persist"
 	"github.com/guarzo/zkillanalytics/internal/service"
 	"github.com/guarzo/zkillanalytics/internal/xlog"
-	"net/http"
-	"strings"
-	"time"
 )
 
 func LoginHandler(esiService *service.EsiService) http.HandlerFunc {
@@ -141,6 +143,19 @@ func LogoutHandler(s *handlers.SessionService) http.HandlerFunc {
 		session, _ := s.Get(r, handlers.SessionName)
 		clearSession(s, w, r)
 		session.Save(r, w)
+
+		// Capture the 'error' query parameter if present
+		errorMessage := r.URL.Query().Get("error")
+		if errorMessage != "" {
+			// URL-encode the error message
+			encodedError := url.QueryEscape(errorMessage)
+			// Append to redirect URL
+			redirectURL := fmt.Sprintf("/?error=%s", encodedError)
+			http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
+			return
+		}
+
+		// Otherwise, redirect normally
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 	}
 }

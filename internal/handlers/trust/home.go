@@ -2,11 +2,12 @@ package trust
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/guarzo/zkillanalytics/internal/handlers"
 	"github.com/guarzo/zkillanalytics/internal/model"
 	"github.com/guarzo/zkillanalytics/internal/service"
 	"github.com/guarzo/zkillanalytics/internal/xlog"
-	"net/http"
 )
 
 func HomeHandler(s *handlers.SessionService, esiService *service.EsiService) http.HandlerFunc {
@@ -28,7 +29,8 @@ func HomeHandler(s *handlers.SessionService, esiService *service.EsiService) htt
 
 		identities, err := validateIdentities(session, sessionValues, storeData, esiService)
 		if err != nil {
-			handleErrorWithRedirect(w, r, fmt.Sprintf("Failed to validate identities: %v", err), "/logout")
+			errorMessage := fmt.Sprintf("Failed to validate identities: %s", err.Error())
+			handleErrorWithRedirect(w, r, errorMessage, "/logout")
 			return
 		}
 

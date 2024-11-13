@@ -2,14 +2,15 @@ package trust
 
 import (
 	"fmt"
-	"github.com/guarzo/zkillanalytics/internal/handlers"
-	"github.com/guarzo/zkillanalytics/internal/service"
-	"html"
 	"html/template"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"slices"
 	"time"
+
+	"github.com/guarzo/zkillanalytics/internal/handlers"
+	"github.com/guarzo/zkillanalytics/internal/service"
 
 	"github.com/gorilla/sessions"
 
@@ -64,35 +65,17 @@ func sameUserCount(session *sessions.Session, previousUsers, storeUsers int) boo
 	return false
 }
 
+// handleErrorWithRedirect redirects to the given URL with an error message as a query parameter
 func handleErrorWithRedirect(w http.ResponseWriter, r *http.Request, errorMessage, redirectURL string) {
-	// Set content type to HTML with UTF-8 encoding for proper character handling
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	// URL-encode the error message to ensure it's safe for URLs
+	encodedMessage := url.QueryEscape(errorMessage)
 
-	// Escape the error message and redirect URL to prevent injection issues
-	escapedMessage := html.EscapeString(errorMessage)
-	escapedURL := html.EscapeString(redirectURL)
+	// Construct the new URL with the error query parameter
+	newURL := fmt.Sprintf("%s?error=%s", redirectURL, encodedMessage)
+	xlog.Logf(newURL)
 
-	// Construct HTML response with JavaScript for alert and redirection
-	responseHTML := fmt.Sprintf(`
-		<!DOCTYPE html>
-		<html lang="en">
-		<head>
-			<meta charset="UTF-8">
-			<meta http-equiv="X-UA-Compatible" content="IE=edge">
-			<meta name="viewport" content="width=device-width, initial-scale=1.0">
-			<title>Error</title>
-		</head>
-		<body>
-			<script>
-				alert("%s");
-				window.location.href = "%s";
-			</script>
-		</body>
-		</html>`, escapedMessage, escapedURL)
-
-	// Write the HTML response with embedded JavaScript
-	w.WriteHeader(http.StatusInternalServerError)
-	_, _ = w.Write([]byte(responseHTML))
+	// Redirect the user with the updated URL
+	http.Redirect(w, r, newURL, http.StatusTemporaryRedirect)
 }
 
 func clearSession(s *handlers.SessionService, w http.ResponseWriter, r *http.Request) {
