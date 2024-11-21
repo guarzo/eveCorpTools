@@ -13,6 +13,8 @@ import (
 
 	"github.com/guarzo/zkillanalytics/internal/handlers"
 	"github.com/guarzo/zkillanalytics/internal/model"
+	"github.com/guarzo/zkillanalytics/internal/persist"
+	"github.com/guarzo/zkillanalytics/internal/xlog"
 
 	"github.com/guarzo/zkillanalytics/internal/service"
 )
@@ -310,4 +312,62 @@ func fetchEntityData(entityType string, data EntityData, token *oauth2.Token, es
 		return data, nil
 	}
 	return EntityData{}, fmt.Errorf("unknown entity type: %s", entityType)
+}
+
+func UpdateIsOnCouchHandler(w http.ResponseWriter, r *http.Request) {
+	xlog.Logf("Update IsOnCouch Handler invoked")
+
+	// Parse the request
+	var request struct {
+		ID        int64  `json:"id"`
+		IsOnCouch bool   `json:"isOnCouch"`
+		TableID   string `json:"tableId"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		xlog.Logf("Error decoding JSON: %v", err)
+		sendJSONError(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	xlog.Logf("Received Update IsOnCouch request: %+v", request)
+
+	// Load the data
+	data, err := persist.LoadTrustedCharacters()
+	if err != nil {
+		xlog.Logf("Error loading trusted characters: %v", err)
+		sendJSONError(w, "Error loading trusted characters", http.StatusInternalServerError)
+		return
+	}
+
+	// Update the IsOnCouch field based on the table and ID
+	switch request.TableID {
+	case "trusted-characters-table":
+		for i, character := range data.TrustedCharacters {
+			if character.CharacterID == request.ID {
+				data.TrustedCharacters[i].IsOnCouch = request.IsOnCouch
+				break
+			}
+		}
+	case "trusted-corporations-table":
+		for i, corporation := range data.TrustedCorporations {
+			if corporation.CorporationID == request.ID {
+				data.TrustedCorporations[i].IsOnCouch = request.IsOnCouch
+				break
+			}
+		}
+	default:
+		xlog.Logf("Table ID was not recognized: %v", request.TableID)
+		sendJSONError(w, "Error parsing tableID", http.StatusInternalServerError)
+		return
+	}
+
+	// Save the updated data
+	if err := persist.SaveTrustedCharacters(data); err != nil {
+		xlog.Logf("Error saving trusted characters: %v", err)
+		sendJSONError(w, "Error saving trusted characters", http.StatusInternalServerError)
+		return
+	}
+
+	sendJSONResponse(w, http.StatusOK, map[string]string{"message": "IsOnCouch updated successfully"})
 }

@@ -26,6 +26,9 @@ toastr.options = {
     "hideMethod": "fadeOut"
 };
 
+console.log(TrustedCharacters)
+console.log(TrustedCorporations)
+
 /**
  * Function to show the loading indicator
  */
@@ -829,15 +832,46 @@ function initializeAllTabulatorTables() {
             indexField: "CharacterID",
             data: TrustedCharacters,
             columns: [
-                { title: "Character Name", field: "CharacterName", headerSort: true, minWidth: 250 },
-                { title: "Added By", field: "AddedBy", headerSort: true, minWidth: 250 },
-                { title: "Corporation", field: "CorporationName", headerSort: true, minWidth: 250 },
+                {
+                    title: "Status",
+                    field: "IsOnCouch", // This should match the field name in the data
+                    formatter: (cell, formatterParams) => {
+                        const isOnCouch = cell.getValue();
+                        return isOnCouch
+                            ? '<i class="fas fa-couch text-yellow-500" title="On the Couch"></i>'
+                            : '<i class="fas fa-user text-green-500" title="Member"></i>';
+                    },
+                    hozAlign: "center",
+                    minWidth: 50,
+                    cellClick: function (e, cell) {
+                        const rowData = cell.getRow().getData();
+                        const currentStatus = rowData.IsOnCouch;
+
+                        // Toggle the status
+                        const newStatus = !currentStatus;
+
+                        // Update the backend
+                        updateStatus(rowData.CharacterID, newStatus, "character")
+                            .then(() => {
+                                // Update the cell value and refresh the table
+                                rowData.IsOnCouch = newStatus;
+                                cell.getRow().update(rowData);
+                                toastr.success("Status updated successfully.");
+                            })
+                            .catch(error => {
+                                console.error("Failed to update status:", error);
+                                toastr.error("Failed to update status. Please try again.");
+                            });
+                    }
+                },
+                { title: "Character Name", field: "CharacterName", headerSort: true, minWidth: 100 },
+                { title: "Corporation", field: "CorporationName", headerSort: true, minWidth: 100 },
                 {
                     title: "Comment",
                     field: "Comment",
-                    editor: "input", // Makes the cell editable
-                    editable: true, // Ensures it's editable by the user
-                    minWidth: 300,
+                    editor: "input",
+                    editable: true,
+                    minWidth: 150
                 },
                 {
                     title: "Remove",
@@ -847,11 +881,10 @@ function initializeAllTabulatorTables() {
                     minWidth: 50,
                     cellClick: function (e, cell) {
                         const rowData = cell.getRow().getData();
-                        const characterName = rowData.CharacterName;
                         const characterID = rowData.CharacterID;
+                        const characterName = rowData.CharacterName;
                         console.log(`Removing trusted character with ID: ${characterID}, Name: ${characterName}`);
 
-                        // Use SweetAlert2 for Confirmation
                         Swal.fire({
                             title: `Remove Character?`,
                             text: `Do you want to stop trusting "${characterName}"?`,
@@ -859,19 +892,9 @@ function initializeAllTabulatorTables() {
                             showCancelButton: true,
                             confirmButtonText: 'Yes',
                             cancelButtonText: 'No',
-                            customClass: {
-                                popup: 'bg-gray-800 text-gray-200', // Tailwind classes for modal background and text
-                                title: 'font-semibold text-xl', // Tailwind classes for title styling
-                                content: 'text-gray-300', // Tailwind classes for content/body text
-                                confirmButton: 'bg-teal-500 hover:bg-teal-600 text-gray-900 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-400',
-                                cancelButton: 'bg-red-500 hover:bg-red-600 text-gray-900 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-400',
-                                actions: 'flex justify-center space-x-4', // Tailwind classes for button container
-                                // Optionally, customize the icon
-                                icon: 'text-yellow-400' // Tailwind class for icon color
-                            }
                         }).then((result) => {
                             if (result.isConfirmed) {
-                                removeEntity('trusted', 'character', characterID.toString()); // Convert to string
+                                removeEntity('trusted', 'character', characterID.toString());
                             }
                         });
                     }
@@ -883,15 +906,46 @@ function initializeAllTabulatorTables() {
             indexField: "CorporationID",
             data: TrustedCorporations,
             columns: [
-                { title: "Corporation Name", field: "CorporationName", headerSort: true, minWidth: 250 },
-                { title: "Added By", field: "AddedBy", headerSort: true, minWidth: 250 },
-                { title: "Alliance Name", field: "AllianceName", headerSort: true, minWidth: 250 },
+                {
+                    title: "Status",
+                    field: "IsOnCouch", // This should match the field name in the data
+                    formatter: (cell, formatterParams) => {
+                        const isOnCouch = cell.getValue();
+                        return isOnCouch
+                            ? '<i class="fas fa-couch text-yellow-500" title="On the Couch"></i>'
+                            : '<i class="fas fa-user text-green-500" title="Member"></i>';
+                    },
+                    hozAlign: "center",
+                    minWidth: 50,
+                    cellClick: function (e, cell) {
+                        const rowData = cell.getRow().getData();
+                        const currentStatus = rowData.IsOnCouch;
+
+                        // Toggle the status
+                        const newStatus = !currentStatus;
+
+                        // Update the backend
+                        updateStatus(rowData.CharacterID, newStatus, "character")
+                            .then(() => {
+                                // Update the cell value and refresh the table
+                                rowData.IsOnCouch = newStatus;
+                                cell.getRow().update(rowData);
+                                toastr.success("Status updated successfully.");
+                            })
+                            .catch(error => {
+                                console.error("Failed to update status:", error);
+                                toastr.error("Failed to update status. Please try again.");
+                            });
+                    }
+                },
+                { title: "Corporation Name", field: "CorporationName", headerSort: true, minWidth: 100 },
+                { title: "Alliance Name", field: "AllianceName", headerSort: true, minWidth: 100 },
                 {
                     title: "Comment",
                     field: "Comment",
-                    editor: "input", // Makes the cell editable
-                    editable: true, // Ensures it's editable by the user
-                    minWidth: 300,
+                    editor: "input",
+                    editable: true,
+                    minWidth: 150
                 },
                 {
                     title: "Remove",
@@ -905,7 +959,6 @@ function initializeAllTabulatorTables() {
                         const corporationName = rowData.CorporationName;
                         console.log(`Removing trusted corporation with ID: ${corporationID}, Name: ${corporationName}`);
 
-                        // Use SweetAlert2 for Confirmation
                         Swal.fire({
                             title: `Remove Corporation?`,
                             text: `Do you want to stop trusting "${corporationName}"?`,
@@ -913,23 +966,12 @@ function initializeAllTabulatorTables() {
                             showCancelButton: true,
                             confirmButtonText: 'Yes',
                             cancelButtonText: 'No',
-                            customClass: {
-                                popup: 'bg-gray-800 text-gray-200', // Tailwind classes for modal background and text
-                                title: 'font-semibold text-xl', // Tailwind classes for title styling
-                                content: 'text-gray-300', // Tailwind classes for content/body text
-                                confirmButton: 'bg-teal-500 hover:bg-teal-600 text-gray-900 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-400',
-                                cancelButton: 'bg-red-500 hover:bg-red-600 text-gray-900 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-400',
-                                actions: 'flex justify-center space-x-4', // Tailwind classes for button container
-                                // Optionally, customize the icon
-                                icon: 'text-yellow-400' // Tailwind class for icon color
-                            }
-
                         }).then((result) => {
                             if (result.isConfirmed) {
-                                removeEntity('trusted', 'corporation', corporationID.toString()); // Convert to string
+                                removeEntity('trusted', 'corporation', corporationID.toString());
                             }
                         });
-                    },
+                    }
                 }
             ]
         },
@@ -1051,6 +1093,34 @@ function initializeAllTabulatorTables() {
     // Setup Mutation Observers for all tables
     const allTableIds = tableConfigs.map(config => config.tableId);
     setupMutationObservers(allTableIds);
+}
+
+async function updateStatus(entityID, isOnCouch, entityType) {
+    const url = `/update-is-on-couch`;
+
+    const payload = {
+        id: entityID,
+        isOnCouch,
+        tableId: entityType === "character" ? "trusted-characters-table" : "trusted-corporations-table"
+    };
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || "Failed to update status.");
+        }
+
+        return response.json();
+    } catch (error) {
+        console.error(`Error updating status:`, error);
+        throw error;
+    }
 }
 
 /**

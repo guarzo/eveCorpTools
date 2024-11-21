@@ -2,8 +2,9 @@ package model
 
 import (
 	"fmt"
-	"golang.org/x/oauth2"
 	"time"
+
+	"golang.org/x/oauth2"
 )
 
 // Character contains detailed information about an EVE Online character
@@ -113,6 +114,7 @@ type TrustedCharacter struct {
 	AddedBy         string    `json:"AddedBy"`
 	DateAdded       time.Time `json:"DateAdded"`
 	Comment         string    `json:"Comment"`
+	IsOnCouch       bool      `json:"IsOnCouch"`
 }
 
 type TrustedCorporation struct {
@@ -123,6 +125,7 @@ type TrustedCorporation struct {
 	DateAdded       time.Time `json:"DateAdded"`
 	AddedBy         string    `json:"AddedBy"`
 	Comment         string    `json:"Comment"`
+	IsOnCouch       bool      `json:"IsOnCouch"`
 }
 
 type TrustedCharacters struct {

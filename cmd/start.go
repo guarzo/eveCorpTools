@@ -101,6 +101,7 @@ func registerTrustRoutes(r *mux.Router, sessionStore *handlers.SessionService, t
 	r.HandleFunc("/logout", trust.LogoutHandler(sessionStore))
 
 	r.HandleFunc("/update-comment", trust.UpdateCommentHandler)
+	r.HandleFunc("/update-is-on-couch", trust.UpdateIsOnCouchHandler)
 
 	r.HandleFunc("/validate-and-add-trusted-character", trust.AddTrustedCharacterHandler(sessionStore, trustedService, esiService)).Methods("POST")
 	r.HandleFunc("/remove-trusted-character", trust.RemoveTrustedCharacterHandler(trustedService)).Methods("POST")
