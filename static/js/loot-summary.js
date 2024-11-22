@@ -88,17 +88,25 @@ async function fetchLootSummaries() {
                     const details = row.getData();
                     document.getElementById("selectedRowId").value = details.id;
                     document.getElementById("detailDate").innerText = details.date || 'N/A';
-                    document.getElementById("detailBattleReport").innerText = details.battleReport || 'N/A';
-                    document.getElementById("detailBattleReport").href = details.battleReport && details.battleReport.startsWith('http')
-                        ? details.battleReport
-                        : '#';
+                    const battleReportLink = document.getElementById("detailBattleReport");
+
+                    if (details.battleReport && details.battleReport.startsWith('http')) {
+                        battleReportLink.href = details.battleReport;
+                        battleReportLink.innerText = 'View Battle Report';
+                        battleReportLink.classList.remove('text-gray-400');
+                        battleReportLink.classList.add('text-teal-300', 'hover:underline');
+                    } else {
+                        battleReportLink.href = '#';
+                        battleReportLink.innerText = details.battleReport || 'N/A';
+                        battleReportLink.classList.remove('text-teal-300', 'hover:underline');
+                        battleReportLink.classList.add('text-gray-400');
+                    }
+
                     document.getElementById("detailTotalBuyPrice").innerText = details.totalBuyPrice || '0';
                     displaySplitDetails(details.splitDetails);
                     openDetailModal();
                 });
-
-
-
+                
                 // Ensure the lootSummaryTable is visible
                 document.getElementById("lootSummaryTable").style.display = "block";
 

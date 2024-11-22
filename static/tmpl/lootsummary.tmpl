@@ -37,50 +37,53 @@
                     </div>
                 </section>
             </div>
-            <!-- Detail Modal -->
-            <div id="detailModal" class="fixed inset-0 bg-black bg-opacity-50 hidden">
-                <div class="flex items-center justify-center min-h-screen">
-                    <div class="bg-gray-800 p-6 rounded-lg shadow-lg w-11/12 max-w-md mx-auto">
-                        <!-- Modal content -->
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-2xl font-bold text-teal-200">Details</h2>
-                            <button class="text-gray-400 hover:text-gray-200" onclick="closeDetailModal()" title="Close">
-                                <i class="fas fa-times text-2xl"></i>
-                            </button>
-                        </div>
-                        <input type="hidden" id="selectedRowId">
-                        <div class="space-y-4">
-                            <!-- Detail fields (same as before) -->
-                            <div class="flex items-center">
-                                <i class="fas fa-calendar-alt text-teal-500 mr-2"></i>
-                                <span class="font-semibold text-gray-200">Date:</span>
-                                <span id="detailDate" class="text-teal-200 ml-auto"></span>
+                <!-- Detail Modal -->
+                <div id="detailModal" class="fixed inset-0 bg-black bg-opacity-50 hidden">
+                    <div class="flex items-center justify-center min-h-screen">
+                        <div class="bg-gray-800 p-6 rounded-lg shadow-lg w-11/12 max-w-3xl mx-auto">
+                            <!-- Modal content -->
+                            <div class="flex justify-between items-center mb-4">
+                                <h2 class="text-2xl font-bold text-teal-200">Details</h2>
+                                <button class="text-gray-400 hover:text-gray-200" onclick="closeDetailModal()" title="Close">
+                                    <i class="fas fa-times text-2xl"></i>
+                                </button>
                             </div>
-                            <div class="flex items-center">
-                                <i class="fas fa-link text-teal-500 mr-2"></i>
-                                <span class="font-semibold text-gray-200">Battle Report:</span>
-                                <a id="detailBattleReport" href="#" target="_blank"
-                                   class="text-teal-300 hover:underline ml-auto"></a>
+                            <input type="hidden" id="selectedRowId">
+                            <div class="space-y-4">
+                                <!-- Date Field -->
+                                <div class="flex items-center">
+                                    <i class="fas fa-calendar-alt text-teal-500 mr-2"></i>
+                                    <span class="font-semibold text-gray-200">Date:</span>
+                                    <span id="detailDate" class="text-teal-200 ml-auto"></span>
+                                </div>
+                                <!-- Battle Report Field -->
+                                <div class="flex items-center">
+                                    <i class="fas fa-link text-teal-500 mr-2"></i>
+                                    <span class="font-semibold text-gray-200">Battle Report:</span>
+                                    <a id="detailBattleReport" href="#" target="_blank" class="text-teal-300 hover:underline ml-auto">View Battle Report</a>
+                                </div>
+                                <!-- Total Buy Price Field -->
+                                <div class="flex items-center">
+                                    <i class="fas fa-coins text-yellow-500 mr-2"></i>
+                                    <span class="font-semibold text-gray-200">Total Buy Price:</span>
+                                    <span id="detailTotalBuyPrice" class="text-teal-200 ml-auto"></span>
+                                </div>
+                                <!-- Split Details -->
+                                <hr class="border-gray-700">
+                                <div id="splitDetails" class="text-teal-300">
+                                    <!-- Split details will be inserted here -->
+                                </div>
                             </div>
-                            <div class="flex items-center">
-                                <i class="fas fa-coins text-yellow-500 mr-2"></i>
-                                <span class="font-semibold text-gray-200">Total Buy Price:</span>
-                                <span id="detailTotalBuyPrice" class="text-teal-200 ml-auto"></span>
+                            <!-- Delete Button -->
+                            <div class="flex justify-center mt-6">
+                                <button class="flex items-center text-red-500 hover:text-red-700"
+                                        onclick="confirmDelete()" title="Delete">
+                                    <i class="fas fa-trash-alt text-2xl mr-2"></i> Delete
+                                </button>
                             </div>
-                            <hr class="border-gray-700">
-                            <div id="splitDetails" class="text-teal-300">
-                                <!-- Split details will be inserted here -->
-                            </div>
-                        </div>
-                        <div class="flex justify-center mt-6">
-                            <button class="flex items-center text-red-500 hover:text-red-700"
-                                    onclick="confirmDelete()" title="Delete">
-                                <i class="fas fa-trash-alt text-2xl mr-2"></i> Delete
-                            </button>
                         </div>
                     </div>
                 </div>
-            </div>
         <!-- Placeholder for No Data and Error Messages -->
         <div id="noDataMessage" class="text-center text-xl text-teal-200 mt-8 hidden">
             No saved loot splits available.
