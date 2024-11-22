@@ -5,7 +5,6 @@ function initSaveSplit() {
             <!-- Label for Battle Report -->
             <label for="battleReport" class="text-teal-200 text-lg font-semibold mb-2">
                 Battle Report
-                <i class="fas fa-info-circle text-gray-400 ml-1" title="Enter a link or brief description"></i>
             </label>
 
             <!-- Battle Report Input -->

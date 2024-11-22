@@ -106,7 +106,7 @@ async function fetchLootSummaries() {
                     displaySplitDetails(details.splitDetails);
                     openDetailModal();
                 });
-                
+
                 // Ensure the lootSummaryTable is visible
                 document.getElementById("lootSummaryTable").style.display = "block";
 

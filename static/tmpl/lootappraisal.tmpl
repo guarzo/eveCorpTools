@@ -28,6 +28,15 @@
         </button>
         <h1 class="text-3xl font-bold text-teal-200 ml-4 flex-grow text-center">Loot Split Calculator</h1>
     </header>
+
+    <!-- Hero Image Section -->
+    <section class="relative">
+        <img src="/static/images/hero-image.jpg" alt="Loot Summary Hero Image" class="w-full h-64 object-cover">
+        <div class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <h2 class="text-4xl font-bold text-teal-200">Share the wealth</h2>
+        </div>
+    </section>
+
     <main class="flex-grow bg-gradient-to-b from-gray-800 to-gray-700 p-6 opacity-0 animate-fade-in">
         <div class="container mx-auto w-full px-4 sm:px-6 lg:px-8">
             <section class="space-y-6">
@@ -48,7 +57,6 @@
                 <div id="pilot-count-container" class="text-center my-6">
                     <label for="pilotCount" class="text-teal-200 text-lg font-semibold mb-2 block">
                         Total Number of Pilots
-                        <i class="fas fa-info-circle text-gray-400 ml-1" title="Include all participating pilots."></i>
                     </label>
                     <select id="pilotCount" class="w-48 px-4 py-2 text-center bg-gray-700 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
                         <!-- Options will be added dynamically -->
@@ -59,7 +67,6 @@
                 <div id="scanner-count-container" class="text-center my-6">
                     <label for="scannerCount" class="text-teal-200 text-lg font-semibold mb-2 block">
                         Number of Scanners
-                        <i class="fas fa-info-circle text-gray-400 ml-1" title="Number of players acting as scanners."></i>
                     </label>
                     <select id="scannerCount" class="w-48 px-4 py-2 text-center bg-gray-700 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
                         <!-- Options will be added dynamically -->
