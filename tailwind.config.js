@@ -11,9 +11,17 @@ module.exports = {
                     '0%': { transform: 'rotate(0deg)' },
                     '100%': { transform: 'rotate(360deg)' },
                 },
+                'fade-in': {
+                    '0%': { opacity: 0 },
+                    '100%': { opacity: 1 },
+                },
+            },
+            fontFamily: {
+                sans: ['Inter', 'Sans-serif'],
             },
             animation: {
                 'spin-slow': 'spin-slow 3s linear infinite',
+                'fade-in': 'fade-in 0.5s ease-out forwards',
             },
             colors: {
                 'custom-teal': '#38B2AC',

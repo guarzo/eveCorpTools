@@ -35,40 +35,69 @@ async function fetchLootSummaries() {
 
 
                 window.lootSummaryTable = new Tabulator("#lootSummaryTable", {
+                    theme: "midnight",
                     data: processedData,
-                    layout: "fitData",
+                    layout: "fitColumns",
                     responsiveLayout: "hide",
                     columns: [
-                        { title: "Date", field: "date", minWidth: 300 },
-                        { title: "Battle Report", field: "battleReport", formatter: "link", formatterParams: { labelField: "battleReport", urlField: "battleReport", minWidth: 300 } },
-                        { title: "Total Buy Price", field: "totalBuyPrice", minWidth: 300 },
                         {
-                            title: "Remove",
-                            formatter: "buttonCross",
-                            hozAlign: "center",
-                            headerSort: false,
+                            title: `<i class="fas fa-calendar-alt text-teal-500"></i> Date`,
+                            field: "date", minWidth: 150, sorter: "datetime"},
+                        {
+                            title: `<i class="fas fa-link text-teal-500"></i> Battle Report`,
+                            field: "battleReport",
+                            headerTooltip: "Link to the battle report or description",
+                            formatter: function(cell, formatterParams) {
+                                const value = cell.getValue();
+                                const isValidUrl = value.startsWith('http://') || value.startsWith('https://');
+
+                                if (isValidUrl) {
+                                    // If it's a URL, display as a clickable link
+                                    return `<a href="${value}" target="_blank" class="text-teal-300 hover:text-teal-500" title="View Battle Report">
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>`;
+                                } else {
+                                    // If it's plain text, display the text
+                                    return `<span class="text-gray-200">${value}</span>`;
+                                }
+                            },
                             minWidth: 50,
-                            cellClick: function (e, cell) {
-                                const rowData = cell.getRow().getData();
-                                confirmDelete(rowData.id); // Pass row id to confirmDelete
-                            }
+                        },
+                        {
+                            title: `<i class="fas fa-coins text-yellow-500"></i> Total Buy Price`,
+                            field: "totalBuyPrice",
+                            minWidth: 150,
+                            formatter: function(cell, formatterParams) {
+                                const value = cell.getValue();
+                                return `<i class="fas fa-coins text-yellow-500 mr-2"></i>${value} ISK`;
+                            },
+                            headerTooltip: "Total value of the loot",
+                            sorter: "number"
                         }
+
                     ],
-                    // Additional Tabulator configurations as needed
+                    rowFormatter: function(row) {
+                        row.getElement().style.cursor = "pointer";
+                    },
                 });
 
-                // Set up row click event
+
+
+                // Update the rowClick event handler
                 window.lootSummaryTable.on("rowClick", function(e, row) {
                     const details = row.getData();
-                    console.log(details)
                     document.getElementById("selectedRowId").value = details.id;
                     document.getElementById("detailDate").innerText = details.date || 'N/A';
                     document.getElementById("detailBattleReport").innerText = details.battleReport || 'N/A';
-                    document.getElementById("detailBattleReport").href = details.battleReport || '#';
+                    document.getElementById("detailBattleReport").href = details.battleReport && details.battleReport.startsWith('http')
+                        ? details.battleReport
+                        : '#';
                     document.getElementById("detailTotalBuyPrice").innerText = details.totalBuyPrice || '0';
                     displaySplitDetails(details.splitDetails);
-                    document.getElementById("detailContainer").style.display = "block";
+                    openDetailModal();
                 });
+
+
 
                 // Ensure the lootSummaryTable is visible
                 document.getElementById("lootSummaryTable").style.display = "block";
@@ -119,6 +148,18 @@ function confirmDelete(id) {
     });
 }
 
+
+// Function to open the detail modal
+function openDetailModal() {
+    document.getElementById("detailModal").classList.remove('hidden');
+}
+
+// Function to close the detail modal
+function closeDetailModal() {
+    document.getElementById("detailModal").classList.add('hidden');
+}
+
+
 function deleteDetails(id) {
     fetch('/delete-loot-split', {
         method: 'POST',
@@ -130,8 +171,9 @@ function deleteDetails(id) {
         .then(response => {
             if (response.ok) {
                 console.log("Loot split deleted successfully.");
+                toastr.success('Loot split deleted successfully.');
                 fetchLootSummaries(); // Refresh the table
-                document.getElementById("detailContainer").style.display = "none"; // Hide details container
+                closeDetailModal(); // Close the modal
             } else {
                 console.error("Error deleting loot split.");
                 toastr.error('Failed to delete loot split.');
@@ -151,88 +193,34 @@ function formatNumber(num) {
 function displaySplitDetails(splitDetails) {
     const splitDetailsContainer = document.getElementById("splitDetails");
     splitDetailsContainer.innerHTML = '';
-    console.log(splitDetails)
     if (splitDetails && typeof splitDetails === 'object' && Object.keys(splitDetails).length > 0) {
+        const table = document.createElement('table');
+        table.classList.add('w-full', 'text-left', 'mt-4');
         for (const key in splitDetails) {
             if (splitDetails.hasOwnProperty(key)) {
                 const value = splitDetails[key];
-                splitDetailsContainer.innerHTML += `
-                    <p><strong>${key}:</strong> ${formatNumber(Number(value))}
-                        <span class="clipboard-icon cursor-pointer text-gray-400 hover:text-green-500 ml-2" onclick="copyToClipboard(this, '${value}')">
-                            <i class="fas fa-clipboard"></i>
-                        </span>
-                    </p>`;
+                const row = document.createElement('tr');
+
+                const cellKey = document.createElement('td');
+                cellKey.classList.add('py-2', 'font-semibold', 'text-gray-200');
+                cellKey.innerText = key;
+
+                const cellValue = document.createElement('td');
+                cellValue.classList.add('py-2', 'text-teal-200', 'text-right');
+                cellValue.innerHTML = `${formatNumber(Number(value))} ISK
+                    <span class="clipboard-icon cursor-pointer text-gray-400 hover:text-green-500 ml-2" onclick="copyToClipboard(this, '${value}')">
+                        <i class="fas fa-clipboard"></i>
+                    </span>`;
+
+                row.appendChild(cellKey);
+                row.appendChild(cellValue);
+                table.appendChild(row);
             }
         }
+        splitDetailsContainer.appendChild(table);
     } else {
         splitDetailsContainer.innerHTML = '<p>No split details available</p>';
     }
-}
-
-// Function to copy text to clipboard and add temporary visual feedback
-function copyToClipboard(element, value) {
-    navigator.clipboard.writeText(value.toString()).then(() => {
-        console.log("Copied to clipboard:", value);
-
-        // Visual feedback using Tailwind classes
-        element.classList.add('text-green-500', 'scale-125', 'transform', 'transition', 'duration-300');
-
-        // Remove feedback after 1 second
-        setTimeout(() => {
-            element.classList.remove('text-green-500', 'scale-125');
-        }, 1000);
-    }).catch(err => {
-        console.error("Failed to copy to clipboard", err);
-    });
-}
-
-function confirmDelete() {
-    Swal.fire({
-        title: 'Are you sure?',
-        text: "This action cannot be undone!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Yes, delete it!',
-        cancelButtonText: 'Cancel',
-        reverseButtons: false
-    }).then((result) => {
-        if (result.isConfirmed) {
-            deleteDetails();
-            Swal.fire({
-                title: 'Deleted!',
-                text: 'The loot split entry has been deleted.',
-                icon: 'success',
-                confirmButtonColor: '#3085d6'
-            });
-        }
-    });
-}
-
-function deleteDetails() {
-    const id = parseInt(document.getElementById("selectedRowId").value);
-    fetch('/delete-loot-split', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ id: id })
-    })
-        .then(response => {
-            if (response.ok) {
-                console.log("Loot split deleted successfully.");
-                fetchLootSummaries(); // Refresh the table
-                document.getElementById("detailContainer").style.display = "none"; // Hide details container
-            } else {
-                console.error("Error deleting loot split.");
-                toastr.error('Failed to delete loot split.');
-            }
-        })
-        .catch(error => {
-            console.error("Error deleting loot split.", error);
-            toastr.error('An error occurred while deleting the loot split.');
-        });
 }
 
 // Function to display a message when no data is available

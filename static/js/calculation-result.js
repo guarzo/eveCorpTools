@@ -9,20 +9,22 @@ function initCalculationResult() {
         </div>`;
 }
 
-function calculateSplit(totalBuyPrice, totalPilots, Count) {
+function calculateSplit(totalBuyPrice, totalPilots, scannerCount) {
+    console.log('Calculating split with:', { totalBuyPrice, totalPilots, scannerCount });
+
     const results = {
-        Payout: 0,
+        scannerPayout: 0,
         pilotPayout: 0,
         corpShare: 0,
         ruleExplanation: "",
     };
 
-    if (isNaN(totalBuyPrice) || totalBuyPrice <= 0 || (totalPilots + Count) <= 0) {
+    if (isNaN(totalBuyPrice) || totalBuyPrice <= 0 || (totalPilots + scannerCount) <= 0) {
         results.ruleExplanation = "Invalid data provided.";
         return results;
     }
 
-    const totalParticipants = totalPilots + Count;
+    const totalParticipants = totalPilots + scannerCount;
     const baseShare = Math.floor(totalBuyPrice / totalParticipants);
 
     // Calculate corporation share if base share exceeds threshold
@@ -32,13 +34,13 @@ function calculateSplit(totalBuyPrice, totalPilots, Count) {
     }
 
     const basePayout = Math.floor(totalBuyPrice / totalParticipants);
-    const Bonus = Math.floor(totalBuyPrice * 0.10); // s get 10% bonus of total loot
-    const Payout = basePayout + Math.floor(Bonus / Count); // Base + bonus per
+    const bonus = Math.floor(totalBuyPrice * 0.10); // Scanners get 10% bonus of total loot
+    const scannerPayout = basePayout + Math.floor(bonus / scannerCount); // Base + bonus per scanner
     const pilotPayout = basePayout; // Pilots get base payout
-    const remainder = totalBuyPrice - ((Payout * Count) + (pilotPayout * totalPilots));
+    const remainder = totalBuyPrice - ((scannerPayout * scannerCount) + (pilotPayout * totalPilots));
 
-    // Add remainder to the first  payout
-    results.Payout = Payout + (remainder > 0 ? remainder : 0);
+    // Add remainder to the first scanner payout
+    results.scannerPayout = scannerPayout + (remainder > 0 ? remainder : 0);
     results.pilotPayout = pilotPayout;
 
     // Rule explanation
@@ -49,13 +51,21 @@ function calculateSplit(totalBuyPrice, totalPilots, Count) {
     return results;
 }
 
-
 function calculateValues(totalBuyPrice) {
     const valuesContainer = document.getElementById("valuesContainer");
     const splitRulesContainer = document.getElementById("splitRulesContainer");
+    const calculationResultContainer = document.getElementById("calculation-result-container");
+
+    // Remove the 'hidden' class to show the container
+    calculationResultContainer.classList.remove('hidden');
 
     const totalPilots = parseInt(document.getElementById("pilotCount").value) || 0;
     const scannerCount = parseInt(document.getElementById("scannerCount").value) || 0;
+
+    if (!valuesContainer || !splitRulesContainer) {
+        console.error('Values container or split rules container not found.');
+        return;
+    }
 
     valuesContainer.innerHTML = "";
     splitRulesContainer.innerHTML = "";
@@ -71,7 +81,7 @@ function calculateValues(totalBuyPrice) {
     // Display Scanner Payout
     if (scannerCount > 0) {
         valuesContainer.innerHTML += `
-            <p>Scanner Payout: ${formatNumber(results.scannerPayout)} (each)
+            <p>Scanner Payout: ${formatNumber(results.scannerPayout)} ISK (each)
                 <span class="clipboard-icon cursor-pointer text-gray-400 hover:text-green-500 ml-2" 
                       onclick="copyToClipboard(this, '${results.scannerPayout}')">
                     <i class="fas fa-clipboard"></i>
@@ -82,7 +92,7 @@ function calculateValues(totalBuyPrice) {
     // Display Pilot Payout
     if (totalPilots > 0) {
         valuesContainer.innerHTML += `
-            <p>Pilot Payout: ${formatNumber(results.pilotPayout)} (each)
+            <p>Pilot Payout: ${formatNumber(results.pilotPayout)} ISK (each)
                 <span class="clipboard-icon cursor-pointer text-gray-400 hover:text-green-500 ml-2" 
                       onclick="copyToClipboard(this, '${results.pilotPayout}')">
                     <i class="fas fa-clipboard"></i>
@@ -93,7 +103,7 @@ function calculateValues(totalBuyPrice) {
     // Display Corporation Share
     if (results.corpShare > 0) {
         valuesContainer.innerHTML += `
-            <p>Corp Share: ${formatNumber(results.corpShare)}
+            <p>Corp Share: ${formatNumber(results.corpShare)} ISK
                 <span class="clipboard-icon cursor-pointer text-gray-400 hover:text-green-500 ml-2" 
                       onclick="copyToClipboard(this, '${results.corpShare}')">
                     <i class="fas fa-clipboard"></i>
@@ -104,8 +114,6 @@ function calculateValues(totalBuyPrice) {
     // Display Rule Explanation
     splitRulesContainer.innerHTML = `<p class="text-center">${results.ruleExplanation}</p>`;
 }
-
-
 
 function recalculateSplit() {
     const totalBuyPrice = parseFloat(
@@ -123,18 +131,3 @@ function recalculateSplit() {
     calculateValues(totalBuyPrice);
 }
 
-function copyToClipboard(element, value) {
-    navigator.clipboard.writeText(value.toString()).then(() => {
-        console.log("Copied to clipboard:", value);
-
-        // Add temporary feedback styling
-        element.classList.add('text-green-500', 'scale-125', 'transform', 'transition', 'duration-300');
-
-        // Remove feedback after 1 second
-        setTimeout(() => {
-            element.classList.remove('text-green-500', 'scale-125');
-        }, 1000);
-    }).catch(err => {
-        console.error("Failed to copy to clipboard", err);
-    });
-}

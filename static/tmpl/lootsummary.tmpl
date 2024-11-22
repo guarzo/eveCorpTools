@@ -12,10 +12,14 @@
     <link href="https://unpkg.com/tabulator-tables@6.3.0/dist/css/tabulator.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/luxon/2.0.2/luxon.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
+
+    <!-- Tabulator Midnight Theme -->
+    <link href="https://unpkg.com/tabulator-tables@6.3.0/dist/css/tabulator_midnight.min.css" rel="stylesheet">
+
 </head>
-<body class="bg-gray-900 text-gray-100 font-sans min-h-screen flex flex-col">
+<body class="bg-gradient-to-b from-gray-800 to-gray-700 text-gray-100 font-sans min-h-screen flex flex-col">
     <!-- Header -->
-    <header class="w-full bg-gray-800 h-20 py-4 px-8 shadow-xl border-b-4 border-teal-500 flex items-center">
+     <header class="w-full bg-gradient-to-r from-gray-900 to-gray-800 h-20 py-4 px-8 shadow-lg border-b-4 border-teal-600 flex items-center">
         <button onclick="window.location.href='/loot-appraisal'" class="text-teal-500 text-2xl hover:text-teal-300">
             <i class="fas fa-calculator" title="Go to Loot Appraisal"></i>
         </button>
@@ -23,46 +27,69 @@
     </header>
 
     <!-- Main Content -->
-    <main class="flex-grow bg-gradient-to-b from-gray-800 to-gray-700 p-6">
-        <div class="container mx-auto w-full">
-            <section class="my-6">
-                <!-- Loot Summary Table -->
-                <div class="flex justify-center">
-                    <div id="lootSummaryTable" class="inline-block overflow-x-auto max-w-max"></div>
+        <main class="flex-grow bg-gradient-to-b from-gray-800 to-gray-700 p-6">
+            <div class="container mx-auto w-full">
+                <section class="my-6">
+                    <h2 class="text-2xl font-bold text-teal-200 mb-4 text-center">Loot Splits Table</h2>
+                    <!-- Loot Summary Table -->
+                    <div class="flex justify-center">
+                        <div id="lootSummaryTable" class="w-full max-w-7xl"></div>
+                    </div>
+                </section>
+            </div>
+            <!-- Detail Modal -->
+            <div id="detailModal" class="fixed inset-0 bg-black bg-opacity-50 hidden">
+                <div class="flex items-center justify-center min-h-screen">
+                    <div class="bg-gray-800 p-6 rounded-lg shadow-lg w-11/12 max-w-md mx-auto">
+                        <!-- Modal content -->
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-2xl font-bold text-teal-200">Details</h2>
+                            <button class="text-gray-400 hover:text-gray-200" onclick="closeDetailModal()" title="Close">
+                                <i class="fas fa-times text-2xl"></i>
+                            </button>
+                        </div>
+                        <input type="hidden" id="selectedRowId">
+                        <div class="space-y-4">
+                            <!-- Detail fields (same as before) -->
+                            <div class="flex items-center">
+                                <i class="fas fa-calendar-alt text-teal-500 mr-2"></i>
+                                <span class="font-semibold text-gray-200">Date:</span>
+                                <span id="detailDate" class="text-teal-200 ml-auto"></span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-link text-teal-500 mr-2"></i>
+                                <span class="font-semibold text-gray-200">Battle Report:</span>
+                                <a id="detailBattleReport" href="#" target="_blank"
+                                   class="text-teal-300 hover:underline ml-auto"></a>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-coins text-yellow-500 mr-2"></i>
+                                <span class="font-semibold text-gray-200">Total Buy Price:</span>
+                                <span id="detailTotalBuyPrice" class="text-teal-200 ml-auto"></span>
+                            </div>
+                            <hr class="border-gray-700">
+                            <div id="splitDetails" class="text-teal-300">
+                                <!-- Split details will be inserted here -->
+                            </div>
+                        </div>
+                        <div class="flex justify-center mt-6">
+                            <button class="flex items-center text-red-500 hover:text-red-700"
+                                    onclick="confirmDelete()" title="Delete">
+                                <i class="fas fa-trash-alt text-2xl mr-2"></i> Delete
+                            </button>
+                        </div>
+                    </div>
                 </div>
-            </section>
-
-            <!-- Detail Container -->
-            <section id="detailContainer" class="my-6 bg-gray-800 p-4 rounded-lg shadow hidden">
-                <h2 class="text-center text-2xl font-bold text-teal-200">Details</h2>
-                <input type="hidden" id="selectedRowId">
-                <div class="field flex justify-between py-2">
-                    <label class="font-semibold text-gray-200">Date:</label>
-                    <span id="detailDate" class="text-teal-200"></span>
-                </div>
-                <div class="field flex justify-between py-2">
-                    <label class="font-semibold text-gray-200">Battle Report:</label>
-                    <span><a id="detailBattleReport" href="#" target="_blank" class="text-teal-300 hover:underline"></a></span>
-                </div>
-                <div class="field flex justify-between py-2">
-                    <label class="font-semibold text-gray-200">Total Buy Price:</label>
-                    <span id="detailTotalBuyPrice" class="text-teal-200"></span>
-                </div>
-                <div id="splitDetails" class="my-4 text-left text-teal-300"></div>
-                <div class="button-container text-center">
-                    <button class="bg-red-500 text-white px-6 py-2 rounded hover:bg-red-700"
-                            onclick="confirmDelete()">Delete</button>
-                </div>
-            </section>
-
-            <!-- Placeholder for No Data and Error Messages -->
-            <div id="noDataMessage" class="text-center text-xl text-teal-200 mt-8 hidden">No saved loot splits available.</div>
-            <div id="errorMessage" class="text-center text-xl text-red-500 mt-8 hidden"></div>
+            </div>
+        <!-- Placeholder for No Data and Error Messages -->
+        <div id="noDataMessage" class="text-center text-xl text-teal-200 mt-8 hidden">
+            No saved loot splits available.
         </div>
+        <div id="errorMessage" class="text-center text-xl text-red-500 mt-8 hidden"></div>
     </main>
 
     <!-- Footer -->
-    <footer class="w-full bg-gray-800 h-20 py-4 text-center shadow-xl border-t-4 border-teal-500 flex items-center justify-center">
+    <footer class="w-full bg-gradient-to-r from-gray-900 to-gray-800 h-20 py-4 text-center shadow-lg border-t-4 border-teal-500 flex items-center justify-center">
         <div class="container mx-auto flex flex-col items-center justify-center h-full">
             <img src="/static/images/new_logo.png" alt="Zoolanders Logo" class="max-h-full h-12 w-auto object-contain mb-1">
             <p class="text-sm">&copy; 2024 Zoolanders Loot Split. All rights reserved.</p>
@@ -78,5 +105,6 @@
 
     <!-- Custom JavaScript -->
     <script src="/static/js/loot-summary.js"></script>
+    <script src="/static/js/copy.js"></script>
 </body>
 </html>
