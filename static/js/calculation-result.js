@@ -9,20 +9,20 @@ function initCalculationResult() {
         </div>`;
 }
 
-function calculateSplit(totalBuyPrice, totalPilots, scannerCount) {
+function calculateSplit(totalBuyPrice, totalPilots, Count) {
     const results = {
-        scannerPayout: 0,
+        Payout: 0,
         pilotPayout: 0,
         corpShare: 0,
         ruleExplanation: "",
     };
 
-    if (isNaN(totalBuyPrice) || totalBuyPrice <= 0 || (totalPilots + scannerCount) <= 0) {
+    if (isNaN(totalBuyPrice) || totalBuyPrice <= 0 || (totalPilots + Count) <= 0) {
         results.ruleExplanation = "Invalid data provided.";
         return results;
     }
 
-    const totalParticipants = totalPilots + scannerCount;
+    const totalParticipants = totalPilots + Count;
     const baseShare = Math.floor(totalBuyPrice / totalParticipants);
 
     // Calculate corporation share if base share exceeds threshold
@@ -32,18 +32,18 @@ function calculateSplit(totalBuyPrice, totalPilots, scannerCount) {
     }
 
     const basePayout = Math.floor(totalBuyPrice / totalParticipants);
-    const scannerBonus = Math.floor(totalBuyPrice * 0.10); // Scanners get 10% bonus of total loot
-    const scannerPayout = basePayout + Math.floor(scannerBonus / scannerCount); // Base + bonus per scanner
+    const Bonus = Math.floor(totalBuyPrice * 0.10); // s get 10% bonus of total loot
+    const Payout = basePayout + Math.floor(Bonus / Count); // Base + bonus per
     const pilotPayout = basePayout; // Pilots get base payout
-    const remainder = totalBuyPrice - ((scannerPayout * scannerCount) + (pilotPayout * totalPilots));
+    const remainder = totalBuyPrice - ((Payout * Count) + (pilotPayout * totalPilots));
 
-    // Add remainder to the first scanner payout
-    results.scannerPayout = scannerPayout + (remainder > 0 ? remainder : 0);
+    // Add remainder to the first  payout
+    results.Payout = Payout + (remainder > 0 ? remainder : 0);
     results.pilotPayout = pilotPayout;
 
     // Rule explanation
     results.ruleExplanation = results.corpShare > 0
-        ? "10% Corp Share applied. Scanners receive 10% bonus on their base share."
+        ? "10% Corp Share applied. s receive 10% bonus on their base share."
         : "Scanners receive 10% bonus on their base share.";
 
     return results;

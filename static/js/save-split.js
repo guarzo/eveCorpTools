@@ -21,7 +21,7 @@ async function saveLootSplit() {
     const totalBuyPriceElement = document.getElementById("lootInput");
     const totalBuyPrice = parseFloat(totalBuyPriceElement.innerText.replace(/,/g, "").replace(" ISK", ""));
     const totalPilots = parseInt(document.getElementById("pilotCount").value) || 0;
-    const scannerCount = parseInt(document.getElementById("scannerCount").value) || 0;
+    const Count = parseInt(document.getElementById("Count").value) || 0;
     const battleReport = document.getElementById("battleReport").value;
 
     if (totalBuyPrice <= 0 || isNaN(totalBuyPrice)) {
@@ -35,15 +35,15 @@ async function saveLootSplit() {
     }
 
     // Call shared calculation function
-    const results = calculateSplit(totalBuyPrice, totalPilots, scannerCount);
+    const results = calculateSplit(totalBuyPrice, totalPilots, Count);
 
     const lootSplit = {
         totalBuyPrice: totalBuyPrice.toString(),
         pilotCount: totalPilots,
-        scannerCount,
+        Count,
         involvedCount: totalPilots, // All pilots are involved
         splitDetails: {
-            "Scanner": results.scannerPayout,
+            "": results.Payout,
             "Involved": results.pilotPayout,
             "Corporation": results.corpShare,
         },
