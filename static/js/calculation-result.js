@@ -26,7 +26,7 @@ function calculateSplit(totalBuyPrice, totalPilots, Count) {
     const baseShare = Math.floor(totalBuyPrice / totalParticipants);
 
     // Calculate corporation share if base share exceeds threshold
-    if (baseShare > 100_000_000) {
+    if (baseShare > 250_000_000) {
         results.corpShare = Math.floor(totalBuyPrice * 0.10); // Corporation gets 10%
         totalBuyPrice -= results.corpShare; // Adjust remaining loot
     }
@@ -43,7 +43,7 @@ function calculateSplit(totalBuyPrice, totalPilots, Count) {
 
     // Rule explanation
     results.ruleExplanation = results.corpShare > 0
-        ? "10% Corp Share applied. s receive 10% bonus on their base share."
+        ? "10% Corp Share applied. Scanners receive 10% bonus on their base share."
         : "Scanners receive 10% bonus on their base share.";
 
     return results;
