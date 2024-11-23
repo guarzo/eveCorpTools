@@ -48,11 +48,10 @@ func TPSHandler(route config.Route, orchestrateService *service.OrchestrateServi
 		alliances := orchestrateService.GetTrackedAlliances()
 		characters := orchestrateService.GetTrackedCharacters()
 
-		// Fetch data and create chart using OrchestrateService
 		chartData, err := orchestrateService.GetAllData(r.Context(), corporations, alliances, characters, startDate, endDate)
 		if err != nil {
 			if err.Error() == "another GetAllData operation is in progress" {
-				orchestrateService.Logger.Warn("Another GetAllData operation is in progress")
+				orchestrateService.Logger.Warnf("Another GetAllData operation is in progress, %v", err)
 				LoadingHandler(w, r)
 			} else {
 				orchestrateService.Logger.Errorf("Error fetching detailed killmails: %v", err)

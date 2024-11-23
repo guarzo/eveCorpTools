@@ -81,7 +81,7 @@ func (pf *PrefetchService) prefetch(ctx context.Context) {
 	pf.Logger.Infof("Prefetching data for %s to %s...", begin, end)
 
 	// Use a derived context with a timeout to prevent indefinite blocking
-	prefetchCtx, cancel := context.WithTimeout(ctx, 23*time.Hour)
+	prefetchCtx, cancel := context.WithTimeout(ctx, 1*time.Hour)
 	defer cancel()
 
 	pf.Logger.Info("Calling GetAllData...")

@@ -3,6 +3,7 @@ package tps
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/guarzo/zkillanalytics/internal/config"
 	"github.com/guarzo/zkillanalytics/internal/persist"
@@ -25,7 +26,11 @@ func RefreshTPSHandler(orchestrateService *service.OrchestrateService) http.Hand
 		orchestrateService.Logger.Infof("removed current month data")
 
 		begin, end := persist.GetDateRange(config.MonthToDate)
-		_, err = orchestrateService.GetAllData(context.Background(), config.CorporationIDs, config.AllianceIDs, config.CharacterIDs, begin, end)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		defer cancel()
+
+		_, err = orchestrateService.GetAllData(ctx, config.CorporationIDs, config.AllianceIDs, config.CharacterIDs, begin, end)
 		if err != nil {
 			orchestrateService.Logger.Errorf("Error fetching updated killmails: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)

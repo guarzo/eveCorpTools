@@ -34,7 +34,8 @@ type OrchestrateService struct {
 	Client          *http.Client
 
 	// Mutex to ensure only one GetAllData runs at a time
-	mu sync.Mutex
+	mu              sync.Mutex
+	mutexAcquiredAt time.Time // Tracks when the mutex was acquired
 }
 
 // NewOrchestrateService initializes and returns a new OrchestrateService instance.
@@ -61,10 +62,22 @@ func NewOrchestrateService(
 // GetAllData orchestrates the data fetching process based on availability and necessity.
 // It ensures that only one instance runs at a time.
 func (os *OrchestrateService) GetAllData(ctx context.Context, corporations, alliances, characters []int, startString, endString string) (*model.ChartData, error) {
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Minute)
+	defer cancel()
+
+	os.Logger.Infof("Attempting to acquire mutex...")
 	if !os.AcquireMutex(5 * time.Second) {
 		return nil, fmt.Errorf("another GetAllData operation is in progress")
 	}
-	defer os.ReleaseMutex()
+
+	// Use defer to ensure the mutex is always released, even if a panic occurs.
+	defer func() {
+		if r := recover(); r != nil {
+			os.Logger.Errorf("Recovered from panic: %v", r)
+		}
+		os.Logger.Infof("Releasing mutex")
+		os.ReleaseMutex()
+	}()
 
 	// Parse the start and end dates
 	startDate, err := time.Parse("2006-01-02", startString)
@@ -271,6 +284,7 @@ func (os *OrchestrateService) AcquireMutex(timeout time.Duration) bool {
 	done := make(chan struct{})
 	go func() {
 		os.mu.Lock()
+		os.mutexAcquiredAt = time.Now() // Record when the mutex was acquired
 		close(done)
 	}()
 
@@ -282,8 +296,14 @@ func (os *OrchestrateService) AcquireMutex(timeout time.Duration) bool {
 	}
 }
 
-// ReleaseMutex releases the mutex.
 func (os *OrchestrateService) ReleaseMutex() {
+	// Calculate how long the mutex was held
+	duration := time.Since(os.mutexAcquiredAt)
+
+	// Log the duration
+	os.Logger.Infof("Mutex was held for: %v", duration)
+
+	// Release the mutex
 	os.mu.Unlock()
 }
 
