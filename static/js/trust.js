@@ -825,374 +825,43 @@ function setupFormEventListeners() {
  * Initializes all Tabulator tables
  */
 function initializeAllTabulatorTables() {
-    // Define table configurations
     const tableConfigs = [
-        {
+        createTableConfig({
             tableId: "trusted-characters-table",
-            theme: "midnight",
             indexField: "CharacterID",
             data: TrustedCharacters,
-            columns: [
-                {
-                    title: "Status",
-                    field: "IsOnCouch", // This should match the field name in the data
-                    formatter: (cell, formatterParams) => {
-                        const isOnCouch = cell.getValue();
-                        return isOnCouch
-                            ? '<i class="fas fa-couch text-yellow-500" title="On the Couch"></i>'
-                            : '<i class="fas fa-user text-green-500" title="Member"></i>';
-                    },
-                    hozAlign: "center",
-                    minWidth: 50,
-                    cellClick: function (e, cell) {
-                        const rowData = cell.getRow().getData();
-                        const currentStatus = cell.getValue();
-
-                        // Toggle the status
-                        const newStatus = !currentStatus;
-
-                        // Update the backend
-                        updateStatus(
-                            rowData.CharacterID || rowData.CorporationID, // Use the appropriate ID
-                            newStatus,
-                            rowData.CharacterID ? "character" : "corporation"
-                        )
-                            .then(() => {
-                                // Update only the specific field
-                                cell.getRow().update({ IsOnCouch: newStatus });
-                                toastr.success("Status updated successfully.");
-                            })
-                            .catch(error => {
-                                console.error("Failed to update status:", error);
-                                toastr.error("Failed to update status. Please try again.");
-                            });
-                    }
-                },
-                { title: "Character Name", field: "CharacterName", headerSort: true, minWidth: 250 },
-                { title: "Corporation", field: "CorporationName", headerSort: true, minWidth: 250 },
-                {
-                    title: "Comment",
-                    field: "Comment",
-                    editor: "input",
-                    editable: true,
-                    minWidth: 250,
-                    cellEdited: function (cell) {
-                        console.log("cellEdited called for cell:", cell);
-                        // Ensure this is for the "Comment" field
-                        if (cell.getColumn().getField() === "Comment") {
-                            const rowData = cell.getRow().getData();
-                            const updatedComment = cell.getValue();
-
-                            // Get the table element ID
-                            const tableElement = cell.getTable().element;
-                            const tableId = tableElement.id;
-
-                            // Determine if this is a character or corporation table
-                            const isCharacterTable = tableId.includes("character");
-                            const entityId = isCharacterTable ? rowData.CharacterID : rowData.CorporationID;
-
-                            // Log for debugging
-                            console.log(`Updating comment for ${isCharacterTable ? "Character" : "Corporation"} ID: ${entityId}, Comment: ${updatedComment}`);
-                            console.log(`Table ID: ${tableId}`);
-
-                            // Call backend function to update the comment
-                            updateComment(entityId, updatedComment, tableId);
-                        }
-                    }
-                },
-                {
-                    title: "Remove",
-                    formatter: "buttonCross",
-                    hozAlign: "center",
-                    headerSort: false,
-                    minWidth: 50,
-                    cellClick: function (e, cell) {
-                        const rowData = cell.getRow().getData();
-                        const characterID = rowData.CharacterID;
-                        const characterName = rowData.CharacterName;
-                        console.log(`Removing trusted character with ID: ${characterID}, Name: ${characterName}`);
-
-                        Swal.fire({
-                            title: `Remove Character?`,
-                            text: `Do you want to stop trusting "${characterName}"?`,
-                            icon: 'warning',
-                            showCancelButton: true,
-                            confirmButtonText: 'Yes',
-                            cancelButtonText: 'No',
-                        }).then((result) => {
-                            if (result.isConfirmed) {
-                                removeEntity('trusted', 'character', characterID.toString());
-                            }
-                        });
-                    }
-                }
-            ]
-        },
-        {
+            entityType: 'character',
+            trustStatus: 'trusted'
+        }),
+        createTableConfig({
             tableId: "trusted-corporations-table",
             indexField: "CorporationID",
             data: TrustedCorporations,
-            theme: "midnight",
-            columns: [
-                {
-                    title: "Status",
-                    field: "IsOnCouch", // This should match the field name in the data
-                    formatter: (cell, formatterParams) => {
-                        const isOnCouch = cell.getValue();
-                        return isOnCouch
-                            ? '<i class="fas fa-couch text-yellow-500" title="On the Couch"></i>'
-                            : '<i class="fas fa-user text-green-500" title="Member"></i>';
-                    },
-                    hozAlign: "center",
-                    minWidth: 50,
-                    cellClick: function (e, cell) {
-                        const rowData = cell.getRow().getData();
-                        const currentStatus = cell.getValue();
-
-                        // Toggle the status
-                        const newStatus = !currentStatus;
-
-                        // Update the backend
-                        updateStatus(
-                            rowData.CharacterID || rowData.CorporationID, // Use the appropriate ID
-                            newStatus,
-                            rowData.CharacterID ? "character" : "corporation"
-                        )
-                            .then(() => {
-                                // Update only the specific field
-                                cell.getRow().update({ IsOnCouch: newStatus });
-                                toastr.success("Status updated successfully.");
-                            })
-                            .catch(error => {
-                                console.error("Failed to update status:", error);
-                                toastr.error("Failed to update status. Please try again.");
-                            });
-                    }
-                },
-                { title: "Corporation Name", field: "CorporationName", headerSort: true, minWidth: 250 },
-                { title: "Alliance Name", field: "AllianceName", headerSort: true, minWidth: 250 },
-                {
-                    title: "Comment",
-                    field: "Comment",
-                    editor: "input",
-                    editable: true,
-                    minWidth: 250,
-                    cellEdited: function (cell) {
-                        console.log("cellEdited called for cell:", cell);
-                        // Ensure this is for the "Comment" field
-                        if (cell.getColumn().getField() === "Comment") {
-                            const rowData = cell.getRow().getData();
-                            const updatedComment = cell.getValue();
-
-                            // Get the table element ID
-                            const tableElement = cell.getTable().element;
-                            const tableId = tableElement.id;
-
-                            // Determine if this is a character or corporation table
-                            const isCharacterTable = tableId.includes("character");
-                            const entityId = isCharacterTable ? rowData.CharacterID : rowData.CorporationID;
-
-                            // Log for debugging
-                            console.log(`Updating comment for ${isCharacterTable ? "Character" : "Corporation"} ID: ${entityId}, Comment: ${updatedComment}`);
-                            console.log(`Table ID: ${tableId}`);
-
-                            // Call backend function to update the comment
-                            updateComment(entityId, updatedComment, tableId);
-                        }
-                    }
-                },
-                {
-                    title: "Remove",
-                    formatter: "buttonCross",
-                    hozAlign: "center",
-                    headerSort: false,
-                    minWidth: 50,
-                    cellClick: function (e, cell) {
-                        const rowData = cell.getRow().getData();
-                        const corporationID = rowData.CorporationID;
-                        const corporationName = rowData.CorporationName;
-                        console.log(`Removing trusted corporation with ID: ${corporationID}, Name: ${corporationName}`);
-
-                        Swal.fire({
-                            title: `Remove Corporation?`,
-                            text: `Do you want to stop trusting "${corporationName}"?`,
-                            icon: 'warning',
-                            showCancelButton: true,
-                            confirmButtonText: 'Yes',
-                            cancelButtonText: 'No',
-                        }).then((result) => {
-                            if (result.isConfirmed) {
-                                removeEntity('trusted', 'corporation', corporationID.toString());
-                            }
-                        });
-                    }
-                }
-            ]
-        },
-        {
+            entityType: 'corporation',
+            trustStatus: 'trusted'
+        }),
+        createTableConfig({
             tableId: "untrusted-characters-table",
             indexField: "CharacterID",
             data: UntrustedCharacters,
-            theme: "midnight",
-            columns: [
-                { title: "Character Name", field: "CharacterName", headerSort: true, minWidth: 250 },
-                { title: "Added By", field: "AddedBy", headerSort: true, minWidth: 250 },
-                { title: "Corporation", field: "CorporationName", headerSort: true, minWidth: 250 },
-                {
-                    title: "Comment",
-                    field: "Comment",
-                    editor: "input", // Makes the cell editable
-                    editable: true, // Ensures it's editable by the user
-                    minWidth: 250,
-                    cellEdited: function (cell) {
-                        console.log("cellEdited called for cell:", cell);
-                        // Ensure this is for the "Comment" field
-                        if (cell.getColumn().getField() === "Comment") {
-                            const rowData = cell.getRow().getData();
-                            const updatedComment = cell.getValue();
-
-                            // Get the table element ID
-                            const tableElement = cell.getTable().element;
-                            const tableId = tableElement.id;
-
-                            // Determine if this is a character or corporation table
-                            const isCharacterTable = tableId.includes("character");
-                            const entityId = isCharacterTable ? rowData.CharacterID : rowData.CorporationID;
-
-                            // Log for debugging
-                            console.log(`Updating comment for ${isCharacterTable ? "Character" : "Corporation"} ID: ${entityId}, Comment: ${updatedComment}`);
-                            console.log(`Table ID: ${tableId}`);
-
-                            // Call backend function to update the comment
-                            updateComment(entityId, updatedComment, tableId);
-                        }
-                    }
-                },
-                {
-                    title: "Remove",
-                    formatter: "buttonCross",
-                    hozAlign: "center",
-                    headerSort: false,
-                    minWidth: 50,
-                    cellClick: function (e, cell) {
-                        const rowData = cell.getRow().getData();
-                        const characterName = rowData.CharacterName;
-                        const characterID = rowData.CharacterID;
-                        console.log(`Removing untrusted character with ID: ${characterID}, Name: ${characterName}`);
-
-                        // Use SweetAlert2 for Confirmation
-                        Swal.fire({
-                            title: `Remove Character?`,
-                            text: `Has everyone updated their standings for "${characterName}"?`,
-                            icon: 'warning',
-                            showCancelButton: true,
-                            confirmButtonText: 'Yes',
-                            cancelButtonText: 'No',
-                            customClass: {
-                                popup: 'bg-gray-800 text-gray-200', // Tailwind classes for modal background and text
-                                title: 'font-semibold text-xl', // Tailwind classes for title styling
-                                content: 'text-gray-300', // Tailwind classes for content/body text
-                                confirmButton: 'bg-teal-500 hover:bg-teal-600 text-gray-900 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-400',
-                                cancelButton: 'bg-red-500 hover:bg-red-600 text-gray-900 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-400',
-                                actions: 'flex justify-center space-x-4', // Tailwind classes for button container
-                                // Optionally, customize the icon
-                                icon: 'text-yellow-400' // Tailwind class for icon color
-                            }
-                        }).then((result) => {
-                            if (result.isConfirmed) {
-                                removeEntity('untrusted', 'corporation', characterID.toString()); // Convert to string
-                            }
-                        });
-                    }
-                }
-            ]
-        },
-        {
+            entityType: 'character',
+            trustStatus: 'untrusted'
+        }),
+        createTableConfig({
             tableId: "untrusted-corporations-table",
             indexField: "CorporationID",
             data: UntrustedCorporations,
-            theme: "midnight",
-            columns: [
-                { title: "Corporation Name", field: "CorporationName", headerSort: true, minWidth: 250 },
-                { title: "Added By", field: "AddedBy", headerSort: true, minWidth: 250 },
-                { title: "Alliance Name", field: "AllianceName", headerSort: true, minWidth: 250 },
-                {
-                    title: "Comment",
-                    field: "Comment",
-                    editor: "input", // Makes the cell editable
-                    editable: true, // Ensures it's editable by the user
-                    minWidth: 250,
-                    cellEdited: function (cell) {
-                        console.log("cellEdited called for cell:", cell);
-                        // Ensure this is for the "Comment" field
-                        if (cell.getColumn().getField() === "Comment") {
-                            const rowData = cell.getRow().getData();
-                            const updatedComment = cell.getValue();
-
-                            // Get the table element ID
-                            const tableElement = cell.getTable().element;
-                            const tableId = tableElement.id;
-
-                            // Determine if this is a character or corporation table
-                            const isCharacterTable = tableId.includes("character");
-                            const entityId = isCharacterTable ? rowData.CharacterID : rowData.CorporationID;
-
-                            // Log for debugging
-                            console.log(`Updating comment for ${isCharacterTable ? "Character" : "Corporation"} ID: ${entityId}, Comment: ${updatedComment}`);
-                            console.log(`Table ID: ${tableId}`);
-
-                            // Call backend function to update the comment
-                            updateComment(entityId, updatedComment, tableId);
-                        }
-                    }
-                },
-                {
-                    title: "Remove",
-                    formatter: "buttonCross",
-                    hozAlign: "center",
-                    headerSort: false,
-                    minWidth: 50,
-                    cellClick: function (e, cell) {
-                        const rowData = cell.getRow().getData();
-                        const corporationID = rowData.CorporationID;
-                        const corporationName = rowData.CorporationName;
-                        console.log(`Removing untrusted corporation with ID: ${corporationID}, Name: ${corporationName}`);
-
-                        // Use SweetAlert2 for Confirmation
-                        Swal.fire({
-                            title: `Remove Corporation?`,
-                            text: `Has everyone updated their standings for "${corporationName}"?`,
-                            icon: 'warning',
-                            showCancelButton: true,
-                            confirmButtonText: 'Yes',
-                            cancelButtonText: 'No',
-                            customClass: {
-                                popup: 'bg-gray-800 text-gray-200', // Tailwind classes for modal background and text
-                                title: 'font-semibold text-xl', // Tailwind classes for title styling
-                                content: 'text-gray-300', // Tailwind classes for content/body text
-                                confirmButton: 'bg-teal-500 hover:bg-teal-600 text-gray-900 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-400',
-                                cancelButton: 'bg-red-500 hover:bg-red-600 text-gray-900 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-400',
-                                actions: 'flex justify-center space-x-4', // Tailwind classes for button container
-                                // Optionally, customize the icon
-                                icon: 'text-yellow-400' // Tailwind class for icon color
-                            }
-                            }).then((result) => {
-                            if (result.isConfirmed) {
-                                removeEntity('untrusted', 'corporation', corporationID.toString()); // Convert to string
-                            }
-                        });
-                    },
-                }
-            ]
-        }
+            entityType: 'corporation',
+            trustStatus: 'untrusted'
+        })
     ];
 
-    // Initialize each table using the generic function
+    // Initialize each table
     tableConfigs.forEach(config => {
         initializeTabulatorTable(config.tableId, config.indexField, config.data, config.columns);
     });
 
-    // Setup Mutation Observers for all tables
+    // Setup Mutation Observers
     const allTableIds = tableConfigs.map(config => config.tableId);
     setupMutationObservers(allTableIds);
 }
@@ -1646,3 +1315,134 @@ document.addEventListener('DOMContentLoaded', function () {
     setupFormEventListeners();
     hideLoading();
 });
+
+
+function getCommentColumnDefinition() {
+    return {
+        title: "Comment",
+        field: "Comment",
+        editor: "input",
+        editable: true,
+        minWidth: 250,
+        cellEdited: function (cell) {
+            console.log("cellEdited called for cell:", cell);
+            // Ensure this is for the "Comment" field
+            if (cell.getColumn().getField() === "Comment") {
+                const rowData = cell.getRow().getData();
+                const updatedComment = cell.getValue();
+
+                // Get the table element ID
+                const tableElement = cell.getTable().element;
+                const tableId = tableElement.id;
+
+                // Determine if this is a character or corporation table
+                const isCharacterTable = tableId.includes("character");
+                const entityId = isCharacterTable ? rowData.CharacterID : rowData.CorporationID;
+
+                // Log for debugging
+                console.log(`Updating comment for ${isCharacterTable ? "Character" : "Corporation"} ID: ${entityId}, Comment: ${updatedComment}`);
+                console.log(`Table ID: ${tableId}`);
+
+                // Call backend function to update the comment
+                updateComment(entityId, updatedComment, tableId);
+            }
+        }
+    };
+}
+
+function getStatusColumnDefinition() {
+    return {
+        title: "Status",
+        field: "IsOnCouch",
+        formatter: (cell) => {
+            const isOnCouch = cell.getValue();
+            return isOnCouch
+                ? '<i class="fas fa-couch text-yellow-500" title="On the Couch"></i>'
+                : '<i class="fas fa-user text-green-500" title="Member"></i>';
+        },
+        hozAlign: "center",
+        minWidth: 50,
+        cellClick: function (e, cell) {
+            const rowData = cell.getRow().getData();
+            const currentStatus = cell.getValue();
+
+            // Toggle the status
+            const newStatus = !currentStatus;
+
+            // Update the backend
+            updateStatus(
+                rowData.CharacterID || rowData.CorporationID, // Use the appropriate ID
+                newStatus,
+                rowData.CharacterID ? "character" : "corporation"
+            )
+                .then(() => {
+                    // Update only the specific field
+                    cell.getRow().update({ IsOnCouch: newStatus });
+                    toastr.success("Status updated successfully.");
+                })
+                .catch(error => {
+                    console.error("Failed to update status:", error);
+                    toastr.error("Failed to update status. Please try again.");
+                });
+        }
+    };
+}
+
+function getRemoveColumnDefinition(entityType, trustStatus) {
+    return {
+        title: "Remove",
+        formatter: "buttonCross",
+        hozAlign: "center",
+        headerSort: false,
+        minWidth: 50,
+        cellClick: function (e, cell) {
+            const rowData = cell.getRow().getData();
+            const entityID = rowData.CharacterID || rowData.CorporationID;
+            const entityName = rowData.CharacterName || rowData.CorporationName;
+            console.log(`Removing ${trustStatus} ${entityType} with ID: ${entityID}, Name: ${entityName}`);
+
+            // Use SweetAlert2 for Confirmation
+            Swal.fire({
+                title: `Remove ${capitalize(entityType)}?`,
+                text: `Do you want to stop trusting "${entityName}"?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Yes',
+                cancelButtonText: 'No',
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    removeEntity(trustStatus, entityType, entityID.toString());
+                }
+            });
+        }
+    };
+}
+
+
+function createTableConfig({ tableId, indexField, data, entityType, trustStatus }) {
+    const columns = [
+        trustStatus === 'trusted' ? getStatusColumnDefinition() : null,
+        {
+            title: entityType === 'character' ? "Character Name" : "Corporation Name",
+            field: entityType === 'character' ? "CharacterName" : "CorporationName",
+            headerSort: true,
+            minWidth: 250
+        },
+        entityType === 'character'
+            ? { title: "Corporation", field: "CorporationName", headerSort: true, minWidth: 250 }
+            : { title: "Alliance Name", field: "AllianceName", headerSort: true, minWidth: 250 },
+        trustStatus === 'untrusted'
+            ? { title: "Added By", field: "AddedBy", headerSort: true, minWidth: 250 }
+            : null,
+        getCommentColumnDefinition(),
+        getRemoveColumnDefinition(entityType, trustStatus)
+    ].filter(Boolean); // Remove null entries
+
+    return {
+        tableId,
+        indexField,
+        data,
+        theme: "midnight",
+        columns
+    };
+}
