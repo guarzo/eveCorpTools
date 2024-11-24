@@ -870,7 +870,13 @@ function initializeAllTabulatorTables() {
                 {
                     title: "Comment",
                     field: "Comment",
-                    editor: "input",
+                    // editor: "input",
+                    editor: function(cell, onRendered, success, cancel) {
+                        console.log("Editor activated for cell:", cell);
+                        // Use the default input editor
+                        var editor = Tabulator.editors.input(cell, onRendered, success, cancel);
+                        return editor;
+                    },
                     editable: true,
                     minWidth: 250
                 },
