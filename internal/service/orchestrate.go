@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	fs "os"
+	"os"
 	"sync"
 	"time"
 
@@ -61,65 +61,67 @@ func NewOrchestrateService(
 
 // GetAllData orchestrates the data fetching process based on availability and necessity.
 // It ensures that only one instance runs at a time.
-func (os *OrchestrateService) GetAllData(ctx context.Context, corporations, alliances, characters []int, startString, endString string) (*model.ChartData, error) {
+func (svc *OrchestrateService) GetAllData(ctx context.Context, corporations, alliances, characters []int, startString, endString string) (*model.ChartData, error) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Minute)
 	defer cancel()
 
-	os.Logger.Infof("Attempting to acquire mutex...")
-	if !os.AcquireMutex(5 * time.Second) {
+	svc.Logger.Infof("Attempting to acquire mutex...")
+	if !svc.AcquireMutex() {
 		return nil, fmt.Errorf("another GetAllData operation is in progress")
 	}
 
 	// Use defer to ensure the mutex is always released, even if a panic occurs.
 	defer func() {
 		if r := recover(); r != nil {
-			os.Logger.Errorf("Recovered from panic: %v", r)
+			svc.Logger.Errorf("Recovered from panic: %v", r)
 		}
-		os.Logger.Infof("Releasing mutex")
-		os.ReleaseMutex()
+		svc.Logger.Infof("Releasing mutex")
+		svc.ReleaseMutex()
 	}()
 
 	// Parse the start and end dates
 	startDate, err := time.Parse("2006-01-02", startString)
 	if err != nil {
-		os.Logger.Errorf("Invalid start date format: %v", err)
-		return nil, err
-	}
-	endDate, err := time.Parse("2006-01-02", endString)
-	if err != nil {
-		os.Logger.Errorf("Invalid end date format: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("invalid start date format: %w", err)
 	}
 
-	os.Logger.Infof("Fetching data from %s to %s...", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
+	endDate, err := time.Parse("2006-01-02", endString)
+	if err != nil {
+		return nil, fmt.Errorf("invalid e date format: %w", err)
+	}
+
+	svc.Logger.Infof("Fetching data from %s to %s...", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 	fetchStart := time.Now()
 	year := startDate.Year()
 	esiRefresh := false
 
 	// Inside GetAllData
-	dataAvailability, err := CheckDataAvailability(int(startDate.Month()), int(endDate.Month()), year)
+	dataAvailability, err := svc.CheckDataAvailability(int(startDate.Month()), int(endDate.Month()), year)
 	if err != nil {
-		os.Logger.Errorf("Error checking data availability: %v", err)
+		svc.Logger.Errorf("Error checking data availability: %v", err)
 		return nil, err
 	}
 
 	// Log available months for debugging
-	availableMonths := []int{}
-	for month, available := range dataAvailability {
+	var availableMonths []int
+	for key, available := range dataAvailability {
 		if available {
-			availableMonths = append(availableMonths, month)
+			availableMonths = append(availableMonths, key)
 		}
 	}
-	os.Logger.Infof("Data available for months: %v", availableMonths)
+
+	for _, key := range availableMonths {
+		aYear, month := extractYearMonthKey(key)
+		svc.Logger.Infof("Data available for %04d-%02d", aYear, month)
+	}
 
 	// Load ESI data
-
 	esiFileName := persist.GenerateEsiDataFileName()
-	fileInfo, err := fs.Stat(esiFileName)
+	fileInfo, err := os.Stat(esiFileName)
 
 	esiData, err := persist.ReadEsiDataFromFile(esiFileName)
-	if err != nil || os.isESIDataStale(fileInfo) {
-		os.Logger.Warnf("Using new ESI File: %v", err)
+	if err != nil || svc.isESIDataStale(fileInfo) {
+		svc.Logger.Warnf("Using new ESI File: %v", err)
 		esiData = &model.ESIData{
 			AllianceInfos:    make(map[int]model.Alliance),
 			CharacterInfos:   make(map[int]model.Character),
@@ -137,23 +139,23 @@ func (os *OrchestrateService) GetAllData(ctx context.Context, corporations, alli
 
 	fetchIDs, err := persist.LoadIdsFromFile()
 	if err != nil || fetchIDs == nil || (fetchIDs.CorporationIDs == nil && fetchIDs.AllianceIDs == nil && fetchIDs.CharacterIDs == nil) {
-		os.Logger.Warnf("Using new ID File: %v", err)
+		svc.Logger.Warnf("Using new ID File: %v", err)
 		fetchIDs = &model.Ids{ // Initialize fetchIDs as a pointer to avoid nil reference issues
 			CorporationIDs: make([]int, 0),
 			AllianceIDs:    make([]int, 0),
 			CharacterIDs:   make([]int, 0),
 		}
-		os.Logger.Infof("Loaded IDs from file")
+		svc.Logger.Infof("Loaded IDs from file")
 	}
 
 	idChanged, newIDs, err := persist.CheckIfIdsChanged(hardCodedIDs)
 	if err != nil {
 		newIDs = hardCodedIDs
-		os.Logger.Errorf("Error checking if IDs changes")
+		svc.Logger.Errorf("Error checking if IDs changes")
 	}
 
 	// Create parameters for data fetching
-	params := model.NewParams(os.Client, fetchIDs.CorporationIDs, fetchIDs.AllianceIDs, fetchIDs.CharacterIDs, year, esiData, idChanged, newIDs)
+	params := model.NewParams(svc.Client, fetchIDs.CorporationIDs, fetchIDs.AllianceIDs, fetchIDs.CharacterIDs, year, esiData, idChanged, newIDs)
 
 	// Update fetchIDs with new IDs if there were changes
 	if idChanged {
@@ -163,31 +165,38 @@ func (os *OrchestrateService) GetAllData(ctx context.Context, corporations, alli
 	}
 
 	// Fetch missing data if necessary
-	newData, err := os.GetMissingData(ctx, &params, dataAvailability)
+	newData, err := svc.GetMissingData(ctx, &params, dataAvailability)
 	if err != nil {
-		os.Logger.Errorf("Error fetching missing data: %v", err)
+		svc.Logger.Errorf("Error fetching missing data: %v", err)
 		return nil, err
 	}
 
-	// Aggregate existing store data into ChartData
-	for month := int(startDate.Month()); month <= int(endDate.Month()); month++ {
-		if dataAvailability[month] {
+	yearMonths, err := generateYearMonthPairs(int(startDate.Month()), int(endDate.Month()), startDate.Year())
+	if err != nil {
+		svc.Logger.Errorf("Error generating year-month pairs: %v", err)
+		return nil, err
+	}
+
+	for _, ym := range yearMonths {
+		y, m := ym.Year, ym.Month
+		key := getYearMonthKey(y, m)
+		if dataAvailability[key] {
 			// Load existing data from file
-			fileName := persist.GenerateZkillFileName(year, month)
+			fileName := persist.GenerateZkillFileName(y, m)
 			monthlyKillMailData, err := persist.ReadKillMailsFromFile(fileName)
 			if err != nil {
-				os.Logger.Errorf("Error loading data from file %s: %v", fileName, err)
+				svc.Logger.Errorf("Error loading data from file %s: %v", fileName, err)
 				continue
 			}
 			// Populate tracked characters in ESIData
-			err = os.ESIService.LoadTrackedCharacters(ctx, monthlyKillMailData.KillMails, esiData)
+			err = svc.ESIService.LoadTrackedCharacters(ctx, monthlyKillMailData.KillMails, esiData)
 			if err != nil {
-				os.Logger.Errorf("Error loading tracked characters into ESI data: %v", err)
+				svc.Logger.Errorf("Error loading tracked characters into ESI data: %v", err)
 				return nil, err
 			}
 
 			// Aggregate KillMailData into NewData
-			newData.KillMails = os.KillMailService.AggregateKillMailDumps(newData.KillMails, monthlyKillMailData.KillMails)
+			newData.KillMails = svc.KillMailService.AggregateKillMailDumps(newData.KillMails, monthlyKillMailData.KillMails)
 		}
 	}
 
@@ -199,9 +208,9 @@ func (os *OrchestrateService) GetAllData(ctx context.Context, corporations, alli
 
 	// Refresh ESI data if necessary
 	if esiRefresh {
-		err = os.ESIService.RefreshEsiData(ctx, chartData, os.Client)
+		err = svc.ESIService.RefreshEsiData(ctx, chartData, svc.Client)
 		if err != nil {
-			os.Logger.Errorf("Error refreshing ESI data: %v", err)
+			svc.Logger.Errorf("Error refreshing ESI data: %v", err)
 			return nil, err
 		}
 	}
@@ -209,41 +218,41 @@ func (os *OrchestrateService) GetAllData(ctx context.Context, corporations, alli
 	// Persist ESI data and IDs
 	err = persist.SaveEsiDataToFile(esiFileName, esiData)
 	if err != nil {
-		os.Logger.Errorf("Error saving ESI data: %v", err)
+		svc.Logger.Errorf("Error saving ESI data: %v", err)
 		return nil, err
 	}
 
 	err = persist.SaveIdsToFile(fetchIDs)
 	if err != nil {
-		os.Logger.Errorf("Error saving IDs data: %v", err)
+		svc.Logger.Errorf("Error saving IDs data: %v", err)
 		return nil, err
 	}
 
-	if saveErr := persist.SaveFailedCharacters(os.Failed); saveErr != nil {
-		os.Logger.Errorf("Error saving IDs data: %v", err)
+	if saveErr := persist.SaveFailedCharacters(svc.Failed); saveErr != nil {
+		svc.Logger.Errorf("Error saving IDs data: %v", err)
 	}
 
 	cacheFile := persist.GenerateCacheDataFileName()
-	err = os.ESIService.Cache.SaveToFile(cacheFile)
+	err = svc.ESIService.Cache.SaveToFile(cacheFile)
 	if err != nil {
-		os.Logger.Errorf("Error saving cache: %v", err)
+		svc.Logger.Errorf("Error saving cache: %v", err)
 	}
 
 	fetchTotalTime := time.Since(fetchStart)
-	os.Logger.Infof("Data fetching complete in %.2f seconds", fetchTotalTime.Seconds())
+	svc.Logger.Infof("Data fetching complete in %.2f seconds", fetchTotalTime.Seconds())
 	return chartData, nil
 }
 
-func (os *OrchestrateService) isESIDataStale(fileInfo fs.FileInfo) bool {
+func (svc *OrchestrateService) isESIDataStale(fileInfo os.FileInfo) bool {
 	return time.Since(fileInfo.ModTime()) > ESIDataStaleDuration || fileInfo.Size() <= MinESIDataSize
 }
 
-func (os *OrchestrateService) GetMissingData(ctx context.Context, params *model.Params, dataAvailability map[int]bool) (*model.KillMailData, error) {
+func (svc *OrchestrateService) GetMissingData(ctx context.Context, params *model.Params, dataAvailability map[int]bool) (*model.KillMailData, error) {
 	aggregatedData := &model.KillMailData{
 		KillMails: []model.DetailedKillMail{},
 	}
 
-	for month, available := range dataAvailability {
+	for key, available := range dataAvailability {
 		if available && !params.ChangedIDs {
 			// Data for this month is already available and IDs haven't changed; skip fetching.
 			continue
@@ -254,24 +263,24 @@ func (os *OrchestrateService) GetMissingData(ctx context.Context, params *model.
 			available = false
 		}
 
+		// Extract year and month from key
+		year, month := extractYearMonthKey(key)
+
 		// Fetch the data for this month
-		monthlyKillMailData, err := os.KillMailService.GetKillMailDataForMonth(ctx, params, month)
+		monthlyKillMailData, err := svc.KillMailService.GetKillMailDataForMonth(ctx, params, month)
 		if err != nil {
-			os.Logger.Errorf("Error fetching data for month %d: %v", month, err)
+			svc.Logger.Errorf("Error fetching data for %04d-%02d: %v", year, month, err)
 			return nil, err
 		}
 
-		// Reset aggregatedData.KillMails for each month to avoid carryover
-		aggregatedData.KillMails = []model.DetailedKillMail{}
-
 		// Aggregate and prepare to save
-		aggregatedData.KillMails = os.KillMailService.AggregateKillMailDumps(aggregatedData.KillMails, monthlyKillMailData.KillMails)
+		aggregatedData.KillMails = svc.KillMailService.AggregateKillMailDumps(aggregatedData.KillMails, monthlyKillMailData.KillMails)
 
 		// Save the aggregated data to a unique store file
-		fileName := persist.GenerateZkillFileName(params.Year, month)
-		os.Logger.Infof("Saving data for month %d to file %s with %d killmails", month, fileName, len(aggregatedData.KillMails))
+		fileName := persist.GenerateZkillFileName(year, month)
+		svc.Logger.Infof("Saving data for %04d-%02d to file %s with %d killmails", year, month, fileName, len(aggregatedData.KillMails))
 		if err = persist.SaveKillMailsToFile(fileName, monthlyKillMailData); err != nil {
-			os.Logger.Errorf("Failed to save fetched data to file %s: %v", fileName, err)
+			svc.Logger.Errorf("Failed to save fetched data to file %s: %v", fileName, err)
 			return nil, fmt.Errorf("failed to save fetched data: %w", err)
 		}
 	}
@@ -279,59 +288,51 @@ func (os *OrchestrateService) GetMissingData(ctx context.Context, params *model.
 	return aggregatedData, nil
 }
 
-// AcquireMutex attempts to acquire the mutex within the given timeout.
-func (os *OrchestrateService) AcquireMutex(timeout time.Duration) bool {
-	done := make(chan struct{})
-	go func() {
-		os.mu.Lock()
-		os.mutexAcquiredAt = time.Now() // Record when the mutex was acquired
-		close(done)
-	}()
-
-	select {
-	case <-done:
+func (svc *OrchestrateService) AcquireMutex() bool {
+	if svc.mu.TryLock() {
+		svc.mutexAcquiredAt = time.Now()
 		return true
-	case <-time.After(timeout):
+	} else {
 		return false
 	}
 }
 
-func (os *OrchestrateService) ReleaseMutex() {
+func (svc *OrchestrateService) ReleaseMutex() {
 	// Calculate how long the mutex was held
-	duration := time.Since(os.mutexAcquiredAt)
+	duration := time.Since(svc.mutexAcquiredAt)
 
 	// Log the duration
-	os.Logger.Infof("Mutex was held for: %v", duration)
+	svc.Logger.Infof("Mutex was held for: %v", duration)
 
 	// Release the mutex
-	os.mu.Unlock()
+	svc.mu.Unlock()
 }
 
 // GetTrackedCorporations returns the list of tracked corporation IDs.
-func (os *OrchestrateService) GetTrackedCorporations() []int {
+func (svc *OrchestrateService) GetTrackedCorporations() []int {
 	return config.CorporationIDs
 }
 
 // GetTrackedAlliances returns the list of tracked alliance IDs.
-func (os *OrchestrateService) GetTrackedAlliances() []int {
+func (svc *OrchestrateService) GetTrackedAlliances() []int {
 	return config.AllianceIDs
 }
 
 // GetTrackedCharacters returns the list of tracked character IDs.
-func (os *OrchestrateService) GetTrackedCharacters() []int {
+func (svc *OrchestrateService) GetTrackedCharacters() []int {
 	return config.CharacterIDs
 }
 
 // GetTrackedCharactersFromKillMails extracts tracked character IDs from killmails and ESI data.
-func (os *OrchestrateService) GetTrackedCharactersFromKillMails(fullKillMail []model.DetailedKillMail, esiData *model.ESIData) []int {
+func (svc *OrchestrateService) GetTrackedCharactersFromKillMails(fullKillMail []model.DetailedKillMail, esiData *model.ESIData) []int {
 	var trackedCharacters []int
 
-	os.Logger.Debugf("tracked characters, killmail length: %d", len(fullKillMail))
+	svc.Logger.Debugf("tracked characters, killmail length: %d", len(fullKillMail))
 
 	for _, km := range fullKillMail {
 		for _, attacker := range km.Attackers {
 			if persist.Contains(trackedCharacters, attacker.CharacterID) {
-				os.Logger.Debugf("Character %d already tracked, skipping", attacker.CharacterID)
+				svc.Logger.Debugf("Character %d already tracked, skipping", attacker.CharacterID)
 				continue
 			}
 
@@ -356,69 +357,105 @@ func (os *OrchestrateService) GetTrackedCharactersFromKillMails(fullKillMail []m
 		}
 	}
 
-	os.Logger.Debugf("Found %d tracked characters", len(trackedCharacters))
+	svc.Logger.Debugf("Found %d tracked characters", len(trackedCharacters))
 	return trackedCharacters
 }
 
-func (os *OrchestrateService) LookupType(id int) string {
-	return os.InvTypeService.QueryInvType(id)
+func (svc *OrchestrateService) LookupType(id int) string {
+	return svc.InvTypeService.QueryInvType(id)
 }
 
-// CheckDataAvailability checks which months within a range have data files already present.
-func CheckDataAvailability(startMonth, endMonth, year int) (map[int]bool, error) {
+type YearMonth struct {
+	Year  int
+	Month int
+}
+
+func (svc *OrchestrateService) CheckDataAvailability(startMonth, endMonth, startYear int) (map[int]bool, error) {
 	dataAvailability := make(map[int]bool)
-	currentMonth := int(time.Now().Month())
-	previousMonth := currentMonth - 1
-	if previousMonth == 0 {
-		previousMonth = 12 // Handle year change from January to December of previous year
-		year -= 1
+	currentTime := time.Now()
+	stalenessDuration := 24 * time.Hour
+
+	yearMonths, err := generateYearMonthPairs(startMonth, endMonth, startYear)
+	if err != nil {
+		return nil, err
 	}
 
-	for month := startMonth; month <= endMonth; month++ {
-		fileName := persist.GenerateZkillFileName(year, month)
-		if fileInfo, err := fs.Stat(fileName); err == nil {
-			if fileInfo.Size() <= 1*1024 {
-				fmt.Printf("File %s is too small (%d bytes). Marking as unavailable.\n", fileName, fileInfo.Size())
-				dataAvailability[month] = false
-				continue
-			}
-			fmt.Printf("Data for %04d-%02d already exists.\n", year, month)
-			dataAvailability[month] = true
+	for _, ym := range yearMonths {
+		y, m := ym.Year, ym.Month
+		key := getYearMonthKey(y, m)
 
-			// Handle current month: force update if file is stale
-			if month == currentMonth {
-				fileDate := fileInfo.ModTime().Truncate(24 * time.Hour)
-				today := time.Now().Truncate(24 * time.Hour)
-				if fileDate.Before(today) {
-					fmt.Printf("Removing stale month-to-date file %s...\n", fileName)
-					dataAvailability[month] = false
-					err = fs.Remove(fileName)
-					if err != nil {
-						fmt.Printf("Error removing stale month-to-date file %s: %s\n", fileName, err)
-					}
-				} else {
-					fmt.Printf("Continuing to use current month data for %s, %s\n", fileName, fileDate.Format("2006-01-02:15:04:05"))
-				}
-			}
+		fileName := persist.GenerateZkillFileName(y, m)
+		fileInfo, err := os.Stat(fileName)
 
-			// Handle previous month: always set as unavailable to force re-fetch
-			if month == previousMonth {
-				fileDate := fileInfo.ModTime().Truncate(24 * time.Hour)
-				today := time.Now().Truncate(24 * time.Hour)
-				if fileDate.Before(today) {
-					fmt.Printf("Removing stale last month file %s...\n", fileName)
-					dataAvailability[month] = false
-					err = fs.Remove(fileName)
-					if err != nil {
-						fmt.Printf("Error removing stale last month %s: %s\n", fileName, err)
-					}
-				} else {
-					fmt.Printf("Continuing to use existing last month data for %s, %s\n", fileName, fileDate.Format("2006-01-02:15:04:05"))
+		if err != nil {
+			dataAvailability[key] = false
+			continue
+		}
+
+		if fileInfo.Size() <= 1*1024 {
+			svc.Logger.Warnf("File %s is too small (%d bytes). Marking as unavailable.\n", fileName, fileInfo.Size())
+			dataAvailability[key] = false
+			continue
+		}
+
+		dataAvailability[key] = true
+		svc.Logger.Warnf("Data for %04d-%02d already exists.\n", y, m)
+
+		// Check if the file is stale for current or previous month
+		if isCurrentOrPreviousMonth(y, m, currentTime) {
+			age := currentTime.Sub(fileInfo.ModTime())
+			if age > stalenessDuration {
+				svc.Logger.Warnf("Removing stale file %s (age: %v)...\n", fileName, age)
+				dataAvailability[key] = false
+				err = os.Remove(fileName)
+				if err != nil {
+					svc.Logger.Errorf("Error removing stale file %s: %s\n", fileName, err)
 				}
+			} else {
+				svc.Logger.Infof("Using recent file %s (age: %v)\n", fileName, age)
 			}
-		} else {
-			dataAvailability[month] = false
 		}
 	}
+
 	return dataAvailability, nil
+}
+
+func generateYearMonthPairs(startMonth, endMonth, startYear int) ([]struct{ Year, Month int }, error) {
+	var yearMonths []struct{ Year, Month int }
+
+	startDate := time.Date(startYear, time.Month(startMonth), 1, 0, 0, 0, 0, time.UTC)
+	endDate := time.Date(startYear, time.Month(endMonth), 1, 0, 0, 0, 0, time.UTC)
+
+	if endDate.Before(startDate) {
+		// Handle crossing over to the next year
+		endDate = endDate.AddDate(1, 0, 0)
+	}
+
+	for d := startDate; !d.After(endDate); d = d.AddDate(0, 1, 0) {
+		yearMonths = append(yearMonths, struct{ Year, Month int }{d.Year(), int(d.Month())})
+	}
+
+	return yearMonths, nil
+}
+
+// getYearMonthKey generates a unique integer key from a year and month.
+// For example, year 2023 and month 7 become 202307.
+func getYearMonthKey(year, month int) int {
+	return year*100 + month
+}
+
+// extractYearMonthKey extracts the year and month from a key generated by getYearMonthKey.
+func extractYearMonthKey(key int) (year int, month int) {
+	year = key / 100
+	month = key % 100
+	return
+}
+
+func isCurrentOrPreviousMonth(year, month int, currentTime time.Time) bool {
+	currentYear, currentMonth := currentTime.Year(), int(currentTime.Month())
+	previousTime := currentTime.AddDate(0, -1, 0)
+	previousYear, previousMonth := previousTime.Year(), int(previousTime.Month())
+
+	return (year == currentYear && month == currentMonth) ||
+		(year == previousYear && month == previousMonth)
 }

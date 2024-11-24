@@ -14,6 +14,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
     <link href="https://unpkg.com/tabulator-tables@6.3.0/dist/css/tabulator.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
+    <link href="https://unpkg.com/tabulator-tables@6.3.0/dist/css/tabulator_midnight.min.css" rel="stylesheet">
 
     <!-- JavaScript dependencies -->
     <script src="https://unpkg.com/tabulator-tables@6.3.0/dist/js/tabulator.min.js"></script>
@@ -22,7 +23,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
-<body class="bg-gray-900 text-gray-200 font-sans min-h-screen flex flex-col">
+<body class="bg-gray-900 text-gray-100 font-sans min-h-screen flex flex-col">
     <div id="loading-indicator" class="fixed inset-0 bg-gray-800 bg-opacity-75 items-center justify-center z-50 hidden" aria-live="polite" aria-label="Loading" role="status">
         <div class="w-16 h-16 border-4 border-t-4 border-teal-500 flex rounded-full animate-spin-slow"></div>
         <div id="progress-container" class="absolute bottom-10 w-3/4 bg-gray-700 rounded">
@@ -30,37 +31,40 @@
         </div>
     </div>
 
-
     <div class="flex flex-col flex-grow">
         <!-- Header -->
-        <header class="bg-teal-700 text-yellow-400 py-6">
-            <div class="container mx-auto flex items-center justify-between px-4">
+        <header class="w-full bg-gradient-to-r from-gray-900 to-gray-800 h-20 py-4 px-8 shadow-lg border-b-4 border-teal-600 flex items-center">
+            <div class="flex items-center justify-between w-full">
+                <!-- Left side buttons -->
                 <div class="flex items-center space-x-2">
                     <!-- Add Character Button -->
-                    <a href="/auth-character" class="bg-teal-500 hover:bg-teal-600 text-gray-900 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-400" title="Add Character" aria-label="Add Character">
+                    <a href="/auth-character" class="text-teal-500 text-2xl hover:text-teal-300 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-teal-400" title="Add Character" aria-label="Add Character">
                         <i class="fas fa-user-plus"></i>
                     </a>
 
                     <!-- Write Contacts for All Button -->
                     <button id="write-contacts-all-btn"
-                            class="bg-teal-500 hover:bg-teal-600 text-gray-900 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-400 relative"
+                            class="text-teal-500 text-2xl hover:text-teal-300 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-teal-400 relative"
                             title="Write Contacts for All"
                             aria-label="Write Contacts for All"
                             disabled
                             aria-disabled="true">
                         <i class="fas fa-pen"></i>
                         <!-- Progress Bar -->
-                        <div id="write-all-progress-bar" class="absolute bottom-0 left-0 h-1 bg-yellow-400 w-0 transition-width duration-300"></div>
+                        <div id="write-all-progress-bar" class="absolute bottom-0 left-0 h-1 bg-teal-400 w-0 transition-width duration-300"></div>
                     </button>
                 </div>
 
-                <h1 class="text-3xl font-bold">{{ .Title }}</h1>
+                <!-- Title -->
+                <h1 class="text-3xl font-bold text-teal-200 text-center flex-grow">{{ .Title }}</h1>
+
+                <!-- Right side buttons -->
                 <div class="flex items-center space-x-2 text-xl">
                     {{ if .LoggedIn }}
-                        <button id="toggle-contacts-btn" class="bg-teal-500 hover:bg-teal-600 text-gray-900 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-400" title="Show Contacts to Delete" aria-label="Toggle Contacts">
+                        <button id="toggle-contacts-btn" class="text-teal-500 text-2xl hover:text-teal-300 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-teal-400" title="Show Contacts to Delete" aria-label="Toggle Contacts">
                             <i class="fas fa-toggle-on"></i>
                         </button>
-                        <a href="/logout" class="bg-teal-500 hover:bg-teal-600 text-gray-900 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-400" title="Logout" aria-label="Logout">
+                        <a href="/logout" class="text-teal-500 text-2xl hover:text-teal-300 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-teal-400" title="Logout" aria-label="Logout">
                             <i class="fas fa-sign-out-alt"></i>
                         </a>
                     {{ end }}
@@ -68,16 +72,15 @@
             </div>
         </header>
         <!-- Main Content -->
-        <main class="flex-grow container mx-auto px-4 py-6">
+        <main class="flex-grow bg-gradient-to-b from-gray-800 to-gray-700 p-6 opacity-0 animate-fade-in">
             {{ block "content" . }}{{ end }}
         </main>
 
         <!-- Footer -->
-        <footer class="bg-teal-700 text-yellow-400 py-6"> <!-- Increased padding and text size -->
-            <div class="container mx-auto text-center">
-                <p class="text-xl font-semibold"> <!-- Increased text size -->
-                    Designed for <img src="/static/images/new_logo.png" alt="Zoolanders Logo" class="inline-block h-10 ml-2">
-                </p>
+        <footer class="w-full bg-gradient-to-r from-gray-900 to-gray-800 h-20 py-4 text-center shadow-lg border-t-4 border-teal-500 flex items-center justify-center">
+            <div class="container mx-auto flex flex-col items-center justify-center h-full">
+                <img src="/static/images/new_logo.png" alt="Zoolanders Logo" class="max-h-full h-12 w-auto object-contain mb-1">
+                <p class="text-sm">&copy; 2024 Zoolanders Loot Split. All rights reserved.</p>
             </div>
         </footer>
     </div>

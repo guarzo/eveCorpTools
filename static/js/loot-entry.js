@@ -56,11 +56,44 @@ async function fetchLootPrice() {
             throw new Error("Network response was not ok");
         }
 
+
         const data = await response.json();
         const lootInput = document.getElementById("lootInput");
         lootInput.innerText = formatNumber(data.totalBuyPrice) + " ISK";
         lootInput.classList.add('highlight');
         setTimeout(() => lootInput.classList.remove('highlight'), 2000);
+
+        // Show the hidden containers
+        document.getElementById('jita-price-container').classList.remove('hidden');
+        document.getElementById('pilot-count-container').classList.remove('hidden');
+        document.getElementById('scanner-count-container').classList.remove('hidden');
+        document.getElementById('calculation-result-container').classList.remove('hidden');
+        document.getElementById('battle-report-container').classList.remove('hidden');
+        document.getElementById('first-divider').classList.remove('hidden');
+        document.getElementById('second-divider').classList.remove('hidden');
+
+        // Initialize calculation result container
+        initCalculationResult();
+
+        // Initialize dropdowns before calculations
+        populatePilotDropdown();
+        initializeScannerDropdown();
+
+        // Add event listeners for dropdown changes
+        document.getElementById("pilotCount").addEventListener("change", recalculateSplit);
+        document.getElementById("scannerCount").addEventListener("change", recalculateSplit);
+
+        // Initialize battle report container
+        initSaveSplit();
+
+        // Calculate values
+        calculateValues(data.totalBuyPrice);
+
+        // Scroll to the next section
+        document.getElementById('pilot-count-container').scrollIntoView({ behavior: 'smooth' });
+
+        // Now that everything succeeded, show the success message
+        toastr.success('Loot appraised successfully!');
         setTimeout(() => {
             if (document.getElementById('valuesContainer')) {
                 calculateValues(data.totalBuyPrice);
@@ -68,7 +101,7 @@ async function fetchLootPrice() {
                 console.error('valuesContainer not found');
             }
         }, 0); // Ensure DOM is updated before calling
-        toastr.success('Loot appraised successfully!');
+
     } catch (error) {
         console.error("Error fetching loot price:", error);
         toastr.error('Failed to appraise loot. Please try again.');
@@ -78,3 +111,7 @@ async function fetchLootPrice() {
 function formatNumber(num) {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
+
+document.addEventListener("DOMContentLoaded", function () {
+    initLootEntry()
+});

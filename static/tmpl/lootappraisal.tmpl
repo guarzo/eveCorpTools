@@ -44,14 +44,14 @@
                 </div>
 
                 <!-- Jita Price Container -->
-                <div id="jita-price-container" class="text-center text-2xl font-semibold text-teal-200 mt-8">
+                <div id="jita-price-container" class="text-center text-2xl font-semibold text-teal-200 mt-8 hidden">
                     <p>Appraised Jita Price will appear here.</p>
                 </div>
 
-                <hr class="my-4 border-gray-700">
+                <hr id="first-divider" class="my-4 border-gray-700 hidden">
 
                 <!-- Total Pilots Dropdown -->
-                <div id="pilot-count-container" class="text-center my-6">
+                <div id="pilot-count-container" class="text-center my-6 hidden">
                     <label for="pilotCount" class="text-teal-200 text-lg font-semibold mb-2 block">
                         Total Number of Pilots
                     </label>
@@ -61,7 +61,7 @@
                 </div>
 
                 <!-- Scanners Dropdown -->
-                <div id="scanner-count-container" class="text-center my-6">
+                <div id="scanner-count-container" class="text-center my-6 hidden">
                     <label for="scannerCount" class="text-teal-200 text-lg font-semibold mb-2 block">
                         Number of Scanners
                     </label>
@@ -71,9 +71,8 @@
                 </div>
 
 
-                <hr class="my-4 border-gray-700">
+                <hr id="second-divider" class="my-4 border-gray-700 hidden">
 
-                <!-- Calculation Result Container -->
                 <!-- Calculation Result Container -->
                 <div id="calculation-result-container" class="mt-8 hidden">
                     <div class="bg-gray-800 p-6 rounded-lg text-center text-gray-400">
@@ -81,10 +80,8 @@
                     </div>
                 </div>
 
-
-
                 <!-- Battle Report Container -->
-                <div id="battle-report-container" class="text-center mt-8"></div>
+                <div id="battle-report-container" class="text-center mt-8 hidden"></div>
 
                 <!-- Save Split Container -->
                 <div id="save-split-container"></div>
@@ -112,13 +109,5 @@
     <script src="/static/js/calculation-result.js"></script>
     <script src="/static/js/save-split.js"></script>
     <script src="/static/js/copy.js"></script>
-
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            initLootEntry();
-            initCalculationResult();
-            initSaveSplit();
-        });
-    </script>
 </body>
 </html>

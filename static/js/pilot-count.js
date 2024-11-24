@@ -27,14 +27,3 @@ function initializeScannerDropdown() {
     scannerCountDropdown.value = scannerCountDropdown.value || "0";
 
 }
-
-document.addEventListener("DOMContentLoaded", function () {
-    // Populate both dropdowns on page load
-    populatePilotDropdown();
-    initializeScannerDropdown();
-
-    // Add event listeners for dropdown changes
-    document.getElementById("pilotCount").addEventListener("change", recalculateSplit);
-    document.getElementById("scannerCount").addEventListener("change", recalculateSplit);
-
-});

@@ -77,5 +77,3 @@ async function saveLootSplit() {
         console.error("Error saving loot split:", error);
     }
 }
-
-

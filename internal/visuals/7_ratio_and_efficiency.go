@@ -7,15 +7,18 @@ import (
 	"github.com/guarzo/zkillanalytics/internal/model"
 )
 
-type KillLossRatioData struct {
+type KillLossAndISKEfficiencyData struct {
 	CharacterName string
 	Kills         int
 	Losses        int
 	Ratio         float64
+	ISKDestroyed  float64
+	ISKLost       float64
+	Efficiency    float64
 }
 
-func GetKillLossRatioData(chartData *model.ChartData) []KillLossRatioData {
-	characterStats := make(map[string]*KillLossRatioData)
+func GetKillLossAndISKEfficiencyData(chartData *model.ChartData) []KillLossAndISKEfficiencyData {
+	characterStats := make(map[string]*KillLossAndISKEfficiencyData)
 
 	for _, km := range chartData.KillMails {
 		// Process attackers
@@ -26,10 +29,11 @@ func GetKillLossRatioData(chartData *model.ChartData) []KillLossRatioData {
 
 				data, exists := characterStats[characterName]
 				if !exists {
-					data = &KillLossRatioData{CharacterName: characterName}
+					data = &KillLossAndISKEfficiencyData{CharacterName: characterName}
 					characterStats[characterName] = data
 				}
 				data.Kills++
+				data.ISKDestroyed += km.ZKB.TotalValue
 			}
 		}
 
@@ -41,28 +45,38 @@ func GetKillLossRatioData(chartData *model.ChartData) []KillLossRatioData {
 
 			data, exists := characterStats[characterName]
 			if !exists {
-				data = &KillLossRatioData{CharacterName: characterName}
+				data = &KillLossAndISKEfficiencyData{CharacterName: characterName}
 				characterStats[characterName] = data
 			}
 			data.Losses++
+			data.ISKLost += km.ZKB.TotalValue
 		}
 	}
 
-	// Calculate ratios and convert to slice
-	var ratioData []KillLossRatioData
+	// Calculate Ratio and Efficiency
+	var statsData []KillLossAndISKEfficiencyData
 	for _, data := range characterStats {
 		if data.Losses > 0 {
 			data.Ratio = float64(data.Kills) / float64(data.Losses)
-		} else {
+		} else if data.Kills > 0 {
 			data.Ratio = float64(data.Kills)
+		} else {
+			data.Ratio = 0
 		}
-		ratioData = append(ratioData, *data)
+
+		totalISK := data.ISKDestroyed + data.ISKLost
+		if totalISK > 0 {
+			data.Efficiency = (data.ISKDestroyed / totalISK) * 100
+		} else {
+			data.Efficiency = 0
+		}
+		statsData = append(statsData, *data)
 	}
 
-	// Sort by ratio
-	sort.Slice(ratioData, func(i, j int) bool {
-		return ratioData[i].Ratio > ratioData[j].Ratio
+	// Sort by Ratio
+	sort.Slice(statsData, func(i, j int) bool {
+		return statsData[i].Ratio > statsData[j].Ratio
 	})
 
-	return ratioData
+	return statsData
 }

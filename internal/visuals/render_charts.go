@@ -91,9 +91,9 @@ var chartDefinitions = []Chart{
 		Type:        "matrix",
 	},
 	{
-		FieldPrefix: "KillLossRatioData",
+		FieldPrefix: "RatioAndEfficiencyData",
 		PrepareFunc: func(cd *model.ChartData) interface{} {
-			return GetKillLossRatioData(cd)
+			return GetKillLossAndISKEfficiencyData(cd)
 		},
 		Description: "Kill-to-Loss Ratio",
 		Type:        "bar",
@@ -194,14 +194,14 @@ func RenderCharts(orchestrateService *service.OrchestrateService, ytdChartData, 
 	}
 
 	// Log summary of charts for each timeframe to verify distinct data loading
-	for _, tf := range data.TimeFrames {
-		logger.Infof("Time frame %s has %d charts", tf.Name, len(tf.Charts))
-		if len(tf.Charts) > 0 {
-			logger.Infof("Example chart for %s: ID=%s, Description=%s", tf.Name, tf.Charts[0].ID, tf.Charts[0].Name)
-		} else {
-			logger.Warnf("No charts found for time frame %s", tf.Name)
-		}
-	}
+	//for _, tf := range data.TimeFrames {
+	//	logger.Infof("Time frame %s has %d charts", tf.Name, len(tf.Charts))
+	//	if len(tf.Charts) > 0 {
+	//		logger.Infof("Example chart for %s: ID=%s, Description=%s", tf.Name, tf.Charts[0].ID, tf.Charts[0].Name)
+	//	} else {
+	//		logger.Warnf("No charts found for time frame %s", tf.Name)
+	//	}
+	//}
 
 	// Render the template
 	funcMap := template.FuncMap{"toLower": strings.ToLower}
@@ -255,14 +255,14 @@ func prepareData(chartData *model.ChartData, getDataFunc func(*model.ChartData) 
 		logger.Errorf("Error marshalling %s: %v", description, err)
 		return "[]", err
 	}
-	logger.Infof("Data sample for %s: %v", description, getDataSample(data))
+	// logger.Infof("Data sample for %s: %v", description, getDataSample(data))
 	return template.JS(jsonData), nil
 }
 
 // getDataSample logs a subset of data for concise output
-func getDataSample(data interface{}) interface{} {
-	if dataSlice, ok := data.([]interface{}); ok && len(dataSlice) > 5 {
-		return dataSlice[:5]
-	}
-	return data
-}
+//func getDataSample(data interface{}) interface{} {
+//	if dataSlice, ok := data.([]interface{}); ok && len(dataSlice) > 5 {
+//		return dataSlice[:5]
+//	}
+//	return data
+//}

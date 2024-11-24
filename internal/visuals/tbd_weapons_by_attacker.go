@@ -93,12 +93,5 @@ func RenderWeaponsByCharacter(orchestrator *service.OrchestrateService, chartDat
 		}
 	}
 
-	//// Create a new stacked bar chart instance
-	//bar := unused2.newBarChart("Weapons Used", true)
-	//bar.SetXAxis(sortedCharacters)
-	//for _, weapon := range weaponNames {
-	//	bar.AddSeries(weapon, seriesData[weapon], charts.WithBarChartOpts(opts.BarChart{Stack: "total"}))
-	//}
-	//return bar
 	return nil
 }

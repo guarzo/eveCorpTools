@@ -130,4 +130,3 @@ function recalculateSplit() {
 
     calculateValues(totalBuyPrice);
 }
-

@@ -829,6 +829,7 @@ function initializeAllTabulatorTables() {
     const tableConfigs = [
         {
             tableId: "trusted-characters-table",
+            theme: "midnight",
             indexField: "CharacterID",
             data: TrustedCharacters,
             columns: [
@@ -864,14 +865,14 @@ function initializeAllTabulatorTables() {
                             });
                     }
                 },
-                { title: "Character Name", field: "CharacterName", headerSort: true, minWidth: 100 },
-                { title: "Corporation", field: "CorporationName", headerSort: true, minWidth: 100 },
+                { title: "Character Name", field: "CharacterName", headerSort: true, minWidth: 250 },
+                { title: "Corporation", field: "CorporationName", headerSort: true, minWidth: 250 },
                 {
                     title: "Comment",
                     field: "Comment",
                     editor: "input",
                     editable: true,
-                    minWidth: 150
+                    minWidth: 250
                 },
                 {
                     title: "Remove",
@@ -905,6 +906,7 @@ function initializeAllTabulatorTables() {
             tableId: "trusted-corporations-table",
             indexField: "CorporationID",
             data: TrustedCorporations,
+            theme: "midnight",
             columns: [
                 {
                     title: "Status",
@@ -925,7 +927,7 @@ function initializeAllTabulatorTables() {
                         const newStatus = !currentStatus;
 
                         // Update the backend
-                        updateStatus(rowData.CharacterID, newStatus, "character")
+                        updateStatus(rowData.CorporationID, newStatus, "corporation")
                             .then(() => {
                                 // Update the cell value and refresh the table
                                 rowData.IsOnCouch = newStatus;
@@ -938,14 +940,14 @@ function initializeAllTabulatorTables() {
                             });
                     }
                 },
-                { title: "Corporation Name", field: "CorporationName", headerSort: true, minWidth: 100 },
-                { title: "Alliance Name", field: "AllianceName", headerSort: true, minWidth: 100 },
+                { title: "Corporation Name", field: "CorporationName", headerSort: true, minWidth: 250 },
+                { title: "Alliance Name", field: "AllianceName", headerSort: true, minWidth: 250 },
                 {
                     title: "Comment",
                     field: "Comment",
                     editor: "input",
                     editable: true,
-                    minWidth: 150
+                    minWidth: 250
                 },
                 {
                     title: "Remove",
@@ -979,6 +981,7 @@ function initializeAllTabulatorTables() {
             tableId: "untrusted-characters-table",
             indexField: "CharacterID",
             data: UntrustedCharacters,
+            theme: "midnight",
             columns: [
                 { title: "Character Name", field: "CharacterName", headerSort: true, minWidth: 250 },
                 { title: "Added By", field: "AddedBy", headerSort: true, minWidth: 250 },
@@ -988,7 +991,7 @@ function initializeAllTabulatorTables() {
                     field: "Comment",
                     editor: "input", // Makes the cell editable
                     editable: true, // Ensures it's editable by the user
-                    minWidth: 300,
+                    minWidth: 250,
                 },
                 {
                     title: "Remove",
@@ -1022,7 +1025,7 @@ function initializeAllTabulatorTables() {
                             }
                         }).then((result) => {
                             if (result.isConfirmed) {
-                                removeEntity('untrusted', 'character', characterID.toString()); // Convert to string
+                                removeEntity('untrusted', 'corporation', characterID.toString()); // Convert to string
                             }
                         });
                     }
@@ -1033,6 +1036,7 @@ function initializeAllTabulatorTables() {
             tableId: "untrusted-corporations-table",
             indexField: "CorporationID",
             data: UntrustedCorporations,
+            theme: "midnight",
             columns: [
                 { title: "Corporation Name", field: "CorporationName", headerSort: true, minWidth: 250 },
                 { title: "Added By", field: "AddedBy", headerSort: true, minWidth: 250 },
@@ -1042,7 +1046,7 @@ function initializeAllTabulatorTables() {
                     field: "Comment",
                     editor: "input", // Makes the cell editable
                     editable: true, // Ensures it's editable by the user
-                    minWidth: 300,
+                    minWidth: 250,
                 },
                 {
                     title: "Remove",
@@ -1406,18 +1410,24 @@ function initializeTabulatorTable(tableId, indexField, data, columns) {
             resizeTabulatorTable(tableId);
         },
         cellEdited: function (cell) {
+            console.log("cellEdited called for cell:", cell);
             // Ensure this is for the "Comment" field
             if (cell.getColumn().getField() === "Comment") {
                 const rowData = cell.getRow().getData();
                 const updatedComment = cell.getValue();
 
+                // Get the table element ID
+                const tableElement = cell.getTable().element;
+                const tableId = tableElement.id;
+
                 // Determine if this is a character or corporation table
                 const isCharacterTable = tableId.includes("character");
                 const entityId = isCharacterTable ? rowData.CharacterID : rowData.CorporationID;
 
-                // Log for debugging (optional)
+                // Log for debugging
                 console.log(`Updating comment for ${isCharacterTable ? "Character" : "Corporation"} ID: ${entityId}, Comment: ${updatedComment}`);
                 console.log(`Table ID: ${tableId}`);
+
                 // Call backend function to update the comment
                 updateComment(entityId, updatedComment, tableId);
             }

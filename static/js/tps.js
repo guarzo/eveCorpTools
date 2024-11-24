@@ -7,7 +7,7 @@ import characterPerformanceChartConfig from './chartConfigs/3_characterPerforman
 import ourShipsUsedChartConfig from './chartConfigs/4_ourShipsUsedChartConfig.js';
 import killActivityOverTimeChartConfig from './chartConfigs/5_killActivityOverTimeChartConfig.js';
 import killsHeatmapChartConfig from './chartConfigs/6_killsHeatmapChartConfig.js';
-import killToLossRatioChartConfig from './chartConfigs/7_killLossRatioChartConfig.js';
+import ratioAndEfficiencyChartConfig from './chartConfigs/7_ratioAndEfficiency.js';
 import topShipsKilledChartConfig from './chartConfigs/8_topShipsKilledChartConfig.js';
 import victimsByCorporationChartConfig from './chartConfigs/9_victimsByCorpChartConfig.js';
 import fleetSizeAndValueKilledOverTimeChartConfig from './chartConfigs/10_fleetSizeAndValueChartConfig.js';
@@ -21,7 +21,7 @@ const chartConfigs = {
     'ourShipsUsedChart': ourShipsUsedChartConfig,
     'killActivityOverTimeChart': killActivityOverTimeChartConfig,
     'killsHeatmapChart': killsHeatmapChartConfig,
-    'killToLossRatioChart': killToLossRatioChartConfig,
+    'killToLossRatioChart': ratioAndEfficiencyChartConfig,
     'topShipsKilledChart': topShipsKilledChartConfig,
     'victimsByCorporationChart': victimsByCorporationChartConfig,
     'fleetSizeAndValueKilledOverTimeChart': fleetSizeAndValueKilledOverTimeChartConfig,
