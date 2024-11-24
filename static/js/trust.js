@@ -846,17 +846,20 @@ function initializeAllTabulatorTables() {
                     minWidth: 50,
                     cellClick: function (e, cell) {
                         const rowData = cell.getRow().getData();
-                        const currentStatus = rowData.IsOnCouch;
+                        const currentStatus = cell.getValue();
 
                         // Toggle the status
                         const newStatus = !currentStatus;
 
                         // Update the backend
-                        updateStatus(rowData.CharacterID, newStatus, "character")
+                        updateStatus(
+                            rowData.CharacterID || rowData.CorporationID, // Use the appropriate ID
+                            newStatus,
+                            rowData.CharacterID ? "character" : "corporation"
+                        )
                             .then(() => {
-                                // Update the cell value and refresh the table
-                                rowData.IsOnCouch = newStatus;
-                                cell.getRow().update(rowData);
+                                // Update only the specific field
+                                cell.getRow().update({ IsOnCouch: newStatus });
                                 toastr.success("Status updated successfully.");
                             })
                             .catch(error => {
@@ -870,15 +873,32 @@ function initializeAllTabulatorTables() {
                 {
                     title: "Comment",
                     field: "Comment",
-                    // editor: "input",
-                    editor: function(cell, onRendered, success, cancel) {
-                        console.log("Editor activated for cell:", cell);
-                        // Use the default input editor
-                        var editor = Tabulator.editors.input(cell, onRendered, success, cancel);
-                        return editor;
-                    },
+                    editor: "input",
                     editable: true,
-                    minWidth: 250
+                    minWidth: 250,
+                    cellEdited: function (cell) {
+                        console.log("cellEdited called for cell:", cell);
+                        // Ensure this is for the "Comment" field
+                        if (cell.getColumn().getField() === "Comment") {
+                            const rowData = cell.getRow().getData();
+                            const updatedComment = cell.getValue();
+
+                            // Get the table element ID
+                            const tableElement = cell.getTable().element;
+                            const tableId = tableElement.id;
+
+                            // Determine if this is a character or corporation table
+                            const isCharacterTable = tableId.includes("character");
+                            const entityId = isCharacterTable ? rowData.CharacterID : rowData.CorporationID;
+
+                            // Log for debugging
+                            console.log(`Updating comment for ${isCharacterTable ? "Character" : "Corporation"} ID: ${entityId}, Comment: ${updatedComment}`);
+                            console.log(`Table ID: ${tableId}`);
+
+                            // Call backend function to update the comment
+                            updateComment(entityId, updatedComment, tableId);
+                        }
+                    }
                 },
                 {
                     title: "Remove",
@@ -927,17 +947,20 @@ function initializeAllTabulatorTables() {
                     minWidth: 50,
                     cellClick: function (e, cell) {
                         const rowData = cell.getRow().getData();
-                        const currentStatus = rowData.IsOnCouch;
+                        const currentStatus = cell.getValue();
 
                         // Toggle the status
                         const newStatus = !currentStatus;
 
                         // Update the backend
-                        updateStatus(rowData.CorporationID, newStatus, "corporation")
+                        updateStatus(
+                            rowData.CharacterID || rowData.CorporationID, // Use the appropriate ID
+                            newStatus,
+                            rowData.CharacterID ? "character" : "corporation"
+                        )
                             .then(() => {
-                                // Update the cell value and refresh the table
-                                rowData.IsOnCouch = newStatus;
-                                cell.getRow().update(rowData);
+                                // Update only the specific field
+                                cell.getRow().update({ IsOnCouch: newStatus });
                                 toastr.success("Status updated successfully.");
                             })
                             .catch(error => {
@@ -953,7 +976,30 @@ function initializeAllTabulatorTables() {
                     field: "Comment",
                     editor: "input",
                     editable: true,
-                    minWidth: 250
+                    minWidth: 250,
+                    cellEdited: function (cell) {
+                        console.log("cellEdited called for cell:", cell);
+                        // Ensure this is for the "Comment" field
+                        if (cell.getColumn().getField() === "Comment") {
+                            const rowData = cell.getRow().getData();
+                            const updatedComment = cell.getValue();
+
+                            // Get the table element ID
+                            const tableElement = cell.getTable().element;
+                            const tableId = tableElement.id;
+
+                            // Determine if this is a character or corporation table
+                            const isCharacterTable = tableId.includes("character");
+                            const entityId = isCharacterTable ? rowData.CharacterID : rowData.CorporationID;
+
+                            // Log for debugging
+                            console.log(`Updating comment for ${isCharacterTable ? "Character" : "Corporation"} ID: ${entityId}, Comment: ${updatedComment}`);
+                            console.log(`Table ID: ${tableId}`);
+
+                            // Call backend function to update the comment
+                            updateComment(entityId, updatedComment, tableId);
+                        }
+                    }
                 },
                 {
                     title: "Remove",
@@ -998,6 +1044,29 @@ function initializeAllTabulatorTables() {
                     editor: "input", // Makes the cell editable
                     editable: true, // Ensures it's editable by the user
                     minWidth: 250,
+                    cellEdited: function (cell) {
+                        console.log("cellEdited called for cell:", cell);
+                        // Ensure this is for the "Comment" field
+                        if (cell.getColumn().getField() === "Comment") {
+                            const rowData = cell.getRow().getData();
+                            const updatedComment = cell.getValue();
+
+                            // Get the table element ID
+                            const tableElement = cell.getTable().element;
+                            const tableId = tableElement.id;
+
+                            // Determine if this is a character or corporation table
+                            const isCharacterTable = tableId.includes("character");
+                            const entityId = isCharacterTable ? rowData.CharacterID : rowData.CorporationID;
+
+                            // Log for debugging
+                            console.log(`Updating comment for ${isCharacterTable ? "Character" : "Corporation"} ID: ${entityId}, Comment: ${updatedComment}`);
+                            console.log(`Table ID: ${tableId}`);
+
+                            // Call backend function to update the comment
+                            updateComment(entityId, updatedComment, tableId);
+                        }
+                    }
                 },
                 {
                     title: "Remove",
@@ -1053,6 +1122,29 @@ function initializeAllTabulatorTables() {
                     editor: "input", // Makes the cell editable
                     editable: true, // Ensures it's editable by the user
                     minWidth: 250,
+                    cellEdited: function (cell) {
+                        console.log("cellEdited called for cell:", cell);
+                        // Ensure this is for the "Comment" field
+                        if (cell.getColumn().getField() === "Comment") {
+                            const rowData = cell.getRow().getData();
+                            const updatedComment = cell.getValue();
+
+                            // Get the table element ID
+                            const tableElement = cell.getTable().element;
+                            const tableId = tableElement.id;
+
+                            // Determine if this is a character or corporation table
+                            const isCharacterTable = tableId.includes("character");
+                            const entityId = isCharacterTable ? rowData.CharacterID : rowData.CorporationID;
+
+                            // Log for debugging
+                            console.log(`Updating comment for ${isCharacterTable ? "Character" : "Corporation"} ID: ${entityId}, Comment: ${updatedComment}`);
+                            console.log(`Table ID: ${tableId}`);
+
+                            // Call backend function to update the comment
+                            updateComment(entityId, updatedComment, tableId);
+                        }
+                    }
                 },
                 {
                     title: "Remove",
@@ -1414,29 +1506,6 @@ function initializeTabulatorTable(tableId, indexField, data, columns) {
         tableBuilt: function () {
             // Ensure resize happens after the table is fully built
             resizeTabulatorTable(tableId);
-        },
-        cellEdited: function (cell) {
-            console.log("cellEdited called for cell:", cell);
-            // Ensure this is for the "Comment" field
-            if (cell.getColumn().getField() === "Comment") {
-                const rowData = cell.getRow().getData();
-                const updatedComment = cell.getValue();
-
-                // Get the table element ID
-                const tableElement = cell.getTable().element;
-                const tableId = tableElement.id;
-
-                // Determine if this is a character or corporation table
-                const isCharacterTable = tableId.includes("character");
-                const entityId = isCharacterTable ? rowData.CharacterID : rowData.CorporationID;
-
-                // Log for debugging
-                console.log(`Updating comment for ${isCharacterTable ? "Character" : "Corporation"} ID: ${entityId}, Comment: ${updatedComment}`);
-                console.log(`Table ID: ${tableId}`);
-
-                // Call backend function to update the comment
-                updateComment(entityId, updatedComment, tableId);
-            }
         }
     });
 }
