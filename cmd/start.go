@@ -80,6 +80,8 @@ func registerLootRoutes(r *mux.Router, orchestrateService *service.OrchestrateSe
 	r.HandleFunc("/delete-loot-split", loot.DeleteLootSplitHandler).Methods("POST")
 	r.HandleFunc("/save-loot-splits", loot.SaveLootSplitsHandler).Methods("POST")
 	r.HandleFunc("/fetch-loot-splits", loot.FetchLootSplitsHandler).Methods("GET")
+	r.HandleFunc("/update-loot-split", loot.UpdateLootSplitHandler).Methods("POST")
+
 	r.HandleFunc("/loot-summary", loot.LootSummaryHandler).Methods("GET")
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	r.NotFoundHandler = http.HandlerFunc(handlers.NotFoundHandler)

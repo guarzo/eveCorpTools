@@ -56,8 +56,15 @@
                                 <!-- Battle Report Field -->
                                 <div class="flex items-center">
                                     <i class="fas fa-link text-teal-500 mr-2"></i>
-                                    <span class="font-semibold text-gray-200">Battle Report:</span>
-                                    <a id="detailBattleReport" href="#" target="_blank" class="text-teal-300 hover:underline ml-auto">View Battle Report</a>
+                                    <a id="detailBattleReportLabel" href="#" class="font-semibold text-gray-200 mr-2">
+                                        Battle Report:
+                                    </a>
+                                    <input
+                                        id="detailBattleReportInput"
+                                        type="text"
+                                        class="bg-gray-700 text-teal-200 ml-auto px-2 py-1 rounded"
+                                        placeholder="Enter Battle Report URL"
+                                    />
                                 </div>
                                 <!-- Total Buy Price Field -->
                                 <div class="flex items-center">
@@ -72,7 +79,12 @@
                                 </div>
                             </div>
                             <!-- Delete Button -->
-                            <div class="flex justify-center mt-6">
+                            <!-- Save and Delete Buttons -->
+                            <div class="flex justify-between mt-6">
+                                <button class="bg-teal-500 text-gray-100 px-4 py-2 rounded hover:bg-teal-400"
+                                        onclick="saveBattleReportUpdate()">
+                                    Save Changes
+                                </button>
                                 <button class="flex items-center text-red-500 hover:text-red-700"
                                         onclick="confirmDelete()" title="Delete">
                                     <i class="fas fa-trash-alt text-2xl mr-2"></i> Delete

@@ -30,6 +30,21 @@ func SaveLootSplitHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Load existing loot splits to determine the next available ID
+	existingSplits, err := persist.LoadLootSplits(config.LootFile)
+	if err != nil {
+		log.Printf("Error loading existing loot splits: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	nextID := 1
+	if len(existingSplits) > 0 {
+		nextID = existingSplits[len(existingSplits)-1].ID + 1
+	}
+
+	lootSplit.ID = nextID
+
 	// Attempt to add the new loot split
 	if err := persist.AddLootSplit(config.LootFile, lootSplit); err != nil {
 		log.Printf("Error saving loot split: %v", err)
@@ -49,8 +64,30 @@ func SaveLootSplitsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Attempt to save all loot splits
-	if err := persist.SaveLootSplits(config.LootFile, lootSplits); err != nil {
+	// Load existing loot splits to determine the next available ID
+	existingSplits, err := persist.LoadLootSplits(config.LootFile)
+	if err != nil {
+		log.Printf("Error loading existing loot splits: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	nextID := 1
+	if len(existingSplits) > 0 {
+		nextID = existingSplits[len(existingSplits)-1].ID + 1
+	}
+
+	// Assign IDs to new splits
+	for i := range lootSplits {
+		lootSplits[i].ID = nextID
+		nextID++
+	}
+
+	// Combine old and new splits
+	combinedSplits := append(existingSplits, lootSplits...)
+
+	// Save all splits back to the file
+	if err := persist.SaveLootSplits(config.LootFile, combinedSplits); err != nil {
 		log.Printf("Error saving loot splits: %v", err)
 		http.Error(w, "Failed to save loot splits", http.StatusInternalServerError)
 		return
@@ -61,6 +98,7 @@ func SaveLootSplitsHandler(w http.ResponseWriter, r *http.Request) {
 
 // FetchLootSplitsHandler handles fetching all loot splits.
 func FetchLootSplitsHandler(w http.ResponseWriter, r *http.Request) {
+	_ = BackfillIDs()
 	lootSplits, err := persist.LoadLootSplits(config.LootFile)
 	if err != nil {
 		log.Printf("Error loading loot splits: %v", err)
@@ -122,4 +160,60 @@ func DeleteLootSplitHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Acknowledge successful deletion
 	w.WriteHeader(http.StatusOK)
+}
+
+// UpdateLootSplitHandler handles updating a specific field of a loot split.
+func UpdateLootSplitHandler(w http.ResponseWriter, r *http.Request) {
+	var updateRequest struct {
+		ID           int    `json:"id"`
+		BattleReport string `json:"battleReport"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&updateRequest); err != nil {
+		log.Printf("Error decoding update request: %v", err)
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	lootSplits, err := persist.LoadLootSplits(config.LootFile)
+	if err != nil {
+		log.Printf("Error loading loot splits: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	// Update the matching loot split
+	for i, split := range lootSplits {
+		if split.ID == updateRequest.ID {
+			lootSplits[i].BattleReport = updateRequest.BattleReport
+			break
+		}
+	}
+
+	// Save the updated splits back to file
+	if err := persist.SaveLootSplits(config.LootFile, lootSplits); err != nil {
+		log.Printf("Error saving updated loot splits: %v", err)
+		http.Error(w, "Failed to save updated loot split", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func BackfillIDs() error {
+	lootSplits, err := persist.LoadLootSplits(config.LootFile)
+	if err != nil {
+		return fmt.Errorf("error loading loot splits: %v", err)
+	}
+
+	// Assign unique IDs to each loot split
+	for i := range lootSplits {
+		lootSplits[i].ID = i + 1 // Use a simple incrementing ID
+	}
+
+	// Save the updated loot splits back to file
+	if err := persist.SaveLootSplits(config.LootFile, lootSplits); err != nil {
+		return fmt.Errorf("error saving loot splits: %v", err)
+	}
+
+	return nil
 }

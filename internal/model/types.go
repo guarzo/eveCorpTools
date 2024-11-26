@@ -22,6 +22,7 @@ type LootSplit struct {
 	SplitDetails  map[string]Amount `json:"splitDetails"` // Custom type to handle mixed input
 	BattleReport  string            `json:"battleReport"`
 	Date          string            `json:"date"`
+	ID            int               `json:"id"`
 }
 
 type Amount float64

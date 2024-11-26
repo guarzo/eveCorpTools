@@ -83,29 +83,29 @@ async function fetchLootSummaries() {
 
 
 
-                // Update the rowClick event handler
                 window.lootSummaryTable.on("rowClick", function(e, row) {
                     const details = row.getData();
                     document.getElementById("selectedRowId").value = details.id;
                     document.getElementById("detailDate").innerText = details.date || 'N/A';
-                    const battleReportLink = document.getElementById("detailBattleReport");
+                    document.getElementById("detailBattleReportInput").value = details.battleReport || '';
+                    document.getElementById("detailTotalBuyPrice").innerText = details.totalBuyPrice || '0';
 
-                    if (details.battleReport && details.battleReport.startsWith('http')) {
-                        battleReportLink.href = details.battleReport;
-                        battleReportLink.innerText = 'View Battle Report';
-                        battleReportLink.classList.remove('text-gray-400');
-                        battleReportLink.classList.add('text-teal-300', 'hover:underline');
+                    // Update the label for the clickable Battle Report
+                    const battleReportLabel = document.getElementById("detailBattleReportLabel");
+                    if (details.battleReport && (details.battleReport.startsWith('http://') || details.battleReport.startsWith('https://'))) {
+                        battleReportLabel.href = details.battleReport;
+                        battleReportLabel.target = "_blank";
+                        battleReportLabel.className = "text-teal-300 hover:underline";
                     } else {
-                        battleReportLink.href = '#';
-                        battleReportLink.innerText = details.battleReport || 'N/A';
-                        battleReportLink.classList.remove('text-teal-300', 'hover:underline');
-                        battleReportLink.classList.add('text-gray-400');
+                        battleReportLabel.href = "#";
+                        battleReportLabel.className = "text-gray-400 cursor-default";
                     }
 
-                    document.getElementById("detailTotalBuyPrice").innerText = details.totalBuyPrice || '0';
                     displaySplitDetails(details.splitDetails);
                     openDetailModal();
                 });
+
+
 
                 // Ensure the lootSummaryTable is visible
                 document.getElementById("lootSummaryTable").style.display = "block";
@@ -131,6 +131,33 @@ async function fetchLootSummaries() {
         displayErrorMessage(error.message || "An unexpected error occurred.");
     }
 }
+
+function saveBattleReportUpdate() {
+    const id = parseInt(document.getElementById("selectedRowId").value, 10); // Ensure id is an integer
+    const battleReport = document.getElementById("detailBattleReportInput").value;
+
+    fetch('/update-loot-split', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ id, battleReport }) // Send id as an int
+    })
+        .then(response => {
+            if (response.ok) {
+                toastr.success('Battle report updated successfully.');
+                fetchLootSummaries(); // Refresh the table
+                closeDetailModal();
+            } else {
+                toastr.error('Failed to update battle report.');
+            }
+        })
+        .catch(error => {
+            console.error('Error updating battle report:', error);
+            toastr.error('An error occurred while updating the battle report.');
+        });
+}
+
 
 function confirmDelete(id) {
     Swal.fire({
