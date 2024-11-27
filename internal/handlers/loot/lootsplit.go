@@ -128,7 +128,6 @@ func LootSummaryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// DeleteLootSplitHandler handles the deletion of a loot split by ID.
 func DeleteLootSplitHandler(w http.ResponseWriter, r *http.Request) {
 	var requestData struct {
 		ID int `json:"id"`
@@ -140,34 +139,46 @@ func DeleteLootSplitHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Step 1: Create a backup of the loot splits file before deletion
-	if err := persist.CreateLootSplitBackup(); err != nil {
-		http.Error(w, "Failed to create backup", http.StatusInternalServerError)
-		return
-	}
-
-	// Attempt to delete the loot split
-	_, err := persist.DeleteLootSplit(config.LootFile, requestData.ID)
+	lootSplits, err := persist.LoadLootSplits(config.LootFile)
 	if err != nil {
-		log.Printf("Error deleting loot split: %v", err)
-		if err.Error() == fmt.Sprintf("invalid ID: %d", requestData.ID) {
-			http.Error(w, "Invalid ID", http.StatusBadRequest)
-		} else {
-			http.Error(w, "Failed to delete loot split", http.StatusInternalServerError)
-		}
+		log.Printf("Error loading loot splits: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
-	// Acknowledge successful deletion
+	// Filter out the record to delete
+	updatedSplits := make([]model.LootSplit, 0)
+	deleted := false
+	for _, split := range lootSplits {
+		if split.ID != requestData.ID {
+			updatedSplits = append(updatedSplits, split)
+		} else {
+			deleted = true
+		}
+	}
+
+	if !deleted {
+		log.Printf("No loot split found with ID: %d", requestData.ID)
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := persist.SaveLootSplits(config.LootFile, updatedSplits); err != nil {
+		log.Printf("Error saving updated loot splits: %v", err)
+		http.Error(w, "Failed to save updated loot splits", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("Successfully deleted loot split with ID: %d", requestData.ID)
 	w.WriteHeader(http.StatusOK)
 }
 
-// UpdateLootSplitHandler handles updating a specific field of a loot split.
 func UpdateLootSplitHandler(w http.ResponseWriter, r *http.Request) {
 	var updateRequest struct {
 		ID           int    `json:"id"`
 		BattleReport string `json:"battleReport"`
 	}
+
 	if err := json.NewDecoder(r.Body).Decode(&updateRequest); err != nil {
 		log.Printf("Error decoding update request: %v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
@@ -181,21 +192,28 @@ func UpdateLootSplitHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Update the matching loot split
+	updated := false
 	for i, split := range lootSplits {
 		if split.ID == updateRequest.ID {
 			lootSplits[i].BattleReport = updateRequest.BattleReport
+			updated = true
 			break
 		}
 	}
 
-	// Save the updated splits back to file
+	if !updated {
+		log.Printf("No loot split found with ID: %d", updateRequest.ID)
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
 	if err := persist.SaveLootSplits(config.LootFile, lootSplits); err != nil {
 		log.Printf("Error saving updated loot splits: %v", err)
 		http.Error(w, "Failed to save updated loot split", http.StatusInternalServerError)
 		return
 	}
 
+	log.Printf("Successfully updated BattleReport for ID: %d", updateRequest.ID)
 	w.WriteHeader(http.StatusOK)
 }
 
