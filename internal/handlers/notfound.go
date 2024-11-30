@@ -7,7 +7,7 @@ import (
 )
 
 func NotFoundHandler(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles(filepath.Join("static", "tmpl", "404.tmpl"))
+	tmpl, err := template.ParseFiles(filepath.Join("static", "Tmpl", "404.Tmpl"))
 	if err != nil {
 		http.Error(w, "404 Page Not Found", http.StatusNotFound)
 		return

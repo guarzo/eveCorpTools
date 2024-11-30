@@ -1,9 +1,14 @@
 package handlers
 
 import (
-	"github.com/gorilla/sessions"
-	"github.com/guarzo/zkillanalytics/internal/xlog"
+	"fmt"
 	"net/http"
+
+	"github.com/gorilla/sessions"
+
+	"github.com/guarzo/zkillanalytics/internal/model"
+	"github.com/guarzo/zkillanalytics/internal/persist"
+	"github.com/guarzo/zkillanalytics/internal/xlog"
 )
 
 const (
@@ -65,4 +70,46 @@ func NewSessionService(secret string) *SessionService {
 
 func (s *SessionService) Get(r *http.Request, name string) (*sessions.Session, error) {
 	return s.store.Get(r, name)
+}
+
+func ClearSession(s *SessionService, w http.ResponseWriter, r *http.Request) {
+	// Get the session
+	session, err := s.Get(r, SessionName)
+	if err != nil {
+		xlog.Logf("Failed to get session to clear: %v", err)
+	}
+
+	// Clear the session
+	session.Values = make(map[interface{}]interface{})
+
+	// Save the session
+	err = sessions.Save(r, w)
+	if err != nil {
+		xlog.Logf("Failed to save session to clear: %v", err)
+	}
+}
+
+func UpdateAndStoreSession(data model.StoreData, etag string, session *sessions.Session, r *http.Request, w http.ResponseWriter) (string, error) {
+	newEtag, err := persist.GenerateETag(data)
+	if err != nil {
+		return etag, fmt.Errorf("failed to generate etag: %w", err)
+	}
+
+	if newEtag != etag {
+		etag, err = persist.Store.Set(data.MainIdentity, data)
+		if err != nil {
+			return etag, fmt.Errorf("failed to update store: %w", err)
+		}
+	}
+
+	session.Values[PreviousEtagUsed] = etag
+	if authenticatedUsers, ok := session.Values[AllAuthenticatedCharacters].([]int64); ok {
+		session.Values[PreviousUserCount] = len(authenticatedUsers)
+	}
+
+	if err := session.Save(r, w); err != nil {
+		return etag, fmt.Errorf("failed to save session: %w", err)
+	}
+
+	return etag, nil
 }

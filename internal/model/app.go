@@ -28,7 +28,7 @@ func NewParams(client *http.Client, corporations, alliances, characters []int, y
 	}
 }
 
-type HomeData struct {
+type StoreData struct {
 	Title                 string
 	LoggedIn              bool
 	Identities            map[int64]CharacterData

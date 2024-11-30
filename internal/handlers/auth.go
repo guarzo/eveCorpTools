@@ -1,18 +1,105 @@
-package trust
+package handlers
 
 import (
 	"fmt"
+	"html/template"
+	"log"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/guarzo/zkillanalytics/internal/handlers"
+	"github.com/gorilla/mux"
+
 	"github.com/guarzo/zkillanalytics/internal/model"
 	"github.com/guarzo/zkillanalytics/internal/persist"
 	"github.com/guarzo/zkillanalytics/internal/service"
 	"github.com/guarzo/zkillanalytics/internal/xlog"
 )
+
+var (
+	Tmpl = template.Must(template.ParseFiles(
+		filepath.Join("static", "tmpl", "landing.tmpl"),
+	))
+)
+
+func AuthMiddleware(sessionStore *SessionService, esiService *service.EsiService) mux.MiddlewareFunc {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// List of public routes that don't require authentication
+			publicRoutes := map[string]bool{
+				"/static":   true,
+				"/landing":  true,
+				"/login":    true,
+				"/logout":   true,
+				"/callback": true,
+			}
+
+			log.Printf("Incoming request path: %s", r.URL.Path)
+
+			// Check if the path starts with one of the public routes
+			for publicRoute := range publicRoutes {
+				if strings.HasPrefix(r.URL.Path, publicRoute) {
+					next.ServeHTTP(w, r)
+					return
+				}
+			}
+
+			log.Println("Proceeding to authentication check")
+
+			session, err := sessionStore.Get(r, SessionName)
+			if err != nil {
+				log.Printf("Error getting session: %v", err)
+				// Clear any invalid session cookies
+				http.SetCookie(w, &http.Cookie{
+					Name:   SessionName,
+					MaxAge: -1, // Expire the session cookie
+					Path:   "/",
+				})
+				handleAuthErrorWithRedirect(w, r, err.Error(), "/landing")
+				return
+			}
+
+			sessionValues := GetSessionValues(session)
+			log.Printf("Session values: %v", sessionValues)
+
+			// Check if logged_in_user is present
+			loggedInUser := sessionValues.LoggedInUser
+			if loggedInUser == 0 {
+				log.Println("User not logged in, redirecting to /landing")
+				http.Redirect(w, r, "/landing", http.StatusFound)
+				return
+			}
+
+			// Ensure token exists for the logged-in user
+			_, err = persist.GetMainIdentityToken(loggedInUser)
+			if err != nil {
+				// If token is missing, redirect to the landing page
+				handleAuthErrorWithRedirect(w, r, err.Error(), "/landing")
+				return
+			}
+
+			_, err = ValidateIdentities(session, esiService, r, w)
+			if err != nil {
+				xlog.Logf("Failed to validate identities")
+				handleAuthErrorWithRedirect(w, r, err.Error(), "/landing")
+				return
+			}
+
+			// If user is authenticated, proceed to the next handler
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+func GetAuthenticatedCharacterIDs(identities map[int64]model.CharacterData) []int64 {
+	authenticatedCharacters := make([]int64, 0, len(identities))
+	for id := range identities {
+		authenticatedCharacters = append(authenticatedCharacters, id)
+	}
+	return authenticatedCharacters
+}
 
 func LoginHandler(esiService *service.EsiService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -31,7 +118,7 @@ func AuthCharacterHandler(esiService *service.EsiService) http.HandlerFunc {
 }
 
 // CallbackHandler handles the OAuth callback
-func CallbackHandler(s *handlers.SessionService, esiService *service.EsiService) http.HandlerFunc {
+func CallbackHandler(s *SessionService, esiService *service.EsiService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		code := r.URL.Query().Get("code")
@@ -41,7 +128,7 @@ func CallbackHandler(s *handlers.SessionService, esiService *service.EsiService)
 
 		token, err := esiService.EsiClient.ExchangeCode(code)
 		if err != nil {
-			handleErrorWithRedirect(w, r, fmt.Sprintf("Failed to exchange token: %v", err), "/")
+			handleAuthErrorWithRedirect(w, r, fmt.Sprintf("Failed to exchange token: %v", err), "/")
 			return
 		}
 
@@ -51,35 +138,35 @@ func CallbackHandler(s *handlers.SessionService, esiService *service.EsiService)
 		// Get user information
 		user, err := esiService.EsiClient.GetUserInfo(token)
 		if err != nil {
-			handleErrorWithRedirect(w, r, fmt.Sprintf("Failed to get user info: %v", err), "/")
+			handleAuthErrorWithRedirect(w, r, fmt.Sprintf("Failed to get user info: %v", err), "/")
 			return
 		}
 
 		xlog.Logf("Authenticated user: CharacterID %d, Name %s", user.CharacterID, user.CharacterName)
 
-		session, err := s.Get(r, handlers.SessionName)
+		session, err := s.Get(r, SessionName)
 		if err != nil {
-			handleErrorWithRedirect(w, r, fmt.Sprintf("Failed to get session: %v", err), "/")
+			handleAuthErrorWithRedirect(w, r, fmt.Sprintf("Failed to get session: %v", err), "/")
 			return
 		}
 
 		if strings.HasPrefix(state, "main") {
 			// Handle main identity
-			session.Values[handlers.LoggedInUser] = user.CharacterID
+			session.Values[LoggedInUser] = user.CharacterID
 
 			// Initialize all_authenticated_characters with main CharacterID
-			session.Values[handlers.AllAuthenticatedCharacters] = []int64{user.CharacterID}
+			session.Values[AllAuthenticatedCharacters] = []int64{user.CharacterID}
 
 			xlog.Logf("Set mainIdentity to CharacterID: %d and initialized allAuthenticatedCharacters", user.CharacterID)
 		} else if strings.HasPrefix(state, "character") {
 			// Handle additional character
-			existingChars, ok := session.Values[handlers.AllAuthenticatedCharacters].([]int64)
+			existingChars, ok := session.Values[AllAuthenticatedCharacters].([]int64)
 			if !ok {
-				session.Values[handlers.AllAuthenticatedCharacters] = []int64{user.CharacterID}
+				session.Values[AllAuthenticatedCharacters] = []int64{user.CharacterID}
 				xlog.Logf("Initialized allAuthenticatedCharacters with CharacterID: %d", user.CharacterID)
 			} else {
 				if !contains(existingChars, user.CharacterID) {
-					session.Values[handlers.AllAuthenticatedCharacters] = append(existingChars, user.CharacterID)
+					session.Values[AllAuthenticatedCharacters] = append(existingChars, user.CharacterID)
 					xlog.Logf("Added CharacterID %d to allAuthenticatedCharacters", user.CharacterID)
 				} else {
 					xlog.Logf("CharacterID %d already exists in allAuthenticatedCharacters", user.CharacterID)
@@ -90,16 +177,16 @@ func CallbackHandler(s *handlers.SessionService, esiService *service.EsiService)
 			xlog.Logf("Authenticated character during 'character' state: %d, Name: %s", user.CharacterID, user.CharacterName)
 		} else {
 			// Unknown state
-			handleErrorWithRedirect(w, r, "Invalid state parameter", "/")
+			handleAuthErrorWithRedirect(w, r, "Invalid state parameter", "/")
 			return
 		}
 
 		// Log session values for debugging
-		xlog.Logf("Session Values after setting: logged_in_user=%v, all_authenticated_characters=%v", session.Values[handlers.LoggedInUser], session.Values[handlers.AllAuthenticatedCharacters])
+		xlog.Logf("Session Values after setting: logged_in_user=%v, all_authenticated_characters=%v", session.Values[LoggedInUser], session.Values[AllAuthenticatedCharacters])
 
-		mainIdentity, ok := session.Values[handlers.LoggedInUser].(int64)
+		mainIdentity, ok := session.Values[LoggedInUser].(int64)
 		if !ok || mainIdentity == 0 {
-			handleErrorWithRedirect(w, r, fmt.Sprintf("Main identity not found, current session: %v", session.Values), "/logout")
+			handleAuthErrorWithRedirect(w, r, fmt.Sprintf("Main identity not found, current session: %v", session.Values), "/logout")
 			return
 		}
 
@@ -113,12 +200,12 @@ func CallbackHandler(s *handlers.SessionService, esiService *service.EsiService)
 		})
 
 		if err != nil {
-			handleErrorWithRedirect(w, r, fmt.Sprintf("Failed to update identities: %v", err), "/")
+			handleAuthErrorWithRedirect(w, r, fmt.Sprintf("Failed to update identities: %v", err), "/")
 			return
 		}
 
 		// Retrieve all authenticated characters from the session
-		allChars, ok := session.Values[handlers.AllAuthenticatedCharacters].([]int64)
+		allChars, ok := session.Values[AllAuthenticatedCharacters].([]int64)
 		if !ok || len(allChars) == 0 {
 			xlog.Logf("Logged in characters: <nil>")
 		} else {
@@ -128,7 +215,7 @@ func CallbackHandler(s *handlers.SessionService, esiService *service.EsiService)
 		// Save the session
 		if err := session.Save(r, w); err != nil {
 			xlog.Logf("Failed to save session: %v", err)
-			handleErrorWithRedirect(w, r, "Failed to save session", "/")
+			handleAuthErrorWithRedirect(w, r, "Failed to save session", "/")
 			return
 		}
 		xlog.Log("Session saved successfully.")
@@ -137,10 +224,10 @@ func CallbackHandler(s *handlers.SessionService, esiService *service.EsiService)
 	}
 }
 
-func LogoutHandler(s *handlers.SessionService) http.HandlerFunc {
+func LogoutHandler(s *SessionService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		session, _ := s.Get(r, handlers.SessionName)
-		clearSession(s, w, r)
+		session, _ := s.Get(r, SessionName)
+		ClearSession(s, w, r)
 		session.Save(r, w)
 
 		// Capture the 'error' query parameter if present
@@ -156,25 +243,6 @@ func LogoutHandler(s *handlers.SessionService) http.HandlerFunc {
 
 		// Otherwise, redirect normally
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
-	}
-}
-
-func ResetIdentitiesHandler(s *handlers.SessionService) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		session, _ := s.Get(r, handlers.SessionName)
-		mainIdentity, ok := session.Values[handlers.LoggedInUser].(int64)
-
-		if !ok || mainIdentity == 0 {
-			handleErrorWithRedirect(w, r, "Attempt to reset identities without a main identity", "/logout")
-			return
-		}
-
-		err := persist.DeleteIdentity(mainIdentity)
-		if err != nil {
-			xlog.Logf("Failed to delete identity %d: %v", mainIdentity, err)
-		}
-
-		http.Redirect(w, r, "/logout", http.StatusSeeOther)
 	}
 }
 

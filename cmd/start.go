@@ -61,70 +61,14 @@ func loggingMiddleware(logger *logrus.Logger) mux.MiddlewareFunc {
 	}
 }
 
-func AuthMiddleware(sessionStore *handlers.SessionService) mux.MiddlewareFunc {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// List of public routes that don't require authentication
-			publicRoutes := map[string]bool{
-				"/static":   true,
-				"/landing":  true,
-				"/login":    true,
-				"/logout":   true,
-				"/callback": true,
-			}
-
-			log.Printf("Incoming request path: %s", r.URL.Path)
-
-			// Check if the path starts with one of the public routes
-			for publicRoute := range publicRoutes {
-				if strings.HasPrefix(r.URL.Path, publicRoute) {
-					next.ServeHTTP(w, r)
-					return
-				}
-			}
-
-			log.Println("Proceeding to authentication check")
-
-			session, err := sessionStore.Get(r, handlers.SessionName)
-			if err != nil {
-				log.Printf("Error getting session: %v", err)
-				// Clear any invalid session cookies
-				http.SetCookie(w, &http.Cookie{
-					Name:   handlers.SessionName,
-					MaxAge: -1, // Expire the session cookie
-					Path:   "/",
-				})
-				http.Redirect(w, r, "/landing", http.StatusFound)
-				return
-			}
-
-			sessionValues := handlers.GetSessionValues(session)
-			log.Printf("Session values: %v", sessionValues)
-
-			// Check if logged_in_user is present
-			loggedInUser := sessionValues.LoggedInUser
-			if loggedInUser == 0 {
-				log.Println("User not logged in, redirecting to /landing")
-				http.Redirect(w, r, "/landing", http.StatusFound)
-				return
-			}
-
-			// Ensure token exists for the logged-in user
-			_, err = persist.GetMainIdentityToken(loggedInUser)
-			if err != nil {
-				// If token is missing, redirect to the landing page
-				http.Redirect(w, r, "/landing", http.StatusFound)
-				return
-			}
-
-			// If user is authenticated, proceed to the next handler
-			next.ServeHTTP(w, r)
-		})
-	}
-}
-
 // registerTPSRoutes registers the routes for the TPS subdomain
-func registerTPSRoutes(r *mux.Router, orchestrateService *service.OrchestrateService) {
+func registerTPSRoutes(r *mux.Router, orchestrateService *service.OrchestrateService, sessionStore *handlers.SessionService, esiService *service.EsiService) {
+	r.Use(handlers.AuthMiddleware(sessionStore, esiService))
+	r.HandleFunc("/login", handlers.LoginHandler(esiService))
+	r.HandleFunc("/landing", handlers.LandingHandler)
+	r.HandleFunc("/logout", handlers.LogoutHandler(sessionStore))
+	r.HandleFunc("/callback/", handlers.CallbackHandler(sessionStore, esiService))
+
 	r.HandleFunc("/", tps.TPSHandler(config.Snippets, orchestrateService)).Methods("GET")
 	r.HandleFunc("/refresh", tps.RefreshTPSHandler(orchestrateService)).Methods("GET")
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
@@ -132,10 +76,14 @@ func registerTPSRoutes(r *mux.Router, orchestrateService *service.OrchestrateSer
 }
 
 // registerLootRoutes registers the routes for the loot subdomain
-func registerLootRoutes(r *mux.Router, orchestrateService *service.OrchestrateService) {
-	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/loot-appraisal", http.StatusMovedPermanently)
-	}).Methods("GET")
+func registerLootRoutes(r *mux.Router, sessionStore *handlers.SessionService, esiService *service.EsiService) {
+	r.Use(handlers.AuthMiddleware(sessionStore, esiService))
+	r.HandleFunc("/login", handlers.LoginHandler(esiService))
+	r.HandleFunc("/landing", handlers.LandingHandler)
+	r.HandleFunc("/logout", handlers.LogoutHandler(sessionStore))
+	r.HandleFunc("/callback/", handlers.CallbackHandler(sessionStore, esiService))
+
+	r.HandleFunc("/", loot.LootAppraisalPageHandler).Methods("GET")
 	r.HandleFunc("/loot-appraisal", loot.LootAppraisalPageHandler).Methods("GET")
 	r.HandleFunc("/appraise-loot", loot.AppraiseLootHandler).Methods("POST")
 	r.HandleFunc("/save-loot-split", loot.SaveLootSplitHandler).Methods("POST")
@@ -151,18 +99,17 @@ func registerLootRoutes(r *mux.Router, orchestrateService *service.OrchestrateSe
 
 // registerTrustRoutes registers the routes for the loot subdomain
 func registerTrustRoutes(r *mux.Router, sessionStore *handlers.SessionService, trustedService *service.TrustedService, esiService *service.EsiService) {
-	r.Use(AuthMiddleware(sessionStore))
+	r.Use(handlers.AuthMiddleware(sessionStore, esiService))
+	r.HandleFunc("/login", handlers.LoginHandler(esiService))
+	r.HandleFunc("/landing", handlers.LandingHandler)
+	r.HandleFunc("/logout", handlers.LogoutHandler(sessionStore))
+	r.HandleFunc("/callback/", handlers.CallbackHandler(sessionStore, esiService))
+
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
 
-	r.HandleFunc("/callback/", trust.CallbackHandler(sessionStore, esiService))
-
 	// user functions
+	r.HandleFunc("/auth-character", handlers.AuthCharacterHandler(esiService))
 	r.HandleFunc("/", trust.HomeHandler(sessionStore, esiService))
-	r.HandleFunc("/login", trust.LoginHandler(esiService))
-	r.HandleFunc("/landing", trust.LandingHandler)
-
-	r.HandleFunc("/auth-character", trust.AuthCharacterHandler(esiService))
-	r.HandleFunc("/logout", trust.LogoutHandler(sessionStore))
 
 	r.HandleFunc("/update-comment", trust.UpdateCommentHandler)
 	r.HandleFunc("/update-is-on-couch", trust.UpdateIsOnCouchHandler)
@@ -183,7 +130,7 @@ func registerTrustRoutes(r *mux.Router, sessionStore *handlers.SessionService, t
 	r.HandleFunc("/remove-untrusted-corporation", trust.RemoveUntrustedCorporationHandler(trustedService)).Methods("POST")
 
 	// admin routes
-	r.HandleFunc("/reset-identities", trust.ResetIdentitiesHandler(sessionStore))
+	r.HandleFunc("/reset-identities", handlers.ResetIdentitiesHandler(sessionStore))
 	r.NotFoundHandler = http.HandlerFunc(handlers.NotFoundHandler)
 
 }
@@ -388,11 +335,11 @@ func StartServer(setup *config.AppSetup) {
 
 	// Initialize Subrouters with Host Matchers
 	tpsRouter := mainRouter.MatcherFunc(hostMatcher("tps.zoolanders.space")).Subrouter()
-	registerTPSRoutes(tpsRouter, orchestrateService)
+	registerTPSRoutes(tpsRouter, orchestrateService, sessionStore, esiService)
 	logger.Info("Registered TPS subdomain routes")
 
 	lootRouter := mainRouter.MatcherFunc(hostMatcher("loot.zoolanders.space")).Subrouter()
-	registerLootRoutes(lootRouter, orchestrateService)
+	registerLootRoutes(lootRouter, sessionStore, esiService)
 	logger.Info("Registered Loot subdomain routes")
 
 	trustRouter := mainRouter.MatcherFunc(hostMatcher("trust.zoolanders.space")).Subrouter()

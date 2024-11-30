@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 
 	"github.com/guarzo/zkillanalytics/internal/persist"
+	"github.com/guarzo/zkillanalytics/internal/xlog"
 )
 
 func WriteJSONResponse(w http.ResponseWriter, data interface{}, statusCode int, logger *logrus.Logger) {
@@ -65,4 +68,39 @@ type ErrorResponse struct {
 // SuccessResponse represents a JSON-formatted success message.
 type SuccessResponse struct {
 	Message string `json:"message"`
+}
+
+// HandleErrorWithRedirect redirects to the given URL with an error message as a query parameter
+func HandleErrorWithRedirect(w http.ResponseWriter, r *http.Request, errorMessage, redirectURL string) {
+	// URL-encode the error message to ensure it's safe for URLs
+	encodedMessage := url.QueryEscape(errorMessage)
+
+	// Construct the new URL with the error query parameter
+	newURL := fmt.Sprintf("%s?error=%s", redirectURL, encodedMessage)
+	xlog.Logf(newURL)
+
+	// Redirect the user with the updated URL
+	http.Redirect(w, r, newURL, http.StatusTemporaryRedirect)
+}
+
+// handleAuthErrorWithRedirect redirects to the given URL with an error message as a query parameter
+func handleAuthErrorWithRedirect(w http.ResponseWriter, r *http.Request, errorMessage, redirectURL string) {
+	title := "Zoo Auth" // default
+	host := r.Host      // Host includes both domain and port, e.g., "foo.bar.com:8080"
+
+	// Split the host by "." and take the first part (e.g., "foo" from "foo.bar.com")
+	hostParts := strings.Split(host, ".")
+	if len(hostParts) > 0 {
+		title = hostParts[0]
+	}
+
+	// URL-encode the error message to ensure it's safe for URLs
+	encodedMessage := url.QueryEscape(errorMessage)
+	encodedTitle := url.QueryEscape(title)
+	// Construct the new URL with the error query parameter
+	newURL := fmt.Sprintf("%s?error=%s&title=%s", redirectURL, encodedMessage, encodedTitle)
+	xlog.Logf(newURL)
+
+	// Redirect the user with the updated URL
+	http.Redirect(w, r, newURL, http.StatusTemporaryRedirect)
 }

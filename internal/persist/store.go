@@ -9,29 +9,29 @@ import (
 	"github.com/guarzo/zkillanalytics/internal/model"
 )
 
-var Store *HomeDataStore
+var Store *DataStore
 
-// HomeDataStore stores HomeData in memory
-type HomeDataStore struct {
+// DataStore stores StoreData in memory
+type DataStore struct {
 	sync.RWMutex
-	store map[int64]model.HomeData
+	store map[int64]model.StoreData
 	ETag  string
 }
 
-// NewHomeDataStore creates a new HomeDataStore
-func NewHomeDataStore() *HomeDataStore {
-	return &HomeDataStore{
-		store: make(map[int64]model.HomeData),
+// NewHomeDataStore creates a new DataStore
+func NewHomeDataStore() *DataStore {
+	return &DataStore{
+		store: make(map[int64]model.StoreData),
 		ETag:  "",
 	}
 }
 
-func (s *HomeDataStore) Set(id int64, homeData model.HomeData) (string, error) {
+func (s *DataStore) Set(id int64, storeData model.StoreData) (string, error) {
 	s.Lock()
 	defer s.Unlock()
-	s.store[id] = homeData
+	s.store[id] = storeData
 
-	etag, err := GenerateETag(homeData)
+	etag, err := GenerateETag(storeData)
 	if err != nil {
 		return "", err
 	}
@@ -39,7 +39,7 @@ func (s *HomeDataStore) Set(id int64, homeData model.HomeData) (string, error) {
 	return etag, nil
 }
 
-func (s *HomeDataStore) Get(id int64) (model.HomeData, string, bool) {
+func (s *DataStore) Get(id int64) (model.StoreData, string, bool) {
 	s.RLock()
 	defer s.RUnlock()
 	homeData, ok := s.store[id]
@@ -47,14 +47,14 @@ func (s *HomeDataStore) Get(id int64) (model.HomeData, string, bool) {
 }
 
 // Delete removes an identity from the store
-func (s *HomeDataStore) Delete(id int64) {
+func (s *DataStore) Delete(id int64) {
 	s.Lock()
 	defer s.Unlock()
 	delete(s.store, id)
 }
 
-func GenerateETag(homeData model.HomeData) (string, error) {
-	data, err := json.Marshal(homeData)
+func GenerateETag(storeData model.StoreData) (string, error) {
+	data, err := json.Marshal(storeData)
 	if err != nil {
 		return "", err
 	}

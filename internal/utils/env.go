@@ -14,7 +14,7 @@ import (
 func GetPort() int {
 	portStr, exists := os.LookupEnv("PORT")
 	if !exists || portStr == "" {
-		portStr = "8081"
+		portStr = "8080"
 		log.Printf("PORT not set. Using default port %s", portStr)
 	} else {
 		log.Printf("Using port from environment: %s", portStr)

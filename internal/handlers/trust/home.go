@@ -20,23 +20,24 @@ func HomeHandler(s *handlers.SessionService, esiService *service.EsiService) htt
 			return
 		}
 
-		storeData, etag, canSkip := checkIfCanSkip(session, sessionValues, r)
+		storeData, etag, canSkip := handlers.CheckIfCanSkip(session)
 
 		if canSkip {
+			xlog.Logf("can skip in home handler")
 			renderBaseTemplate(w, r, storeData)
 			return
 		}
 
-		identities, err := validateIdentities(session, sessionValues, storeData, esiService)
+		identities, err := handlers.ValidateIdentities(session, esiService, r, w)
 		if err != nil {
 			errorMessage := fmt.Sprintf("Failed to validate identities: %s", err.Error())
-			handleErrorWithRedirect(w, r, errorMessage, "/logout")
+			handlers.HandleErrorWithRedirect(w, r, errorMessage, "/logout")
 			return
 		}
 
 		data := prepareHomeData(sessionValues, identities)
 
-		etag, err = updateStoreAndSession(storeData, data, etag, session, r, w)
+		etag, err = handlers.UpdateAndStoreSession(data, etag, session, r, w)
 		if err != nil {
 			xlog.Logf("Failed to update store and session: %v", err)
 			return
@@ -46,21 +47,16 @@ func HomeHandler(s *handlers.SessionService, esiService *service.EsiService) htt
 	}
 }
 
-func LandingHandler(w http.ResponseWriter, r *http.Request) {
-	renderLandingPage(w, r)
-	return
-}
-
-func renderBaseTemplate(w http.ResponseWriter, r *http.Request, data model.HomeData) {
+func renderBaseTemplate(w http.ResponseWriter, r *http.Request, data model.StoreData) {
 	if err := tmpl.ExecuteTemplate(w, "base", data); err != nil {
-		handleErrorWithRedirect(w, r, fmt.Sprintf("Failed to render base template: %v", err), "/")
+		handlers.HandleErrorWithRedirect(w, r, fmt.Sprintf("Failed to render base template: %v", err), "/")
 	}
 }
 
 func renderLandingPage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
-	data := model.HomeData{Title: Title}
-	if err := tmpl.ExecuteTemplate(w, "landing", data); err != nil {
-		handleErrorWithRedirect(w, r, fmt.Sprintf("Failed to render landing template: %v", err), "/")
+	data := model.StoreData{Title: Title}
+	if err := handlers.Tmpl.ExecuteTemplate(w, "landing", data); err != nil {
+		handlers.HandleErrorWithRedirect(w, r, fmt.Sprintf("Failed to render landing template: %v", err), "/")
 	}
 }
