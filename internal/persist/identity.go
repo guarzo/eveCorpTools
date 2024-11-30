@@ -108,12 +108,14 @@ func getIdentityFileName(mainIdentity int64, host string) string {
 	var subAppDirectory string
 
 	switch host {
-	case "loot.example.com":
+	case "loot.zoolanders.space":
 		subAppDirectory = "data/loot"
-	case "tps.example.com":
+	case "tps.zoolanders.space":
 		subAppDirectory = "data/tps"
-	case "trust.example.com":
+	case "trust.zoolanders.space":
 		subAppDirectory = "data/trust"
+	case "localhost":
+		subAppDirectory = "data"
 	default:
 		subAppDirectory = "data/default" // You could add a default case or handle this as an error
 	}
@@ -123,7 +125,7 @@ func getIdentityFileName(mainIdentity int64, host string) string {
 
 // UpdateIdentities loads, updates, and saves identities.
 func UpdateIdentities(mainIdentity int64, host string, updateFunc func(*model.Identities) error) error {
-	xlog.Logf("Loading identities for mainIdentity: %d", mainIdentity)
+	xlog.Logf("Loading identities for mainIdentity: %d, host: %s", mainIdentity, host)
 	ids, err := LoadIdentities(mainIdentity, host)
 	if err != nil {
 		xlog.Logf("Error in LoadIdentities: %v", err)

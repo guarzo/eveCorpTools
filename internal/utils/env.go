@@ -75,6 +75,7 @@ func GetESIEnv(host string) (string, string, string) {
 
 	// Ensure that all required environment variables are set
 	if clientID == "" || clientSecret == "" || callbackURL == "" {
+		log.Printf("clientid :%s, clientsecret :%s, callbackurl %s", clientID, clientSecret, callbackURL)
 		log.Fatalf("%s_EVE_CLIENT_ID, %s_EVE_CLIENT_SECRET, and %s_EVE_CALLBACK_URL must be set", host, host, host)
 	}
 

@@ -5,15 +5,17 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/guarzo/zkillanalytics/internal/model"
-	"github.com/guarzo/zkillanalytics/internal/xlog"
-	"golang.org/x/oauth2"
 	"io"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"sync"
+
+	"golang.org/x/oauth2"
+
+	"github.com/guarzo/zkillanalytics/internal/model"
+	"github.com/guarzo/zkillanalytics/internal/xlog"
 )
 
 // InitializeOAuth configures OAuth2 with client credentials and callback URL.
