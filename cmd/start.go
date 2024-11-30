@@ -61,6 +61,68 @@ func loggingMiddleware(logger *logrus.Logger) mux.MiddlewareFunc {
 	}
 }
 
+func AuthMiddleware(sessionStore *handlers.SessionService) mux.MiddlewareFunc {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// List of public routes that don't require authentication
+			publicRoutes := map[string]bool{
+				"/static":   true,
+				"/landing":  true,
+				"/login":    true,
+				"/logout":   true,
+				"/callback": true,
+			}
+
+			log.Printf("Incoming request path: %s", r.URL.Path)
+
+			// Check if the path starts with one of the public routes
+			for publicRoute := range publicRoutes {
+				if strings.HasPrefix(r.URL.Path, publicRoute) {
+					next.ServeHTTP(w, r)
+					return
+				}
+			}
+
+			log.Println("Proceeding to authentication check")
+
+			session, err := sessionStore.Get(r, handlers.SessionName)
+			if err != nil {
+				log.Printf("Error getting session: %v", err)
+				// Clear any invalid session cookies
+				http.SetCookie(w, &http.Cookie{
+					Name:   handlers.SessionName,
+					MaxAge: -1, // Expire the session cookie
+					Path:   "/",
+				})
+				http.Redirect(w, r, "/landing", http.StatusFound)
+				return
+			}
+
+			sessionValues := handlers.GetSessionValues(session)
+			log.Printf("Session values: %v", sessionValues)
+
+			// Check if logged_in_user is present
+			loggedInUser := sessionValues.LoggedInUser
+			if loggedInUser == 0 {
+				log.Println("User not logged in, redirecting to /landing")
+				http.Redirect(w, r, "/landing", http.StatusFound)
+				return
+			}
+
+			// Ensure token exists for the logged-in user
+			_, err = persist.GetMainIdentityToken(loggedInUser)
+			if err != nil {
+				// If token is missing, redirect to the landing page
+				http.Redirect(w, r, "/landing", http.StatusFound)
+				return
+			}
+
+			// If user is authenticated, proceed to the next handler
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 // registerTPSRoutes registers the routes for the TPS subdomain
 func registerTPSRoutes(r *mux.Router, orchestrateService *service.OrchestrateService) {
 	r.HandleFunc("/", tps.TPSHandler(config.Snippets, orchestrateService)).Methods("GET")
@@ -89,6 +151,7 @@ func registerLootRoutes(r *mux.Router, orchestrateService *service.OrchestrateSe
 
 // registerTrustRoutes registers the routes for the loot subdomain
 func registerTrustRoutes(r *mux.Router, sessionStore *handlers.SessionService, trustedService *service.TrustedService, esiService *service.EsiService) {
+	r.Use(AuthMiddleware(sessionStore))
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
 
 	r.HandleFunc("/callback/", trust.CallbackHandler(sessionStore, esiService))
@@ -96,6 +159,8 @@ func registerTrustRoutes(r *mux.Router, sessionStore *handlers.SessionService, t
 	// user functions
 	r.HandleFunc("/", trust.HomeHandler(sessionStore, esiService))
 	r.HandleFunc("/login", trust.LoginHandler(esiService))
+	r.HandleFunc("/landing", trust.LandingHandler)
+
 	r.HandleFunc("/auth-character", trust.AuthCharacterHandler(esiService))
 	r.HandleFunc("/logout", trust.LogoutHandler(sessionStore))
 

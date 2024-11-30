@@ -31,7 +31,6 @@ func AuthCharacterHandler(esiService *service.EsiService) http.HandlerFunc {
 }
 
 // CallbackHandler handles the OAuth callback
-// CallbackHandler handles the OAuth callback
 func CallbackHandler(s *handlers.SessionService, esiService *service.EsiService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 

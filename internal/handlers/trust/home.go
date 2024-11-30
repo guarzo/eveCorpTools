@@ -46,6 +46,11 @@ func HomeHandler(s *handlers.SessionService, esiService *service.EsiService) htt
 	}
 }
 
+func LandingHandler(w http.ResponseWriter, r *http.Request) {
+	renderLandingPage(w, r)
+	return
+}
+
 func renderBaseTemplate(w http.ResponseWriter, r *http.Request, data model.HomeData) {
 	if err := tmpl.ExecuteTemplate(w, "base", data); err != nil {
 		handleErrorWithRedirect(w, r, fmt.Sprintf("Failed to render base template: %v", err), "/")
