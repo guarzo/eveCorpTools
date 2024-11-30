@@ -15,6 +15,7 @@ import (
 	"github.com/guarzo/zkillanalytics/internal/model"
 	"github.com/guarzo/zkillanalytics/internal/persist"
 	"github.com/guarzo/zkillanalytics/internal/service"
+	"github.com/guarzo/zkillanalytics/internal/utils"
 	"github.com/guarzo/zkillanalytics/internal/xlog"
 )
 
@@ -36,7 +37,9 @@ func AuthMiddleware(sessionStore *SessionService, esiService *service.EsiService
 				"/callback": true,
 			}
 
-			log.Printf("Incoming request path: %s", r.URL.Path)
+			host := utils.GetHost(r.Host)
+
+			log.Printf("Incoming request path: %s, host: %s", r.URL.Path, r.Host)
 
 			// Check if the path starts with one of the public routes
 			for publicRoute := range publicRoutes {
@@ -73,7 +76,7 @@ func AuthMiddleware(sessionStore *SessionService, esiService *service.EsiService
 			}
 
 			// Ensure token exists for the logged-in user
-			_, err = persist.GetMainIdentityToken(loggedInUser)
+			_, err = persist.GetMainIdentityToken(loggedInUser, host)
 			if err != nil {
 				// If token is missing, redirect to the landing page
 				handleAuthErrorWithRedirect(w, r, err.Error(), "/landing")
@@ -124,7 +127,9 @@ func CallbackHandler(s *SessionService, esiService *service.EsiService) http.Han
 		code := r.URL.Query().Get("code")
 		state := r.URL.Query().Get("state")
 
-		xlog.Logf("Received OAuth callback with code: %s, state: %s", code, state)
+		host := utils.GetHost(r.Host)
+
+		xlog.Logf("Received OAuth callback with code: %s, state: %s, host: %s", code, state, host)
 
 		token, err := esiService.EsiClient.ExchangeCode(code)
 		if err != nil {
@@ -193,7 +198,7 @@ func CallbackHandler(s *SessionService, esiService *service.EsiService) http.Han
 		xlog.Logf("MainIdentity: %d", mainIdentity)
 
 		// Update identities with the new token
-		err = persist.UpdateIdentities(mainIdentity, func(userConfig *model.Identities) error {
+		err = persist.UpdateIdentities(mainIdentity, host, func(userConfig *model.Identities) error {
 			xlog.Logf("Updating token for CharacterID: %d", user.CharacterID)
 			userConfig.Tokens[fmt.Sprintf("%d", user.CharacterID)] = *token
 			return nil

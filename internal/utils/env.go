@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 )
 
 // GetPort retrieves the port from the PORT environment variable.
@@ -50,6 +51,13 @@ func GetHostConfig() string {
 	return hostConfig
 }
 
+func GetHost(host string) string {
+	if idx := strings.Index(host, ":"); idx != -1 {
+		host = host[:idx]
+	}
+	return host
+}
+
 func GetVersion() string {
 	version := os.Getenv("VERSION")
 	if version == "" {
@@ -59,13 +67,18 @@ func GetVersion() string {
 	return version
 }
 
-func GetESIEnv() (string, string, string) {
-	clientID := os.Getenv("EVE_CLIENT_ID")
-	clientSecret := os.Getenv("EVE_CLIENT_SECRET")
-	callbackURL := os.Getenv("EVE_CALLBACK_URL")
+func GetESIEnv(host string) (string, string, string) {
+	// Define the unique environment variable names for the specific host
+	clientID := os.Getenv(fmt.Sprintf("%s_EVE_CLIENT_ID", host))
+	clientSecret := os.Getenv(fmt.Sprintf("%s_EVE_CLIENT_SECRET", host))
+	callbackURL := os.Getenv(fmt.Sprintf("%s_EVE_CALLBACK_URL", host))
+
+	// Ensure that all required environment variables are set
 	if clientID == "" || clientSecret == "" || callbackURL == "" {
-		log.Fatalf("EVE_CLIENT_ID, EVE_CLIENT_SECRET, and EVE_CALLBACK_URL must be set")
+		log.Fatalf("%s_EVE_CLIENT_ID, %s_EVE_CLIENT_SECRET, and %s_EVE_CALLBACK_URL must be set", host, host, host)
 	}
+
+	// Return the environment variables
 	return clientID, clientSecret, callbackURL
 }
 

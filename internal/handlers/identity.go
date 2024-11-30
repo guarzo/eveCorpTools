@@ -13,6 +13,7 @@ import (
 	"github.com/guarzo/zkillanalytics/internal/model"
 	"github.com/guarzo/zkillanalytics/internal/persist"
 	"github.com/guarzo/zkillanalytics/internal/service"
+	"github.com/guarzo/zkillanalytics/internal/utils"
 	"github.com/guarzo/zkillanalytics/internal/xlog"
 )
 
@@ -71,13 +72,14 @@ func ResetIdentitiesHandler(s *SessionService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session, _ := s.Get(r, SessionName)
 		mainIdentity, ok := session.Values[LoggedInUser].(int64)
+		host := utils.GetHost(r.Host)
 
 		if !ok || mainIdentity == 0 {
 			handleAuthErrorWithRedirect(w, r, "Attempt to reset identities without a main identity", "/logout")
 			return
 		}
 
-		err := persist.DeleteIdentity(mainIdentity)
+		err := persist.DeleteIdentity(mainIdentity, host)
 		if err != nil {
 			xlog.Logf("Failed to delete identity %d: %v", mainIdentity, err)
 		}
@@ -109,6 +111,8 @@ func ValidateIdentities(session *sessions.Session, esiService *service.EsiServic
 	sessionValues := GetSessionValues(session)
 	storeData, etag, canSkip := CheckIfCanSkip(session)
 	identities := storeData.Identities
+	host := utils.GetHost(r.Host)
+	xlog.Logf("validate identities for %s", host)
 
 	if !canSkip {
 		authenticatedUsers, ok := session.Values[AllAuthenticatedCharacters].([]int64)
@@ -120,7 +124,7 @@ func ValidateIdentities(session *sessions.Session, esiService *service.EsiServic
 		needIdentityPopulation := len(authenticatedUsers) == 0 || !SameIdentities(authenticatedUsers, storeData.Identities) || time.Since(time.Unix(sessionValues.LastRefreshTime, 0)) > 15*time.Minute
 
 		if needIdentityPopulation {
-			userConfig, err := persist.LoadIdentities(sessionValues.LoggedInUser)
+			userConfig, err := persist.LoadIdentities(sessionValues.LoggedInUser, host)
 
 			if err != nil {
 				xlog.Logf("Failed to load identities: %v", err)
@@ -136,7 +140,7 @@ func ValidateIdentities(session *sessions.Session, esiService *service.EsiServic
 				return nil, fmt.Errorf("not a valid user - ask in discord if you think this is a mistake")
 			}
 
-			if err = persist.SaveIdentities(sessionValues.LoggedInUser, userConfig); err != nil {
+			if err = persist.SaveIdentities(sessionValues.LoggedInUser, userConfig, host); err != nil {
 				return nil, fmt.Errorf("failed to save identities: %w", err)
 			}
 

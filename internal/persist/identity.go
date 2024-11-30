@@ -12,12 +12,9 @@ import (
 	"github.com/guarzo/zkillanalytics/internal/xlog"
 )
 
-// Directory where identity files are stored
-const trustDirectory = "data/trust"
-
 // GetMainIdentityToken retrieves the token for the main identity.
-func GetMainIdentityToken(mainIdentity int64) (oauth2.Token, error) {
-	identities, err := LoadIdentities(mainIdentity)
+func GetMainIdentityToken(mainIdentity int64, host string) (oauth2.Token, error) {
+	identities, err := LoadIdentities(mainIdentity, host)
 	if err != nil {
 		return oauth2.Token{}, fmt.Errorf("unable to retrieve token for main identity")
 	}
@@ -29,8 +26,8 @@ func GetMainIdentityToken(mainIdentity int64) (oauth2.Token, error) {
 }
 
 // LoadIdentityToken retrieves the token for a specified character.
-func LoadIdentityToken(mainIdentity, characterID int64) (oauth2.Token, error) {
-	identities, err := LoadIdentities(mainIdentity)
+func LoadIdentityToken(mainIdentity, characterID int64, host string) (oauth2.Token, error) {
+	identities, err := LoadIdentities(mainIdentity, host)
 	if err != nil {
 		return oauth2.Token{}, fmt.Errorf("unable to retrieve token for character %d", characterID)
 	}
@@ -42,78 +39,92 @@ func LoadIdentityToken(mainIdentity, characterID int64) (oauth2.Token, error) {
 	return token, nil
 }
 
-func LoadIdentities(mainIdentity int64) (*model.Identities, error) {
+func LoadIdentities(mainIdentity int64, host string) (*model.Identities, error) {
 	if mainIdentity == 0 {
 		return nil, fmt.Errorf("logged in user not provided")
 	}
 
-	xlog.Logf("Loading identities for mainIdentity: %d", mainIdentity)
+	xlog.Logf("Loading identities for mainIdentity: %d from host: %s", mainIdentity, host)
 
-	mainIdentityStr := fmt.Sprintf("%d", mainIdentity)
-
-	identities := &model.Identities{
-		MainIdentity: mainIdentityStr,
-		Tokens:       make(map[string]oauth2.Token),
-	}
-
-	identityFile := getIdentityFileName(mainIdentity)
+	// Use the host to determine the directory
+	identityFile := getIdentityFileName(mainIdentity, host)
 	if _, err := os.Stat(identityFile); os.IsNotExist(err) {
 		xlog.Log("No identity file found. Initializing new Identities.")
-		return identities, nil
+		return &model.Identities{
+			MainIdentity: fmt.Sprintf("%d", mainIdentity),
+			Tokens:       make(map[string]oauth2.Token),
+		}, nil
 	}
 
-	// Attempt to load with the new model (map[string]oauth2.Token)
-	if err := DecryptData(identityFile, identities); err == nil {
-		xlog.Logf("Loaded identities with new model: %s", SafeLogIdentities(identities))
-		return identities, nil
+	// Attempt to load with the new model
+	var identities model.Identities
+	if err := DecryptData(identityFile, &identities); err == nil {
+		xlog.Logf("Loaded identities: %s", SafeLogIdentities(&identities))
+		return &identities, nil
 	}
 
-	// Fallback: Attempt to load with the old model (map[int64]oauth2.Token)
+	// Fallback to old model
 	xlog.Log("Attempting to load identities with old model format.")
 	oldIdentities := struct {
 		MainIdentity string                 `json:"main_identity"`
 		Tokens       map[int64]oauth2.Token `json:"identities"`
 	}{}
-
 	if err := DecryptData(identityFile, &oldIdentities); err != nil {
 		xlog.Logf("Error decrypting identities file with old model: %v", err)
 		return nil, err
 	}
 
-	// Convert old model (map[int64]) to new model (map[string])
+	// Convert old model to new model
 	for k, v := range oldIdentities.Tokens {
 		identities.Tokens[fmt.Sprintf("%d", k)] = v
 	}
 
-	// Save converted identities with the new model format
-	if saveErr := SaveIdentities(mainIdentity, identities); saveErr != nil {
-		xlog.Logf("Error saving identities after conversion: %v", saveErr)
-		return nil, saveErr
+	// Save converted identities
+	if err := SaveIdentities(mainIdentity, &identities, host); err != nil {
+		xlog.Logf("Error saving identities after conversion: %v", err)
+		return nil, err
 	}
 
-	xlog.Logf("Converted and saved identities to new model: %s", SafeLogIdentities(identities))
-	return identities, nil
+	xlog.Logf("Converted and saved identities to new model: %s", SafeLogIdentities(&identities))
+	return &identities, nil
 }
 
-func SaveIdentities(mainIdentity int64, ids *model.Identities) error {
+func SaveIdentities(mainIdentity int64, ids *model.Identities, host string) error {
 	if mainIdentity == 0 {
 		return fmt.Errorf("no main identity provided")
 	}
-	xlog.Logf("Saving identities for mainIdentity: %d", mainIdentity)
+	xlog.Logf("Saving identities for mainIdentity: %d to host: %s", mainIdentity, host)
 
-	xlog.Logf("Saving identities: %s", SafeLogIdentities(ids))
-	return EncryptData(getIdentityFileName(mainIdentity), ids)
+	// Save the identities to the correct directory based on the host
+	identityFile := getIdentityFileName(mainIdentity, host)
+	xlog.Logf("Saving identities to: %s", identityFile)
+
+	// Encrypt and save data
+	return EncryptData(identityFile, ids)
 }
 
-// getIdentityFileName generates the file path for a given main identity.
-func getIdentityFileName(mainIdentity int64) string {
-	return filepath.Join(trustDirectory, fmt.Sprintf("%d_identity.json", mainIdentity))
+// getIdentityFileName generates the file path for a given main identity, based on the host.
+func getIdentityFileName(mainIdentity int64, host string) string {
+	var subAppDirectory string
+
+	switch host {
+	case "loot.example.com":
+		subAppDirectory = "data/loot"
+	case "tps.example.com":
+		subAppDirectory = "data/tps"
+	case "trust.example.com":
+		subAppDirectory = "data/trust"
+	default:
+		subAppDirectory = "data/default" // You could add a default case or handle this as an error
+	}
+
+	return filepath.Join(subAppDirectory, fmt.Sprintf("%d_identity.json", mainIdentity))
 }
 
 // UpdateIdentities loads, updates, and saves identities.
-func UpdateIdentities(mainIdentity int64, updateFunc func(*model.Identities) error) error {
+func UpdateIdentities(mainIdentity int64, host string, updateFunc func(*model.Identities) error) error {
 	xlog.Logf("Loading identities for mainIdentity: %d", mainIdentity)
-	ids, err := LoadIdentities(mainIdentity)
+	ids, err := LoadIdentities(mainIdentity, host)
 	if err != nil {
 		xlog.Logf("Error in LoadIdentities: %v", err)
 		return err
@@ -130,7 +141,7 @@ func UpdateIdentities(mainIdentity int64, updateFunc func(*model.Identities) err
 	// Log identities after update without tokens
 	xlog.Logf("Identities after updateFunc: %s", SafeLogIdentities(ids))
 
-	if err = SaveIdentities(mainIdentity, ids); err != nil {
+	if err = SaveIdentities(mainIdentity, ids, host); err != nil {
 		xlog.Logf("Error in SaveIdentities: %v", err)
 		return err
 	}
@@ -149,6 +160,6 @@ func SafeLogIdentities(ids *model.Identities) string {
 }
 
 // DeleteIdentity deletes the identity file for a specified main identity.
-func DeleteIdentity(mainIdentity int64) error {
-	return os.Remove(getIdentityFileName(mainIdentity))
+func DeleteIdentity(mainIdentity int64, host string) error {
+	return os.Remove(getIdentityFileName(mainIdentity, host))
 }

@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 
 	"github.com/guarzo/zkillanalytics/internal/persist"
+	"github.com/guarzo/zkillanalytics/internal/utils"
 	"github.com/guarzo/zkillanalytics/internal/xlog"
 )
 
@@ -40,6 +40,7 @@ func WriteJSONError(w http.ResponseWriter, message string, identifier string, st
 
 func GetSessionIdentity(s *SessionService, r *http.Request, logger *logrus.Logger) (int64, oauth2.Token, error) {
 	session, err := s.Get(r, SessionName)
+	host := utils.GetHost(r.Host)
 	if err != nil {
 		logger.Errorf("Session retrieval error: %v", err)
 		return 0, oauth2.Token{}, fmt.Errorf("failed to retrieve session")
@@ -51,7 +52,7 @@ func GetSessionIdentity(s *SessionService, r *http.Request, logger *logrus.Logge
 		return 0, oauth2.Token{}, fmt.Errorf("main identity not found")
 	}
 
-	token, err := persist.GetMainIdentityToken(mainIdentity)
+	token, err := persist.GetMainIdentityToken(mainIdentity, host)
 	if err != nil {
 		logger.Errorf("Error retrieving token for main identity: %v", err)
 		return 0, oauth2.Token{}, fmt.Errorf("failed to retrieve token")
@@ -85,14 +86,10 @@ func HandleErrorWithRedirect(w http.ResponseWriter, r *http.Request, errorMessag
 
 // handleAuthErrorWithRedirect redirects to the given URL with an error message as a query parameter
 func handleAuthErrorWithRedirect(w http.ResponseWriter, r *http.Request, errorMessage, redirectURL string) {
-	title := "Zoo Auth" // default
-	host := r.Host      // Host includes both domain and port, e.g., "foo.bar.com:8080"
 
-	// Split the host by "." and take the first part (e.g., "foo" from "foo.bar.com")
-	hostParts := strings.Split(host, ".")
-	if len(hostParts) > 0 {
-		title = hostParts[0]
-	}
+	host := utils.GetHost(r.Host)
+
+	title := fmt.Sprintf("Zoo Auth-%s", host) // default
 
 	// URL-encode the error message to ensure it's safe for URLs
 	encodedMessage := url.QueryEscape(errorMessage)

@@ -5,6 +5,7 @@ package cmd
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"mime"
@@ -27,6 +28,7 @@ import (
 	"github.com/guarzo/zkillanalytics/internal/handlers/loot"
 	"github.com/guarzo/zkillanalytics/internal/handlers/tps"
 	"github.com/guarzo/zkillanalytics/internal/handlers/trust"
+	"github.com/guarzo/zkillanalytics/internal/model"
 	"github.com/guarzo/zkillanalytics/internal/persist"
 	"github.com/guarzo/zkillanalytics/internal/service"
 	"github.com/guarzo/zkillanalytics/internal/utils"
@@ -236,10 +238,6 @@ func StartServer(setup *config.AppSetup) {
 		log.Fatalf("Failed to initialize identity: %v", err)
 	}
 
-	// Initialize OAuth2 configuration
-
-	sessionStore := handlers.NewSessionService(setup.Secret)
-
 	// Ensure necessary directories exist
 	dirs := []string{
 		"data",
@@ -266,19 +264,18 @@ func StartServer(setup *config.AppSetup) {
 	// Initialize HTTP Client with User-Agent
 	httpClient := utils.NewHTTPClientWithUserAgent(setup.UserAgent)
 
-	esiClient := esi.NewEsiClient(config.BaseEsiURL, failedChars, httpClient, cache, logger)
-	esiClient.InitializeOAuth(setup.ClientID, setup.ClientSecret, setup.CallbackURL)
-	zkillClient := zkill.NewZkillClient(config.ZkillURL, httpClient, cache, logger)
+	lootSessionStore, lootEsiService := initializeForHost("loot", failedChars, httpClient, cache, logger, setup.Secret)
+	tpsSessionStore, tpsEsiService := initializeForHost("tps", failedChars, httpClient, cache, logger, setup.Secret)
+	trustSessionStore, trustEsiService := initializeForHost("trust", failedChars, httpClient, cache, logger, setup.Secret)
 
-	// Initialize Services
-	esiService := service.NewEsiService(esiClient, cache, logger)
+	zkillClient := zkill.NewZkillClient(config.ZkillURL, httpClient, cache, logger)
 	invTypeService := data.NewInvTypeService(logger) // Ensure this function exists and is correctly implemented
 	err = invTypeService.LoadInvTypes()
 	if err != nil {
 		logger.Fatalf("failed to load invtypes %v", err)
 	}
-	killMailService := service.NewKillMailService(zkillClient, esiService, cache, logger)
-	orchestrateService := service.NewOrchestrateService(esiService, killMailService, invTypeService, failedChars, cache, logger, httpClient)
+	killMailService := service.NewKillMailService(zkillClient, tpsEsiService, cache, logger)
+	orchestrateService := service.NewOrchestrateService(tpsEsiService, killMailService, invTypeService, failedChars, cache, logger, httpClient)
 	// Load trusted characters on startup
 	dataLoader := persist.LoadTrustedCharacters
 	dataSaver := persist.SaveTrustedCharacters
@@ -304,7 +301,8 @@ func StartServer(setup *config.AppSetup) {
 	// Function to create a host matcher that handles hostConfig
 	hostMatcher := func(targetHost string) mux.MatcherFunc {
 		return func(r *http.Request, rm *mux.RouteMatch) bool {
-			host := r.Host
+			host := utils.GetHost(r.Host)
+
 			// Remove port if present
 			if idx := strings.Index(host, ":"); idx != -1 {
 				host = host[:idx]
@@ -335,15 +333,15 @@ func StartServer(setup *config.AppSetup) {
 
 	// Initialize Subrouters with Host Matchers
 	tpsRouter := mainRouter.MatcherFunc(hostMatcher("tps.zoolanders.space")).Subrouter()
-	registerTPSRoutes(tpsRouter, orchestrateService, sessionStore, esiService)
+	registerTPSRoutes(tpsRouter, orchestrateService, tpsSessionStore, tpsEsiService)
 	logger.Info("Registered TPS subdomain routes")
 
 	lootRouter := mainRouter.MatcherFunc(hostMatcher("loot.zoolanders.space")).Subrouter()
-	registerLootRoutes(lootRouter, sessionStore, esiService)
+	registerLootRoutes(lootRouter, lootSessionStore, lootEsiService)
 	logger.Info("Registered Loot subdomain routes")
 
 	trustRouter := mainRouter.MatcherFunc(hostMatcher("trust.zoolanders.space")).Subrouter()
-	registerTrustRoutes(trustRouter, sessionStore, trustedService, esiService)
+	registerTrustRoutes(trustRouter, trustSessionStore, trustedService, trustEsiService)
 	logger.Info("Registered Trust subdomain routes")
 
 	// Default Router handles all other hosts
@@ -406,7 +404,7 @@ func StartServer(setup *config.AppSetup) {
 	// Start the server in a goroutine
 	go func() {
 		logger.Infof("Starting server version %s on port %d", setup.Version, setup.Port)
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := server.ListenAndServe(); err != nil && !errors.Is(http.ErrServerClosed, err) {
 			// Error starting or closing listener
 			logger.Fatalf("HTTP server ListenAndServe: %v", err)
 		}
@@ -415,6 +413,23 @@ func StartServer(setup *config.AppSetup) {
 	// Block until graceful shutdown is complete
 	<-idleConnsClosed
 	logger.Info("Server gracefully stopped")
+}
+
+func initializeForHost(host string, failedChars *model.FailedCharacters, httpClient *http.Client, cache *persist.Cache, logger *logrus.Logger, secret string) (*handlers.SessionService, *service.EsiService) {
+	// Get environment variables for the specific host
+	clientID, clientSecret, callbackURL := utils.GetESIEnv(host)
+
+	// Initialize session store for the specific host
+	sessionStore := handlers.NewSessionService(secret) // Use unique session name if needed
+
+	// Initialize ESI client for the specific host
+	esiClient := esi.NewEsiClient(config.BaseEsiURL, failedChars, httpClient, cache, logger)
+	esiClient.InitializeOAuth(clientID, clientSecret, callbackURL)
+
+	// Initialize ESI service for the specific host
+	esiService := service.NewEsiService(esiClient, cache, logger)
+
+	return sessionStore, esiService
 }
 
 // Helper function to get keys of a map

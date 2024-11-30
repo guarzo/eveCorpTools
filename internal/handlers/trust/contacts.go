@@ -8,6 +8,7 @@ import (
 	"github.com/guarzo/zkillanalytics/internal/handlers"
 	"github.com/guarzo/zkillanalytics/internal/persist"
 	"github.com/guarzo/zkillanalytics/internal/service"
+	"github.com/guarzo/zkillanalytics/internal/utils"
 	"github.com/guarzo/zkillanalytics/internal/xlog"
 )
 
@@ -36,6 +37,7 @@ func sendJSONError(w http.ResponseWriter, message string, statusCode int) {
 func AddContactsHandler(s *handlers.SessionService, esiService *service.EsiService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
+		host := utils.GetHost(r.Host)
 		xlog.Logf("AddContactsHandler invoked")
 		var request struct {
 			CharacterID int64 `json:"characterID"`
@@ -58,7 +60,7 @@ func AddContactsHandler(s *handlers.SessionService, esiService *service.EsiServi
 		}
 		sessionValues := handlers.GetSessionValues(session)
 
-		token, err := persist.LoadIdentityToken(sessionValues.LoggedInUser, request.CharacterID)
+		token, err := persist.LoadIdentityToken(sessionValues.LoggedInUser, request.CharacterID, host)
 		if err != nil {
 			xlog.Logf("Error loading identity token for CharacterID %v: %v", request.CharacterID, err)
 			sendJSONError(w, fmt.Sprintf("Character token not found: %v", err), http.StatusInternalServerError)
@@ -107,6 +109,7 @@ func AddContactsHandler(s *handlers.SessionService, esiService *service.EsiServi
 // DeleteContactsHandler processes the request to delete contacts from the EVE API.
 func DeleteContactsHandler(s *handlers.SessionService, esiService *service.EsiService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		host := utils.GetHost(r.Host)
 		var request struct {
 			CharacterID int64 `json:"characterID"`
 		}
@@ -128,7 +131,7 @@ func DeleteContactsHandler(s *handlers.SessionService, esiService *service.EsiSe
 		}
 		sessionValues := handlers.GetSessionValues(session)
 
-		token, err := persist.LoadIdentityToken(sessionValues.LoggedInUser, request.CharacterID)
+		token, err := persist.LoadIdentityToken(sessionValues.LoggedInUser, request.CharacterID, host)
 		if err != nil {
 			xlog.Logf("Error loading identity token for CharacterID %v: %v", request.CharacterID, err)
 			sendJSONError(w, fmt.Sprintf("Character token not found: %v", err), http.StatusInternalServerError)

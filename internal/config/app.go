@@ -11,15 +11,12 @@ import (
 
 // AppSetup holds all environment variables for easy access and passing
 type AppSetup struct {
-	Port         int
-	UserAgent    string
-	HostConfig   string
-	Version      string
-	ClientID     string
-	ClientSecret string
-	CallbackURL  string
-	Key          []byte
-	Secret       string
+	Port       int
+	UserAgent  string
+	HostConfig string
+	Version    string
+	Key        []byte
+	Secret     string
 }
 
 // NewAppSetup initializes and returns a Config struct with values from environment variables
@@ -49,20 +46,15 @@ func NewAppSetup() (*AppSetup, error) {
 
 	version := utils.GetVersion()
 
-	clientID, clientSecret, callbackURL := utils.GetESIEnv()
-
 	// Handle SECRET_KEY, generate if missing
 	secret, key := utils.GetSecretKey()
 
 	return &AppSetup{
-		Port:         port,
-		UserAgent:    userAgent,
-		HostConfig:   hostConfig,
-		Version:      version,
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
-		CallbackURL:  callbackURL,
-		Key:          key,
-		Secret:       secret,
+		Port:       port,
+		UserAgent:  userAgent,
+		HostConfig: hostConfig,
+		Version:    version,
+		Key:        key,
+		Secret:     secret,
 	}, nil
 }

@@ -76,9 +76,9 @@ func DecryptData(inputFile string, data interface{}) error {
 func Initialize(bytes []byte) error {
 	key = bytes
 
-	if _, err := os.Stat(trustDirectory); os.IsNotExist(err) {
-		return os.Mkdir(trustDirectory, 0755)
-	}
+	//if _, err := os.Stat(trustDirectory); os.IsNotExist(err) {
+	//	return os.Mkdir(trustDirectory, 0755)
+	//}
 
 	return nil
 }
