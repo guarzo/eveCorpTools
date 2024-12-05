@@ -36,6 +36,7 @@ func HomeHandler(s *handlers.SessionService, esiService *service.EsiService) htt
 		}
 
 		data := prepareHomeData(sessionValues, identities)
+		session.Values["trustedDataDirty"] = false
 
 		etag, err = handlers.UpdateAndStoreSession(data, etag, session, r, w)
 		if err != nil {

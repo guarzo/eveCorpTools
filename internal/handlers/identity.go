@@ -56,14 +56,18 @@ func SameUserCount(session *sessions.Session, storeUsers int) bool {
 func CheckIfCanSkip(session *sessions.Session) (model.StoreData, string, bool) {
 	canSkip := true
 	sessionValues := GetSessionValues(session)
+
 	storeData, etag, ok := persist.Store.Get(sessionValues.LoggedInUser)
 	if !ok {
 		canSkip = false
 	}
 
+	if dirty, ok := session.Values["trustedDataDirty"].(bool); ok && dirty {
+		canSkip = false
+	}
+
 	if !SameUserCount(session, len(storeData.Identities)) {
 		canSkip = false
-
 	}
 	return storeData, etag, canSkip
 }

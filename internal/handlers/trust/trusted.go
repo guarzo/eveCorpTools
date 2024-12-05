@@ -76,6 +76,8 @@ func handleAddEntity(s *handlers.SessionService, trustedService *service.Trusted
 		Identifier string `json:"identifier"`
 	}
 
+	setDirtyBit(s, r, w)
+
 	// Decode the request body to access the identifier
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		trustedService.Logger.Warnf("Bad request payload: %v", err)
@@ -190,7 +192,6 @@ func handleAddEntity(s *handlers.SessionService, trustedService *service.Trusted
 	handlers.WriteJSONResponse(w, responseEntity, http.StatusOK, trustedService.Logger)
 }
 
-// Handlers for adding/removing trusted/untrusted entities
 func AddTrustedCharacterHandler(s *handlers.SessionService, trustedService *service.TrustedService, esiService *service.EsiService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		handleAddEntity(s, trustedService, esiService, w, r, "trusted", "character")
@@ -215,11 +216,13 @@ func AddUntrustedCorporationHandler(s *handlers.SessionService, trustedService *
 	}
 }
 
-func handleRemoveEntity(trustedService *service.TrustedService, w http.ResponseWriter, r *http.Request, trustStatus, entityType string) {
+func handleRemoveEntity(s *handlers.SessionService, trustedService *service.TrustedService, w http.ResponseWriter, r *http.Request, trustStatus, entityType string) {
 	// Decode request body to retrieve 'identifier'
 	var request struct {
 		Identifier string `json:"identifier"`
 	}
+
+	setDirtyBit(s, r, w)
 
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		trustedService.Logger.Warnf("Bad request payload: %v", err)
@@ -232,6 +235,7 @@ func handleRemoveEntity(trustedService *service.TrustedService, w http.ResponseW
 	// Parse identifier as an integer (expected to be an ID)
 	resolvedID, err := strconv.ParseInt(request.Identifier, 10, 64)
 	if err != nil || resolvedID <= 0 {
+		trustedService.Logger.Warnf("Invalid identifier format: %v", request.Identifier)
 		handlers.WriteJSONResponse(w, handlers.ErrorResponse{Error: "Invalid identifier format"}, http.StatusBadRequest, trustedService.Logger)
 		return
 	}
@@ -248,6 +252,7 @@ func handleRemoveEntity(trustedService *service.TrustedService, w http.ResponseW
 	case trustStatus == "untrusted" && entityType == "corporation":
 		removeErr = trustedService.RemoveUntrustedCorporation(resolvedID)
 	default:
+		trustedService.Logger.Warnf("Unsupported operation: trustStatus=%s, entityType=%s", trustStatus, entityType)
 		handlers.WriteJSONResponse(w, handlers.ErrorResponse{Error: "Unsupported operation"}, http.StatusBadRequest, trustedService.Logger)
 		return
 	}
@@ -255,32 +260,34 @@ func handleRemoveEntity(trustedService *service.TrustedService, w http.ResponseW
 	if removeErr != nil {
 		trustedService.Logger.Errorf("Error removing %s %s: %v", trustStatus, entityType, removeErr)
 		handlers.WriteJSONResponse(w, handlers.ErrorResponse{Error: "Failed to remove entity"}, http.StatusInternalServerError, trustedService.Logger)
-	} else {
-		handlers.WriteJSONResponse(w, handlers.SuccessResponse{Message: fmt.Sprintf("%s %s removed successfully", trustStatus, entityType)}, http.StatusOK, trustedService.Logger)
+		return
+	}
+
+	trustedService.Logger.Infof("Validation succeeded: %s %s with ID %d successfully removed", trustStatus, entityType, resolvedID)
+	handlers.WriteJSONResponse(w, handlers.SuccessResponse{Message: fmt.Sprintf("%s %s removed successfully", trustStatus, entityType)}, http.StatusOK, trustedService.Logger)
+}
+
+func RemoveTrustedCharacterHandler(s *handlers.SessionService, trustedService *service.TrustedService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		handleRemoveEntity(s, trustedService, w, r, "trusted", "character")
 	}
 }
 
-func RemoveTrustedCharacterHandler(trustedService *service.TrustedService) http.HandlerFunc {
+func RemoveTrustedCorporationHandler(s *handlers.SessionService, trustedService *service.TrustedService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		handleRemoveEntity(trustedService, w, r, "trusted", "character")
+		handleRemoveEntity(s, trustedService, w, r, "trusted", "corporation")
 	}
 }
 
-func RemoveTrustedCorporationHandler(trustedService *service.TrustedService) http.HandlerFunc {
+func RemoveUntrustedCharacterHandler(s *handlers.SessionService, trustedService *service.TrustedService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		handleRemoveEntity(trustedService, w, r, "trusted", "corporation")
+		handleRemoveEntity(s, trustedService, w, r, "untrusted", "character")
 	}
 }
 
-func RemoveUntrustedCharacterHandler(trustedService *service.TrustedService) http.HandlerFunc {
+func RemoveUntrustedCorporationHandler(s *handlers.SessionService, trustedService *service.TrustedService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		handleRemoveEntity(trustedService, w, r, "untrusted", "character")
-	}
-}
-
-func RemoveUntrustedCorporationHandler(trustedService *service.TrustedService) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		handleRemoveEntity(trustedService, w, r, "untrusted", "corporation")
+		handleRemoveEntity(s, trustedService, w, r, "untrusted", "corporation")
 	}
 }
 
@@ -314,60 +321,79 @@ func fetchEntityData(entityType string, data EntityData, token *oauth2.Token, es
 	return EntityData{}, fmt.Errorf("unknown entity type: %s", entityType)
 }
 
-func UpdateIsOnCouchHandler(w http.ResponseWriter, r *http.Request) {
-	xlog.Logf("Update IsOnCouch Handler invoked")
+func UpdateIsOnCouchHandler(s *handlers.SessionService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		xlog.Logf("Update IsOnCouch Handler invoked")
 
-	// Parse the request
-	var request struct {
-		ID        int64  `json:"id"`
-		IsOnCouch bool   `json:"isOnCouch"`
-		TableID   string `json:"tableId"`
+		// Parse the request
+		var request struct {
+			ID        int64  `json:"id"`
+			IsOnCouch bool   `json:"isOnCouch"`
+			TableID   string `json:"tableId"`
+		}
+
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			xlog.Logf("Error decoding JSON: %v", err)
+			sendJSONError(w, "Invalid request payload", http.StatusBadRequest)
+			return
+		}
+
+		xlog.Logf("Received Update IsOnCouch request: %+v", request)
+
+		// Load the data
+		data, err := persist.LoadTrustedCharacters()
+		if err != nil {
+			xlog.Logf("Error loading trusted characters: %v", err)
+			sendJSONError(w, "Error loading trusted characters", http.StatusInternalServerError)
+			return
+		}
+
+		// Update the IsOnCouch field based on the table and ID
+		switch request.TableID {
+		case "trusted-characters-table":
+			for i, character := range data.TrustedCharacters {
+				if character.CharacterID == request.ID {
+					data.TrustedCharacters[i].IsOnCouch = request.IsOnCouch
+					break
+				}
+			}
+		case "trusted-corporations-table":
+			for i, corporation := range data.TrustedCorporations {
+				if corporation.CorporationID == request.ID {
+					data.TrustedCorporations[i].IsOnCouch = request.IsOnCouch
+					break
+				}
+			}
+		default:
+			xlog.Logf("Table ID was not recognized: %v", request.TableID)
+			sendJSONError(w, "Error parsing tableID", http.StatusInternalServerError)
+			return
+		}
+
+		// Save the updated data
+		if err := persist.SaveTrustedCharacters(data); err != nil {
+			xlog.Logf("Error saving trusted characters: %v", err)
+			sendJSONError(w, "Error saving trusted characters", http.StatusInternalServerError)
+			return
+		}
+		setDirtyBit(s, r, w)
+
+		sendJSONResponse(w, http.StatusOK, map[string]string{"message": "IsOnCouch updated successfully"})
+
 	}
+}
 
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		xlog.Logf("Error decoding JSON: %v", err)
-		sendJSONError(w, "Invalid request payload", http.StatusBadRequest)
-		return
-	}
-
-	xlog.Logf("Received Update IsOnCouch request: %+v", request)
-
-	// Load the data
-	data, err := persist.LoadTrustedCharacters()
+func setDirtyBit(s *handlers.SessionService, r *http.Request, w http.ResponseWriter) {
+	session, err := s.Get(r, handlers.SessionName)
 	if err != nil {
-		xlog.Logf("Error loading trusted characters: %v", err)
-		sendJSONError(w, "Error loading trusted characters", http.StatusInternalServerError)
+		xlog.Logf("Failed to retrieve session for dirty bit update: %v", err)
 		return
 	}
 
-	// Update the IsOnCouch field based on the table and ID
-	switch request.TableID {
-	case "trusted-characters-table":
-		for i, character := range data.TrustedCharacters {
-			if character.CharacterID == request.ID {
-				data.TrustedCharacters[i].IsOnCouch = request.IsOnCouch
-				break
-			}
-		}
-	case "trusted-corporations-table":
-		for i, corporation := range data.TrustedCorporations {
-			if corporation.CorporationID == request.ID {
-				data.TrustedCorporations[i].IsOnCouch = request.IsOnCouch
-				break
-			}
-		}
-	default:
-		xlog.Logf("Table ID was not recognized: %v", request.TableID)
-		sendJSONError(w, "Error parsing tableID", http.StatusInternalServerError)
-		return
+	session.Values["trustedDataDirty"] = true
+	if err := session.Save(r, w); err != nil {
+		xlog.Logf("Failed to save session with updated dirty bit: %v", err)
+	} else {
+		xlog.Logf("Dirty bit set in session")
 	}
-
-	// Save the updated data
-	if err := persist.SaveTrustedCharacters(data); err != nil {
-		xlog.Logf("Error saving trusted characters: %v", err)
-		sendJSONError(w, "Error saving trusted characters", http.StatusInternalServerError)
-		return
-	}
-
-	sendJSONResponse(w, http.StatusOK, map[string]string{"message": "IsOnCouch updated successfully"})
 }

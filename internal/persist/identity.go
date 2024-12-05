@@ -1,6 +1,7 @@
 package persist
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -62,31 +63,7 @@ func LoadIdentities(mainIdentity int64, host string) (*model.Identities, error) 
 		xlog.Logf("Loaded identities: %s", SafeLogIdentities(&identities))
 		return &identities, nil
 	}
-
-	// Fallback to old model
-	xlog.Log("Attempting to load identities with old model format.")
-	oldIdentities := struct {
-		MainIdentity string                 `json:"main_identity"`
-		Tokens       map[int64]oauth2.Token `json:"identities"`
-	}{}
-	if err := DecryptData(identityFile, &oldIdentities); err != nil {
-		xlog.Logf("Error decrypting identities file with old model: %v", err)
-		return nil, err
-	}
-
-	// Convert old model to new model
-	for k, v := range oldIdentities.Tokens {
-		identities.Tokens[fmt.Sprintf("%d", k)] = v
-	}
-
-	// Save converted identities
-	if err := SaveIdentities(mainIdentity, &identities, host); err != nil {
-		xlog.Logf("Error saving identities after conversion: %v", err)
-		return nil, err
-	}
-
-	xlog.Logf("Converted and saved identities to new model: %s", SafeLogIdentities(&identities))
-	return &identities, nil
+	return nil, errors.New("unable to decrypt identities")
 }
 
 func SaveIdentities(mainIdentity int64, ids *model.Identities, host string) error {
@@ -115,7 +92,7 @@ func getIdentityFileName(mainIdentity int64, host string) string {
 	case "trust.zoolanders.space":
 		subAppDirectory = "data/trust"
 	case "localhost":
-		subAppDirectory = "data"
+		subAppDirectory = "data/trust"
 	default:
 		subAppDirectory = "data/default" // You could add a default case or handle this as an error
 	}

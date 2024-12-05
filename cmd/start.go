@@ -113,23 +113,23 @@ func registerTrustRoutes(r *mux.Router, sessionStore *handlers.SessionService, t
 	r.HandleFunc("/auth-character", handlers.AuthCharacterHandler(esiService))
 	r.HandleFunc("/", trust.HomeHandler(sessionStore, esiService))
 
-	r.HandleFunc("/update-comment", trust.UpdateCommentHandler)
-	r.HandleFunc("/update-is-on-couch", trust.UpdateIsOnCouchHandler)
+	r.HandleFunc("/update-comment", trust.UpdateCommentHandler(sessionStore)).Methods("POST")
+	r.HandleFunc("/update-is-on-couch", trust.UpdateIsOnCouchHandler(sessionStore)).Methods("POST")
 
 	r.HandleFunc("/validate-and-add-trusted-character", trust.AddTrustedCharacterHandler(sessionStore, trustedService, esiService)).Methods("POST")
-	r.HandleFunc("/remove-trusted-character", trust.RemoveTrustedCharacterHandler(trustedService)).Methods("POST")
+	r.HandleFunc("/remove-trusted-character", trust.RemoveTrustedCharacterHandler(sessionStore, trustedService)).Methods("POST")
 
 	r.HandleFunc("/validate-and-add-trusted-corporation", trust.AddTrustedCorporationHandler(sessionStore, trustedService, esiService)).Methods("POST")
-	r.HandleFunc("/remove-trusted-corporation", trust.RemoveTrustedCorporationHandler(trustedService)).Methods("POST")
+	r.HandleFunc("/remove-trusted-corporation", trust.RemoveTrustedCorporationHandler(sessionStore, trustedService)).Methods("POST")
 
 	r.HandleFunc("/add-contacts", trust.AddContactsHandler(sessionStore, esiService))
 	r.HandleFunc("/delete-contacts", trust.DeleteContactsHandler(sessionStore, esiService))
 
 	r.HandleFunc("/validate-and-add-untrusted-character", trust.AddUntrustedCharacterHandler(sessionStore, trustedService, esiService)).Methods("POST")
-	r.HandleFunc("/remove-untrusted-character", trust.RemoveUntrustedCharacterHandler(trustedService)).Methods("POST")
+	r.HandleFunc("/remove-untrusted-character", trust.RemoveUntrustedCharacterHandler(sessionStore, trustedService)).Methods("POST")
 
 	r.HandleFunc("/validate-and-add-untrusted-corporation", trust.AddUntrustedCorporationHandler(sessionStore, trustedService, esiService)).Methods("POST")
-	r.HandleFunc("/remove-untrusted-corporation", trust.RemoveUntrustedCorporationHandler(trustedService)).Methods("POST")
+	r.HandleFunc("/remove-untrusted-corporation", trust.RemoveUntrustedCorporationHandler(sessionStore, trustedService)).Methods("POST")
 
 	// admin routes
 	r.HandleFunc("/reset-identities", handlers.ResetIdentitiesHandler(sessionStore))
